@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="../dist/telepat.js"></script>
+  </head>
+  <body>
+  <script>
+    function statusChangeCallback(response) {
+      if (response.status === 'connected') {
+        Telepat.login(response.authResponse.accessToken);
+      } else if (response.status === 'not_authorized') {
+        document.getElementById('status').innerHTML = 'Please log into this app.';
+      } else {
+        document.getElementById('status').innerHTML = 'Please log into Facebook.';
+      }
+    }
+
+    function checkLoginState() {
+      FB.getLoginStatus(function(response) {
+        statusChangeCallback(response);
+      });
+    }
+
+    window.fbAsyncInit = function() {
+        FB.init({
+          appId      : '1086083914753251',
+          xfbml      : true,
+          version    : 'v2.3',
+          status     : true
+        });
+
+        Telepat.setLogLevel('info');
+
+        Telepat.on('login', function () {
+          console.log("logged in");
+        });
+
+        Telepat.on('logout', function () {
+          console.log("logged out");
+        })
+
+        Telepat.on('connect', function () {
+          checkLoginState();
+        });
+
+        Telepat.connect({
+          apiKey: '3406870085495689e34d878f09faf52c',
+          appId: 20
+        });
+      };
+
+      (function(d, s, id){
+         var js, fjs = d.getElementsByTagName(s)[0];
+         if (d.getElementById(id)) {return;}
+         js = d.createElement(s); js.id = id;
+         js.src = "//connect.facebook.net/en_US/sdk.js";
+         fjs.parentNode.insertBefore(js, fjs);
+       }(document, 'script', 'facebook-jssdk'));
+  </script>
+
+  <fb:login-button scope="public_profile,email" onlogin="checkLoginState();">
+  </fb:login-button>
+  <br/>
+  <button onclick="Telepat.logout()">Logout</button>
+
+  <div id="status">
+  </div>
+  </body>
+</html>

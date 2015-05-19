@@ -1,0 +1,8 @@
+{
+  "name": "telepat-js",
+  "version": "0.0.1",
+  "description": "Javascript client for Telepat",
+  "main": "dist/telepat.js",
+  "ignore": [ "example" ],  
+  "dependencies": {}
+}
