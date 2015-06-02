@@ -43,9 +43,13 @@
           checkLoginState();
         });
 
+        Telepat.on('contexts-update', function () {
+          Telepat.subscribe(Object.keys(Telepat.contexts)[0], 'event');
+        });
+
         Telepat.connect({
           apiKey: '3406870085495689e34d878f09faf52c',
-          appId: 20
+          appId: 1
         });
       };
 

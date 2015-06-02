@@ -36,34 +36,49 @@ API.call = function (endpoint, data, callback) {
 
 module.exports = API;
 },{"crypto-js/sha256":10,"superagent":136}],2:[function(require,module,exports){
-var API = require('./api');
+var Channel = function (api, context, channel) {
+  this.api = api;
+  this.context = context;
+  this.channel = channel;
 
-var Channel = {}
+  api.call('object/subscribe',
+    {
+      context: context,
+      model: channel
+    },
+    function (err, data) {
+      if (err) {
 
-Channel.connect = function() {
-
+      } else {
+        console.log(data);
+      }
+    });
 }
 
 module.exports = Channel;
-},{"./api":1}],3:[function(require,module,exports){
-var log = require('./logger');
-
-var Event = {}
-var eventFunctions = {};
-
-Event.on = function (name, callback) {
-  eventFunctions[name] = callback;
+},{}],3:[function(require,module,exports){
+var Event = function (logger) {
+  this.log = logger;
+  this.eventFunctions = {};
 }
 
-Event.emit = function (args) {
-  log.debug('Emitting ' + arguments[0] + ' event');
+Event.prototype.jet = function () {
+  console.log(this);
+}
+
+Event.prototype.on = function (name, callback) {
+  this.eventFunctions[name] = callback;
+}
+
+Event.prototype.emit = function (args) {
+  this.log.debug('Emitting ' + arguments[0] + ' event');
   var params = Array.prototype.slice.call(arguments);
-  if (typeof eventFunctions[arguments[0]] !== 'undefined')
-    eventFunctions[arguments[0]].apply(this, params);
+  if (typeof this.eventFunctions[arguments[0]] !== 'undefined')
+    this.eventFunctions[arguments[0]].apply(this, params);
 }
 
 module.exports = Event;
-},{"./logger":4}],4:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 var log = require('loglevel');
 
 var originalFactory = log.methodFactory;
@@ -81,7 +96,8 @@ var API = require('./api');
 var PouchDB = require('pouchdb');
 var db = new PouchDB('_telepat');
 var log = require('./logger');
-var Event = require('./event');
+var EventObject = require('./event');
+var Event = new EventObject(log);
 var Channel = require('./channel');
 
 var Telepat = {
@@ -93,7 +109,7 @@ var apiPort = 3100;
 
 var socket;
 var ioSessionId;
-
+var subscriptions = [];
 
 function error(string) {
   log.error(string);
@@ -123,11 +139,21 @@ function registerDevice() {
         if (res.body.identifier !== undefined) {
           API.UDID = res.body.identifier;
           log.info('Received new UDID: ' + API.UDID);
-          db.put({
+
+          var revision = null;
+          var newObject = {
             _id: ':deviceId',
             value: res.body.identifier
+          };
+          db.get(':deviceId').then(function(doc) {
+            newObject._rev = doc._rev;
+            db.put(newObject).catch(function(err) {
+              log.warn('Could not persist UDID. Error: ' + err);
+            });
           }).catch(function(err) {
-            log.warn('Could not persist UDID. Error: ' + err);
+            db.put(newObject).catch(function(err) {
+              log.warn('Could not persist UDID. Error: ' + err);
+            });
           });
         }
         log.info('Connection established');
@@ -143,7 +169,9 @@ Telepat.setLogLevel = function (level) {
   return this;
 }
 
-Telepat.on = Event.on;
+Telepat.on = function(name, callback) {
+  return Event.on(name, callback);
+}
 
 Telepat.login = function (facebookToken) {
   API.call('user/login', {
@@ -217,6 +245,12 @@ Telepat.connect = function (options) {
 
   return this;
 };
+
+Telepat.subscribe = function (context, channel) {
+  var channel = new Channel(API, context, channel);
+  subscriptions.push(channel);
+  return channel;
+}
 
 module.exports = Telepat;
 },{"./api":1,"./channel":2,"./event":3,"./logger":4,"pouchdb":42,"socket.io-client":86}],6:[function(require,module,exports){
