@@ -10,13 +10,18 @@ var API = {
   authenticationToken: null
 }
 
-API.call = function (endpoint, data, callback) {
+API.call = function (endpoint, data, callback, method) {
   if (!this.apiEndpoint || !this.apiKey || !this.appId)
     return callback(null, null);
 
-  var req = request
-    .post(this.apiEndpoint + endpoint)
-    .send(data)
+  var req;
+
+  if (method == 'get')
+    req = request.get(this.apiEndpoint + endpoint);
+  else 
+    req = request.post(this.apiEndpoint + endpoint);
+
+  req.send(data)
     .set('X-BLGREQ-SIGN', SHA256(this.apiKey))
     .set('X-BLGREQ-APPID', this.appId)
     .set('X-BLGREQ-UDID', this.UDID || '');
@@ -34,29 +39,107 @@ API.call = function (endpoint, data, callback) {
     });
 }
 
+API.get = function (endpoint, data, callback) {
+  return this.call(endpoint, data, callback, 'get');
+}
+
 module.exports = API;
-},{"crypto-js/sha256":10,"superagent":136}],2:[function(require,module,exports){
-var Channel = function (api, context, channel) {
-  this.api = api;
-  this.context = context;
-  this.channel = channel;
+},{"crypto-js/sha256":10,"superagent":152}],2:[function(require,module,exports){
+var EventObject = require('./event');
+var jsondiffpatch = require('jsondiffpatch').create({
+  objectHash: function(obj) {
+    return obj._id || obj.id;
+  }
+});
+
+var Channel = function (api, log, error, context, channel) {
+  var api = api;
+  var error = error;
+  var context = context;
+  var channel = channel;
+  var log = log;
+  var event = new EventObject(log);
+  var self = this;
+  var timer;
+  var lastObjects;
+
+  this.objects = {};
 
   api.call('object/subscribe',
     {
-      context: context,
-      model: channel
+      'channel': {
+        'context': context,
+        'model': channel
+      }
     },
-    function (err, data) {
+    function (err, res) {
       if (err) {
-
+        event.emit('error', error('Subscribe failed with error: ' + err));
       } else {
-        console.log(data);
+        lastObjects = JSON.parse(JSON.stringify(self.objects));
+        event.emit('update');
+        timer = setInterval(function () {
+          var diff = jsondiffpatch.diff(lastObjects, self.objects);
+          if (diff !== undefined) {
+            var diffKeys = Object.keys(diff);
+            for (var i=0; i<diffKeys.length; i++) {
+              if (diff[diffKeys[i]].length == 1) {
+                self.add(self.objects[diffKeys[i]]);
+                delete self.objects[diffKeys[i]];
+              } else if (diff[diffKeys[i]].length == 2) {
+                // update
+              } else if (diff[diffKeys[i]].length == 3) {
+                // delete
+              }
+            }
+          }
+          lastObjects = JSON.parse(JSON.stringify(self.objects));
+        }, 50);
       }
     });
+
+  this.unsubscribe = function() {
+    api.call('object/unsubscribe',
+      {
+        channel: {
+          context: context,
+          model: channel
+        }
+      },
+      function (err, res) {
+        if (err) {
+          event.emit('error', error('Unsubscribe failed with error: ' + err));
+        } else {
+          self.objects = {};
+          clearInterval(timer);
+          event.emit('unsubscribe');
+          event.emit('_unsubscribe');
+        }
+      });
+  }
+
+  this.add = function(object) {
+    api.call('object/create',
+      {
+        model: channel,
+        content: object
+      },
+      function (err, res) {
+        if (err) {
+          event.emit('error', error('Adding object failed with error: ' + err));
+        } else {
+          //event.emit('update');
+        }
+      });
+  }
+
+  this.on = function(name, callback) {
+    return event.on(name, callback);
+  }
 }
 
 module.exports = Channel;
-},{}],3:[function(require,module,exports){
+},{"./event":3,"jsondiffpatch":24}],3:[function(require,module,exports){
 var Event = function (logger) {
   this.log = logger;
   this.eventFunctions = {};
@@ -91,7 +174,7 @@ log.methodFactory = function (methodName, logLevel) {
 log.setLevel('warn');
 
 module.exports = log;
-},{"loglevel":11}],5:[function(require,module,exports){
+},{"loglevel":27}],5:[function(require,module,exports){
 var API = require('./api');
 var PouchDB = require('pouchdb');
 var db = new PouchDB('_telepat');
@@ -117,7 +200,7 @@ function error(string) {
 }
 
 function updateContexts() {
-  API.call('context/all', {}, function(err, res) {
+  API.get('context/all', {}, function(err, res) {
       Telepat.contexts = res.body;
       Event.emit('contexts-update');
     })
@@ -246,14 +329,23 @@ Telepat.connect = function (options) {
   return this;
 };
 
-Telepat.subscribe = function (context, channel) {
-  var channel = new Channel(API, context, channel);
+Telepat.subscribe = function (context, channel, onUpdate) {
+  var channel = new Channel(API, log, error, context, channel);
   subscriptions.push(channel);
+  if (onUpdate !== undefined) {
+    channel.on("update", onUpdate);
+  }
+  channel.on("_unsubscribe", function () {
+    var index = subscriptions.indexOf(channel);
+    if (index > -1) {
+      subscriptions.splice(index, 1);
+    }
+  });
   return channel;
 }
 
 module.exports = Telepat;
-},{"./api":1,"./channel":2,"./event":3,"./logger":4,"pouchdb":42,"socket.io-client":86}],6:[function(require,module,exports){
+},{"./api":1,"./channel":2,"./event":3,"./logger":4,"pouchdb":58,"socket.io-client":102}],6:[function(require,module,exports){
 
 },{}],7:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
@@ -1597,6 +1689,1311 @@ process.umask = function() { return 0; };
 
 }));
 },{"./core":9}],11:[function(require,module,exports){
+
+var Pipe = require('../pipe').Pipe;
+
+var Context = function Context(){
+};
+
+Context.prototype.setResult = function(result) {
+	this.result = result;
+	this.hasResult = true;
+	return this;
+};
+
+Context.prototype.exit = function() {
+	this.exiting = true;
+	return this;
+};
+
+Context.prototype.switchTo = function(next, pipe) {
+	if (typeof next === 'string' || next instanceof Pipe) {
+		this.nextPipe = next;
+	} else {
+		this.next = next;
+		if (pipe) {
+			this.nextPipe = pipe;
+		}
+	}
+	return this;
+};
+
+Context.prototype.push = function(child, name) {
+	child.parent = this;
+	if (typeof name !== 'undefined') {
+		child.childName = name;
+	}
+	child.root = this.root || this;
+	child.options = child.options || this.options;
+	if (!this.children) {
+		this.children = [child];
+		this.nextAfterChildren = this.next || null;
+		this.next = child;
+	} else {
+		this.children[this.children.length - 1].next = child;
+		this.children.push(child);
+	}
+	child.next = this;
+	return this;
+};
+
+exports.Context = Context;
+
+},{"../pipe":25}],12:[function(require,module,exports){
+var Context = require('./context').Context;
+
+var DiffContext = function DiffContext(left, right) {
+  this.left = left;
+  this.right = right;
+  this.pipe = 'diff';
+};
+
+DiffContext.prototype = new Context();
+
+exports.DiffContext = DiffContext;
+
+},{"./context":11}],13:[function(require,module,exports){
+var Context = require('./context').Context;
+
+var PatchContext = function PatchContext(left, delta) {
+  this.left = left;
+  this.delta = delta;
+  this.pipe = 'patch';
+};
+
+PatchContext.prototype = new Context();
+
+exports.PatchContext = PatchContext;
+
+},{"./context":11}],14:[function(require,module,exports){
+var Context = require('./context').Context;
+
+var ReverseContext = function ReverseContext(delta) {
+  this.delta = delta;
+  this.pipe = 'reverse';
+};
+
+ReverseContext.prototype = new Context();
+
+exports.ReverseContext = ReverseContext;
+
+},{"./context":11}],15:[function(require,module,exports){
+// use as 2nd parameter for JSON.parse to revive Date instances
+module.exports = function dateReviver(key, value) {
+  var parts;
+  if (typeof value === 'string') {
+    parts = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d*))?(Z|([+\-])(\d{2}):(\d{2}))$/.exec(value);
+    if (parts) {
+      return new Date(Date.UTC(+parts[1], +parts[2] - 1, +parts[3], +parts[4], +parts[5], +parts[6], +(parts[7] || 0)));
+    }
+  }
+  return value;
+};
+
+},{}],16:[function(require,module,exports){
+var Processor = require('./processor').Processor;
+var Pipe = require('./pipe').Pipe;
+var DiffContext = require('./contexts/diff').DiffContext;
+var PatchContext = require('./contexts/patch').PatchContext;
+var ReverseContext = require('./contexts/reverse').ReverseContext;
+
+var trivial = require('./filters/trivial');
+var nested = require('./filters/nested');
+var arrays = require('./filters/arrays');
+var dates = require('./filters/dates');
+var texts = require('./filters/texts');
+
+var DiffPatcher = function DiffPatcher(options) {
+  this.processor = new Processor(options);
+  this.processor.pipe(new Pipe('diff').append(
+    nested.collectChildrenDiffFilter,
+    trivial.diffFilter,
+    dates.diffFilter,
+    texts.diffFilter,
+    nested.objectsDiffFilter,
+    arrays.diffFilter
+  ).shouldHaveResult());
+  this.processor.pipe(new Pipe('patch').append(
+    nested.collectChildrenPatchFilter,
+    arrays.collectChildrenPatchFilter,
+    trivial.patchFilter,
+    texts.patchFilter,
+    nested.patchFilter,
+    arrays.patchFilter
+  ).shouldHaveResult());
+  this.processor.pipe(new Pipe('reverse').append(
+    nested.collectChildrenReverseFilter,
+    arrays.collectChildrenReverseFilter,
+    trivial.reverseFilter,
+    texts.reverseFilter,
+    nested.reverseFilter,
+    arrays.reverseFilter
+  ).shouldHaveResult());
+};
+
+DiffPatcher.prototype.options = function() {
+  return this.processor.options.apply(this.processor, arguments);
+};
+
+DiffPatcher.prototype.diff = function(left, right) {
+  return this.processor.process(new DiffContext(left, right));
+};
+
+DiffPatcher.prototype.patch = function(left, delta) {
+  return this.processor.process(new PatchContext(left, delta));
+};
+
+DiffPatcher.prototype.reverse = function(delta) {
+  return this.processor.process(new ReverseContext(delta));
+};
+
+DiffPatcher.prototype.unpatch = function(right, delta) {
+  return this.patch(right, this.reverse(delta));
+};
+
+exports.DiffPatcher = DiffPatcher;
+
+},{"./contexts/diff":12,"./contexts/patch":13,"./contexts/reverse":14,"./filters/arrays":18,"./filters/dates":19,"./filters/nested":21,"./filters/texts":22,"./filters/trivial":23,"./pipe":25,"./processor":26}],17:[function(require,module,exports){
+
+exports.isBrowser = typeof window !== 'undefined';
+
+},{}],18:[function(require,module,exports){
+var DiffContext = require('../contexts/diff').DiffContext;
+var PatchContext = require('../contexts/patch').PatchContext;
+var ReverseContext = require('../contexts/reverse').ReverseContext;
+
+var lcs = require('./lcs');
+
+var ARRAY_MOVE = 3;
+
+var isArray = (typeof Array.isArray === 'function') ?
+  // use native function
+  Array.isArray :
+  // use instanceof operator
+  function(a) {
+    return a instanceof Array;
+  };
+
+var arrayIndexOf = typeof Array.prototype.indexOf === 'function' ?
+  function(array, item) {
+    return array.indexOf(item);
+  } : function(array, item) {
+    var length = array.length;
+    for (var i = 0; i < length; i++) {
+      if (array[i] === item) {
+        return i;
+      }
+    }
+    return -1;
+  };
+
+function arraysHaveMatchByRef(array1, array2, len1, len2) {
+  for (var index1 = 0; index1 < len1; index1++) {
+    var val1 = array1[index1];
+    for (var index2 = 0; index2 < len2; index2++) {
+      var val2 = array2[index2];
+      if (val1 === val2) {
+        return true;
+      }
+    }
+  }
+}
+
+function matchItems(array1, array2, index1, index2, context) {
+  var value1 = array1[index1];
+  var value2 = array2[index2];
+  if (value1 === value2) {
+    return true;
+  }
+  if (typeof value1 !== 'object' || typeof value2 !== 'object') {
+    return false;
+  }
+  var objectHash = context.objectHash;
+  if (!objectHash) {
+    // no way to match objects was provided, try match by position
+    return context.matchByPosition && index1 === index2;
+  }
+  var hash1;
+  var hash2;
+  if (typeof index1 === 'number') {
+    context.hashCache1 = context.hashCache1 || [];
+    hash1 = context.hashCache1[index1];
+    if (typeof hash1 === 'undefined') {
+      context.hashCache1[index1] = hash1 = objectHash(value1, index1);
+    }
+  } else {
+    hash1 = objectHash(value1);
+  }
+  if (typeof hash1 === 'undefined') {
+    return false;
+  }
+  if (typeof index2 === 'number') {
+    context.hashCache2 = context.hashCache2 || [];
+    hash2 = context.hashCache2[index2];
+    if (typeof hash2 === 'undefined') {
+      context.hashCache2[index2] = hash2 = objectHash(value2, index2);
+    }
+  } else {
+    hash2 = objectHash(value2);
+  }
+  if (typeof hash2 === 'undefined') {
+    return false;
+  }
+  return hash1 === hash2;
+}
+
+var diffFilter = function arraysDiffFilter(context) {
+  if (!context.leftIsArray) {
+    return;
+  }
+
+  var matchContext = {
+    objectHash: context.options && context.options.objectHash,
+    matchByPosition: context.options && context.options.matchByPosition
+  };
+  var commonHead = 0;
+  var commonTail = 0;
+  var index;
+  var index1;
+  var index2;
+  var array1 = context.left;
+  var array2 = context.right;
+  var len1 = array1.length;
+  var len2 = array2.length;
+
+  var child;
+
+  if (len1 > 0 && len2 > 0 && !matchContext.objectHash &&
+    typeof matchContext.matchByPosition !== 'boolean') {
+    matchContext.matchByPosition = !arraysHaveMatchByRef(array1, array2, len1, len2);
+  }
+
+  // separate common head
+  while (commonHead < len1 && commonHead < len2 &&
+    matchItems(array1, array2, commonHead, commonHead, matchContext)) {
+    index = commonHead;
+    child = new DiffContext(context.left[index], context.right[index]);
+    context.push(child, index);
+    commonHead++;
+  }
+  // separate common tail
+  while (commonTail + commonHead < len1 && commonTail + commonHead < len2 &&
+    matchItems(array1, array2, len1 - 1 - commonTail, len2 - 1 - commonTail, matchContext)) {
+    index1 = len1 - 1 - commonTail;
+    index2 = len2 - 1 - commonTail;
+    child = new DiffContext(context.left[index1], context.right[index2]);
+    context.push(child, index2);
+    commonTail++;
+  }
+  var result;
+  if (commonHead + commonTail === len1) {
+    if (len1 === len2) {
+      // arrays are identical
+      context.setResult(undefined).exit();
+      return;
+    }
+    // trivial case, a block (1 or more consecutive items) was added
+    result = result || {
+      _t: 'a'
+    };
+    for (index = commonHead; index < len2 - commonTail; index++) {
+      result[index] = [array2[index]];
+    }
+    context.setResult(result).exit();
+    return;
+  }
+  if (commonHead + commonTail === len2) {
+    // trivial case, a block (1 or more consecutive items) was removed
+    result = result || {
+      _t: 'a'
+    };
+    for (index = commonHead; index < len1 - commonTail; index++) {
+      result['_' + index] = [array1[index], 0, 0];
+    }
+    context.setResult(result).exit();
+    return;
+  }
+  // reset hash cache
+  delete matchContext.hashCache1;
+  delete matchContext.hashCache2;
+
+  // diff is not trivial, find the LCS (Longest Common Subsequence)
+  var trimmed1 = array1.slice(commonHead, len1 - commonTail);
+  var trimmed2 = array2.slice(commonHead, len2 - commonTail);
+  var seq = lcs.get(
+    trimmed1, trimmed2,
+    matchItems,
+    matchContext
+  );
+  var removedItems = [];
+  result = result || {
+    _t: 'a'
+  };
+  for (index = commonHead; index < len1 - commonTail; index++) {
+    if (arrayIndexOf(seq.indices1, index - commonHead) < 0) {
+      // removed
+      result['_' + index] = [array1[index], 0, 0];
+      removedItems.push(index);
+    }
+  }
+
+  var detectMove = true;
+  if (context.options && context.options.arrays && context.options.arrays.detectMove === false) {
+    detectMove = false;
+  }
+  var includeValueOnMove = false;
+  if (context.options && context.options.arrays && context.options.arrays.includeValueOnMove) {
+    includeValueOnMove = true;
+  }
+
+  var removedItemsLength = removedItems.length;
+  for (index = commonHead; index < len2 - commonTail; index++) {
+    var indexOnArray2 = arrayIndexOf(seq.indices2, index - commonHead);
+    if (indexOnArray2 < 0) {
+      // added, try to match with a removed item and register as position move
+      var isMove = false;
+      if (detectMove && removedItemsLength > 0) {
+        for (var removeItemIndex1 = 0; removeItemIndex1 < removedItemsLength; removeItemIndex1++) {
+          index1 = removedItems[removeItemIndex1];
+          if (matchItems(trimmed1, trimmed2, index1 - commonHead,
+            index - commonHead, matchContext)) {
+            // store position move as: [originalValue, newPosition, ARRAY_MOVE]
+            result['_' + index1].splice(1, 2, index, ARRAY_MOVE);
+            if (!includeValueOnMove) {
+              // don't include moved value on diff, to save bytes
+              result['_' + index1][0] = '';
+            }
+
+            index2 = index;
+            child = new DiffContext(context.left[index1], context.right[index2]);
+            context.push(child, index2);
+            removedItems.splice(removeItemIndex1, 1);
+            isMove = true;
+            break;
+          }
+        }
+      }
+      if (!isMove) {
+        // added
+        result[index] = [array2[index]];
+      }
+    } else {
+      // match, do inner diff
+      index1 = seq.indices1[indexOnArray2] + commonHead;
+      index2 = seq.indices2[indexOnArray2] + commonHead;
+      child = new DiffContext(context.left[index1], context.right[index2]);
+      context.push(child, index2);
+    }
+  }
+
+  context.setResult(result).exit();
+
+};
+diffFilter.filterName = 'arrays';
+
+var compare = {
+  numerically: function(a, b) {
+    return a - b;
+  },
+  numericallyBy: function(name) {
+    return function(a, b) {
+      return a[name] - b[name];
+    };
+  }
+};
+
+var patchFilter = function nestedPatchFilter(context) {
+  if (!context.nested) {
+    return;
+  }
+  if (context.delta._t !== 'a') {
+    return;
+  }
+  var index, index1;
+
+  var delta = context.delta;
+  var array = context.left;
+
+  // first, separate removals, insertions and modifications
+  var toRemove = [];
+  var toInsert = [];
+  var toModify = [];
+  for (index in delta) {
+    if (index !== '_t') {
+      if (index[0] === '_') {
+        // removed item from original array
+        if (delta[index][2] === 0 || delta[index][2] === ARRAY_MOVE) {
+          toRemove.push(parseInt(index.slice(1), 10));
+        } else {
+          throw new Error('only removal or move can be applied at original array indices' +
+            ', invalid diff type: ' + delta[index][2]);
+        }
+      } else {
+        if (delta[index].length === 1) {
+          // added item at new array
+          toInsert.push({
+            index: parseInt(index, 10),
+            value: delta[index][0]
+          });
+        } else {
+          // modified item at new array
+          toModify.push({
+            index: parseInt(index, 10),
+            delta: delta[index]
+          });
+        }
+      }
+    }
+  }
+
+  // remove items, in reverse order to avoid sawing our own floor
+  toRemove = toRemove.sort(compare.numerically);
+  for (index = toRemove.length - 1; index >= 0; index--) {
+    index1 = toRemove[index];
+    var indexDiff = delta['_' + index1];
+    var removedValue = array.splice(index1, 1)[0];
+    if (indexDiff[2] === ARRAY_MOVE) {
+      // reinsert later
+      toInsert.push({
+        index: indexDiff[1],
+        value: removedValue
+      });
+    }
+  }
+
+  // insert items, in reverse order to avoid moving our own floor
+  toInsert = toInsert.sort(compare.numericallyBy('index'));
+  var toInsertLength = toInsert.length;
+  for (index = 0; index < toInsertLength; index++) {
+    var insertion = toInsert[index];
+    array.splice(insertion.index, 0, insertion.value);
+  }
+
+  // apply modifications
+  var toModifyLength = toModify.length;
+  var child;
+  if (toModifyLength > 0) {
+    for (index = 0; index < toModifyLength; index++) {
+      var modification = toModify[index];
+      child = new PatchContext(context.left[modification.index], modification.delta);
+      context.push(child, modification.index);
+    }
+  }
+
+  if (!context.children) {
+    context.setResult(context.left).exit();
+    return;
+  }
+  context.exit();
+};
+patchFilter.filterName = 'arrays';
+
+var collectChildrenPatchFilter = function collectChildrenPatchFilter(context) {
+  if (!context || !context.children) {
+    return;
+  }
+  if (context.delta._t !== 'a') {
+    return;
+  }
+  var length = context.children.length;
+  var child;
+  for (var index = 0; index < length; index++) {
+    child = context.children[index];
+    context.left[child.childName] = child.result;
+  }
+  context.setResult(context.left).exit();
+};
+collectChildrenPatchFilter.filterName = 'arraysCollectChildren';
+
+var reverseFilter = function arraysReverseFilter(context) {
+  if (!context.nested) {
+    if (context.delta[2] === ARRAY_MOVE) {
+      context.newName = '_' + context.delta[1];
+      context.setResult([context.delta[0], parseInt(context.childName.substr(1), 10), ARRAY_MOVE]).exit();
+    }
+    return;
+  }
+  if (context.delta._t !== 'a') {
+    return;
+  }
+  var name, child;
+  for (name in context.delta) {
+    if (name === '_t') {
+      continue;
+    }
+    child = new ReverseContext(context.delta[name]);
+    context.push(child, name);
+  }
+  context.exit();
+};
+reverseFilter.filterName = 'arrays';
+
+var reverseArrayDeltaIndex = function(delta, index, itemDelta) {
+  if (typeof index === 'string' && index[0] === '_') {
+    return parseInt(index.substr(1), 10);
+  } else if (isArray(itemDelta) && itemDelta[2] === 0) {
+    return '_' + index;
+  }
+
+  var reverseIndex = +index;
+  for (var deltaIndex in delta) {
+    var deltaItem = delta[deltaIndex];
+    if (isArray(deltaItem)) {
+      if (deltaItem[2] === ARRAY_MOVE) {
+        var moveFromIndex = parseInt(deltaIndex.substr(1), 10);
+        var moveToIndex = deltaItem[1];
+        if (moveToIndex === +index) {
+          return moveFromIndex;
+        }
+        if (moveFromIndex <= reverseIndex && moveToIndex > reverseIndex) {
+          reverseIndex++;
+        } else if (moveFromIndex >= reverseIndex && moveToIndex < reverseIndex) {
+          reverseIndex--;
+        }
+      } else if (deltaItem[2] === 0) {
+        var deleteIndex = parseInt(deltaIndex.substr(1), 10);
+        if (deleteIndex <= reverseIndex) {
+          reverseIndex++;
+        }
+      } else if (deltaItem.length === 1 && deltaIndex <= reverseIndex) {
+        reverseIndex--;
+      }
+    }
+  }
+
+  return reverseIndex;
+};
+
+var collectChildrenReverseFilter = function collectChildrenReverseFilter(context) {
+  if (!context || !context.children) {
+    return;
+  }
+  if (context.delta._t !== 'a') {
+    return;
+  }
+  var length = context.children.length;
+  var child;
+  var delta = {
+    _t: 'a'
+  };
+
+  for (var index = 0; index < length; index++) {
+    child = context.children[index];
+    var name = child.newName;
+    if (typeof name === 'undefined') {
+      name = reverseArrayDeltaIndex(context.delta, child.childName, child.result);
+    }
+    if (delta[name] !== child.result) {
+      delta[name] = child.result;
+    }
+  }
+  context.setResult(delta).exit();
+};
+collectChildrenReverseFilter.filterName = 'arraysCollectChildren';
+
+exports.diffFilter = diffFilter;
+exports.patchFilter = patchFilter;
+exports.collectChildrenPatchFilter = collectChildrenPatchFilter;
+exports.reverseFilter = reverseFilter;
+exports.collectChildrenReverseFilter = collectChildrenReverseFilter;
+
+},{"../contexts/diff":12,"../contexts/patch":13,"../contexts/reverse":14,"./lcs":20}],19:[function(require,module,exports){
+var diffFilter = function datesDiffFilter(context) {
+  if (context.left instanceof Date) {
+    if (context.right instanceof Date) {
+      if (context.left.getTime() !== context.right.getTime()) {
+        context.setResult([context.left, context.right]);
+      } else {
+        context.setResult(undefined);
+      }
+    } else {
+      context.setResult([context.left, context.right]);
+    }
+    context.exit();
+  } else if (context.right instanceof Date) {
+    context.setResult([context.left, context.right]).exit();
+  }
+};
+diffFilter.filterName = 'dates';
+
+exports.diffFilter = diffFilter;
+
+},{}],20:[function(require,module,exports){
+/*
+
+LCS implementation that supports arrays or strings
+
+reference: http://en.wikipedia.org/wiki/Longest_common_subsequence_problem
+
+*/
+
+var defaultMatch = function(array1, array2, index1, index2) {
+  return array1[index1] === array2[index2];
+};
+
+var lengthMatrix = function(array1, array2, match, context) {
+  var len1 = array1.length;
+  var len2 = array2.length;
+  var x, y;
+
+  // initialize empty matrix of len1+1 x len2+1
+  var matrix = [len1 + 1];
+  for (x = 0; x < len1 + 1; x++) {
+    matrix[x] = [len2 + 1];
+    for (y = 0; y < len2 + 1; y++) {
+      matrix[x][y] = 0;
+    }
+  }
+  matrix.match = match;
+  // save sequence lengths for each coordinate
+  for (x = 1; x < len1 + 1; x++) {
+    for (y = 1; y < len2 + 1; y++) {
+      if (match(array1, array2, x - 1, y - 1, context)) {
+        matrix[x][y] = matrix[x - 1][y - 1] + 1;
+      } else {
+        matrix[x][y] = Math.max(matrix[x - 1][y], matrix[x][y - 1]);
+      }
+    }
+  }
+  return matrix;
+};
+
+var backtrack = function(matrix, array1, array2, index1, index2, context) {
+  if (index1 === 0 || index2 === 0) {
+    return {
+      sequence: [],
+      indices1: [],
+      indices2: []
+    };
+  }
+
+  if (matrix.match(array1, array2, index1 - 1, index2 - 1, context)) {
+    var subsequence = backtrack(matrix, array1, array2, index1 - 1, index2 - 1, context);
+    subsequence.sequence.push(array1[index1 - 1]);
+    subsequence.indices1.push(index1 - 1);
+    subsequence.indices2.push(index2 - 1);
+    return subsequence;
+  }
+
+  if (matrix[index1][index2 - 1] > matrix[index1 - 1][index2]) {
+    return backtrack(matrix, array1, array2, index1, index2 - 1, context);
+  } else {
+    return backtrack(matrix, array1, array2, index1 - 1, index2, context);
+  }
+};
+
+var get = function(array1, array2, match, context) {
+  context = context || {};
+  var matrix = lengthMatrix(array1, array2, match || defaultMatch, context);
+  var result = backtrack(matrix, array1, array2, array1.length, array2.length, context);
+  if (typeof array1 === 'string' && typeof array2 === 'string') {
+    result.sequence = result.sequence.join('');
+  }
+  return result;
+};
+
+exports.get = get;
+
+},{}],21:[function(require,module,exports){
+var DiffContext = require('../contexts/diff').DiffContext;
+var PatchContext = require('../contexts/patch').PatchContext;
+var ReverseContext = require('../contexts/reverse').ReverseContext;
+
+var collectChildrenDiffFilter = function collectChildrenDiffFilter(context) {
+  if (!context || !context.children) {
+    return;
+  }
+  var length = context.children.length;
+  var child;
+  var result = context.result;
+  for (var index = 0; index < length; index++) {
+    child = context.children[index];
+    if (typeof child.result === 'undefined') {
+      continue;
+    }
+    result = result || {};
+    result[child.childName] = child.result;
+  }
+  if (result && context.leftIsArray) {
+    result._t = 'a';
+  }
+  context.setResult(result).exit();
+};
+collectChildrenDiffFilter.filterName = 'collectChildren';
+
+var objectsDiffFilter = function objectsDiffFilter(context) {
+  if (context.leftIsArray || context.leftType !== 'object') {
+    return;
+  }
+
+  var name, child;
+  for (name in context.left) {
+    child = new DiffContext(context.left[name], context.right[name]);
+    context.push(child, name);
+  }
+  for (name in context.right) {
+    if (typeof context.left[name] === 'undefined') {
+      child = new DiffContext(undefined, context.right[name]);
+      context.push(child, name);
+    }
+  }
+
+  if (!context.children || context.children.length === 0) {
+    context.setResult(undefined).exit();
+    return;
+  }
+  context.exit();
+};
+objectsDiffFilter.filterName = 'objects';
+
+var patchFilter = function nestedPatchFilter(context) {
+  if (!context.nested) {
+    return;
+  }
+  if (context.delta._t) {
+    return;
+  }
+  var name, child;
+  for (name in context.delta) {
+    child = new PatchContext(context.left[name], context.delta[name]);
+    context.push(child, name);
+  }
+  context.exit();
+};
+patchFilter.filterName = 'objects';
+
+var collectChildrenPatchFilter = function collectChildrenPatchFilter(context) {
+  if (!context || !context.children) {
+    return;
+  }
+  if (context.delta._t) {
+    return;
+  }
+  var length = context.children.length;
+  var child;
+  for (var index = 0; index < length; index++) {
+    child = context.children[index];
+    if (context.left.hasOwnProperty(child.childName) && child.result === undefined) {
+      delete context.left[child.childName];
+    } else if (context.left[child.childName] !== child.result) {
+      context.left[child.childName] = child.result;
+    }
+  }
+  context.setResult(context.left).exit();
+};
+collectChildrenPatchFilter.filterName = 'collectChildren';
+
+var reverseFilter = function nestedReverseFilter(context) {
+  if (!context.nested) {
+    return;
+  }
+  if (context.delta._t) {
+    return;
+  }
+  var name, child;
+  for (name in context.delta) {
+    child = new ReverseContext(context.delta[name]);
+    context.push(child, name);
+  }
+  context.exit();
+};
+reverseFilter.filterName = 'objects';
+
+var collectChildrenReverseFilter = function collectChildrenReverseFilter(context) {
+  if (!context || !context.children) {
+    return;
+  }
+  if (context.delta._t) {
+    return;
+  }
+  var length = context.children.length;
+  var child;
+  var delta = {};
+  for (var index = 0; index < length; index++) {
+    child = context.children[index];
+    if (delta[child.childName] !== child.result) {
+      delta[child.childName] = child.result;
+    }
+  }
+  context.setResult(delta).exit();
+};
+collectChildrenReverseFilter.filterName = 'collectChildren';
+
+exports.collectChildrenDiffFilter = collectChildrenDiffFilter;
+exports.objectsDiffFilter = objectsDiffFilter;
+exports.patchFilter = patchFilter;
+exports.collectChildrenPatchFilter = collectChildrenPatchFilter;
+exports.reverseFilter = reverseFilter;
+exports.collectChildrenReverseFilter = collectChildrenReverseFilter;
+
+},{"../contexts/diff":12,"../contexts/patch":13,"../contexts/reverse":14}],22:[function(require,module,exports){
+/* global diff_match_patch */
+var TEXT_DIFF = 2;
+var DEFAULT_MIN_LENGTH = 60;
+var cachedDiffPatch = null;
+
+var getDiffMatchPatch = function() {
+  /*jshint camelcase: false */
+
+  if (!cachedDiffPatch) {
+    var instance;
+    if (typeof diff_match_patch !== 'undefined') {
+      // already loaded, probably a browser
+      instance = typeof diff_match_patch === 'function' ?
+        new diff_match_patch() : new diff_match_patch.diff_match_patch();
+    } else if (typeof require === 'function') {
+      try {
+        var dmpModuleName = 'diff_match_patch_uncompressed';
+        var dmp = require('../../public/external/' + dmpModuleName);
+        instance = new dmp.diff_match_patch();
+      } catch (err) {
+        instance = null;
+      }
+    }
+    if (!instance) {
+      var error = new Error('text diff_match_patch library not found');
+      error.diff_match_patch_not_found = true;
+      throw error;
+    }
+    cachedDiffPatch = {
+      diff: function(txt1, txt2) {
+        return instance.patch_toText(instance.patch_make(txt1, txt2));
+      },
+      patch: function(txt1, patch) {
+        var results = instance.patch_apply(instance.patch_fromText(patch), txt1);
+        for (var i = 0; i < results[1].length; i++) {
+          if (!results[1][i]) {
+            var error = new Error('text patch failed');
+            error.textPatchFailed = true;
+          }
+        }
+        return results[0];
+      }
+    };
+  }
+  return cachedDiffPatch;
+};
+
+var diffFilter = function textsDiffFilter(context) {
+  if (context.leftType !== 'string') {
+    return;
+  }
+  var minLength = (context.options && context.options.textDiff &&
+    context.options.textDiff.minLength) || DEFAULT_MIN_LENGTH;
+  if (context.left.length < minLength ||
+    context.right.length < minLength) {
+    context.setResult([context.left, context.right]).exit();
+    return;
+  }
+  // large text, use a text-diff algorithm
+  var diff = getDiffMatchPatch().diff;
+  context.setResult([diff(context.left, context.right), 0, TEXT_DIFF]).exit();
+};
+diffFilter.filterName = 'texts';
+
+var patchFilter = function textsPatchFilter(context) {
+  if (context.nested) {
+    return;
+  }
+  if (context.delta[2] !== TEXT_DIFF) {
+    return;
+  }
+
+  // text-diff, use a text-patch algorithm
+  var patch = getDiffMatchPatch().patch;
+  context.setResult(patch(context.left, context.delta[0])).exit();
+};
+patchFilter.filterName = 'texts';
+
+var textDeltaReverse = function(delta) {
+  var i, l, lines, line, lineTmp, header = null,
+    headerRegex = /^@@ +\-(\d+),(\d+) +\+(\d+),(\d+) +@@$/,
+    lineHeader, lineAdd, lineRemove;
+  lines = delta.split('\n');
+  for (i = 0, l = lines.length; i < l; i++) {
+    line = lines[i];
+    var lineStart = line.slice(0, 1);
+    if (lineStart === '@') {
+      header = headerRegex.exec(line);
+      lineHeader = i;
+      lineAdd = null;
+      lineRemove = null;
+
+      // fix header
+      lines[lineHeader] = '@@ -' + header[3] + ',' + header[4] + ' +' + header[1] + ',' + header[2] + ' @@';
+    } else if (lineStart === '+') {
+      lineAdd = i;
+      lines[i] = '-' + lines[i].slice(1);
+      if (lines[i - 1].slice(0, 1) === '+') {
+        // swap lines to keep default order (-+)
+        lineTmp = lines[i];
+        lines[i] = lines[i - 1];
+        lines[i - 1] = lineTmp;
+      }
+    } else if (lineStart === '-') {
+      lineRemove = i;
+      lines[i] = '+' + lines[i].slice(1);
+    }
+  }
+  return lines.join('\n');
+};
+
+var reverseFilter = function textsReverseFilter(context) {
+  if (context.nested) {
+    return;
+  }
+  if (context.delta[2] !== TEXT_DIFF) {
+    return;
+  }
+
+  // text-diff, use a text-diff algorithm
+  context.setResult([textDeltaReverse(context.delta[0]), 0, TEXT_DIFF]).exit();
+};
+reverseFilter.filterName = 'texts';
+
+exports.diffFilter = diffFilter;
+exports.patchFilter = patchFilter;
+exports.reverseFilter = reverseFilter;
+
+},{}],23:[function(require,module,exports){
+var isArray = (typeof Array.isArray === 'function') ?
+  // use native function
+  Array.isArray :
+  // use instanceof operator
+  function(a) {
+    return a instanceof Array;
+  };
+
+var diffFilter = function trivialMatchesDiffFilter(context) {
+  if (context.left === context.right) {
+    context.setResult(undefined).exit();
+    return;
+  }
+  if (typeof context.left === 'undefined') {
+    if (typeof context.right === 'function') {
+      throw new Error('functions are not supported');
+    }
+    context.setResult([context.right]).exit();
+    return;
+  }
+  if (typeof context.right === 'undefined') {
+    context.setResult([context.left, 0, 0]).exit();
+    return;
+  }
+  if (typeof context.left === 'function' || typeof context.right === 'function') {
+    throw new Error('functions are not supported');
+  }
+  context.leftType = context.left === null ? 'null' : typeof context.left;
+  context.rightType = context.right === null ? 'null' : typeof context.right;
+  if (context.leftType !== context.rightType) {
+    context.setResult([context.left, context.right]).exit();
+    return;
+  }
+  if (context.leftType === 'boolean' || context.leftType === 'number') {
+    context.setResult([context.left, context.right]).exit();
+    return;
+  }
+  if (context.leftType === 'object') {
+    context.leftIsArray = isArray(context.left);
+  }
+  if (context.rightType === 'object') {
+    context.rightIsArray = isArray(context.right);
+  }
+  if (context.leftIsArray !== context.rightIsArray) {
+    context.setResult([context.left, context.right]).exit();
+    return;
+  }
+};
+diffFilter.filterName = 'trivial';
+
+var patchFilter = function trivialMatchesPatchFilter(context) {
+  if (typeof context.delta === 'undefined') {
+    context.setResult(context.left).exit();
+    return;
+  }
+  context.nested = !isArray(context.delta);
+  if (context.nested) {
+    return;
+  }
+  if (context.delta.length === 1) {
+    context.setResult(context.delta[0]).exit();
+    return;
+  }
+  if (context.delta.length === 2) {
+    context.setResult(context.delta[1]).exit();
+    return;
+  }
+  if (context.delta.length === 3 && context.delta[2] === 0) {
+    context.setResult(undefined).exit();
+    return;
+  }
+};
+patchFilter.filterName = 'trivial';
+
+var reverseFilter = function trivialReferseFilter(context) {
+  if (typeof context.delta === 'undefined') {
+    context.setResult(context.delta).exit();
+    return;
+  }
+  context.nested = !isArray(context.delta);
+  if (context.nested) {
+    return;
+  }
+  if (context.delta.length === 1) {
+    context.setResult([context.delta[0], 0, 0]).exit();
+    return;
+  }
+  if (context.delta.length === 2) {
+    context.setResult([context.delta[1], context.delta[0]]).exit();
+    return;
+  }
+  if (context.delta.length === 3 && context.delta[2] === 0) {
+    context.setResult([context.delta[0]]).exit();
+    return;
+  }
+};
+reverseFilter.filterName = 'trivial';
+
+exports.diffFilter = diffFilter;
+exports.patchFilter = patchFilter;
+exports.reverseFilter = reverseFilter;
+
+},{}],24:[function(require,module,exports){
+
+var environment = require('./environment');
+
+var DiffPatcher = require('./diffpatcher').DiffPatcher;
+exports.DiffPatcher = DiffPatcher;
+
+exports.create = function(options){
+	return new DiffPatcher(options);
+};
+
+exports.dateReviver = require('./date-reviver');
+
+var defaultInstance;
+
+exports.diff = function() {
+	if (!defaultInstance) {
+		defaultInstance = new DiffPatcher();
+	}
+	return defaultInstance.diff.apply(defaultInstance, arguments);
+};
+
+exports.patch = function() {
+	if (!defaultInstance) {
+		defaultInstance = new DiffPatcher();
+	}
+	return defaultInstance.patch.apply(defaultInstance, arguments);
+};
+
+exports.unpatch = function() {
+	if (!defaultInstance) {
+		defaultInstance = new DiffPatcher();
+	}
+	return defaultInstance.unpatch.apply(defaultInstance, arguments);
+};
+
+exports.reverse = function() {
+	if (!defaultInstance) {
+		defaultInstance = new DiffPatcher();
+	}
+	return defaultInstance.reverse.apply(defaultInstance, arguments);
+};
+
+if (environment.isBrowser) {
+	exports.homepage = '{{package-homepage}}';
+	exports.version = '{{package-version}}';
+} else {
+	var packageInfoModuleName = '../package.json';
+	var packageInfo = require(packageInfoModuleName);
+	exports.homepage = packageInfo.homepage;
+	exports.version = packageInfo.version;
+
+	var formatterModuleName = './formatters';
+	var formatters = require(formatterModuleName);
+	exports.formatters = formatters;
+	// shortcut for console
+	exports.console = formatters.console;
+}
+
+},{"./date-reviver":15,"./diffpatcher":16,"./environment":17}],25:[function(require,module,exports){
+var Pipe = function Pipe(name) {
+  this.name = name;
+  this.filters = [];
+};
+
+Pipe.prototype.process = function(input) {
+  if (!this.processor) {
+    throw new Error('add this pipe to a processor before using it');
+  }
+  var debug = this.debug;
+  var length = this.filters.length;
+  var context = input;
+  for (var index = 0; index < length; index++) {
+    var filter = this.filters[index];
+    if (debug) {
+      this.log('filter: ' + filter.filterName);
+    }
+    filter(context);
+    if (typeof context === 'object' && context.exiting) {
+      context.exiting = false;
+      break;
+    }
+  }
+  if (!context.next && this.resultCheck) {
+    this.resultCheck(context);
+  }
+};
+
+Pipe.prototype.log = function(msg) {
+  console.log('[jsondiffpatch] ' + this.name + ' pipe, ' + msg);
+};
+
+Pipe.prototype.append = function() {
+  this.filters.push.apply(this.filters, arguments);
+  return this;
+};
+
+Pipe.prototype.prepend = function() {
+  this.filters.unshift.apply(this.filters, arguments);
+  return this;
+};
+
+Pipe.prototype.indexOf = function(filterName) {
+  if (!filterName) {
+    throw new Error('a filter name is required');
+  }
+  for (var index = 0; index < this.filters.length; index++) {
+    var filter = this.filters[index];
+    if (filter.filterName === filterName) {
+      return index;
+    }
+  }
+  throw new Error('filter not found: ' + filterName);
+};
+
+Pipe.prototype.list = function() {
+  var names = [];
+  for (var index = 0; index < this.filters.length; index++) {
+    var filter = this.filters[index];
+    names.push(filter.filterName);
+  }
+  return names;
+};
+
+Pipe.prototype.after = function(filterName) {
+  var index = this.indexOf(filterName);
+  var params = Array.prototype.slice.call(arguments, 1);
+  if (!params.length) {
+    throw new Error('a filter is required');
+  }
+  params.unshift(index + 1, 0);
+  Array.prototype.splice.apply(this.filters, params);
+  return this;
+};
+
+Pipe.prototype.before = function(filterName) {
+  var index = this.indexOf(filterName);
+  var params = Array.prototype.slice.call(arguments, 1);
+  if (!params.length) {
+    throw new Error('a filter is required');
+  }
+  params.unshift(index, 0);
+  Array.prototype.splice.apply(this.filters, params);
+  return this;
+};
+
+Pipe.prototype.clear = function() {
+  this.filters.length = 0;
+  return this;
+};
+
+Pipe.prototype.shouldHaveResult = function(should) {
+  if (should === false) {
+    this.resultCheck = null;
+    return;
+  }
+  if (this.resultCheck) {
+    return;
+  }
+  var pipe = this;
+  this.resultCheck = function(context) {
+    if (!context.hasResult) {
+      console.log(context);
+      var error = new Error(pipe.name + ' failed');
+      error.noResult = true;
+      throw error;
+    }
+  };
+  return this;
+};
+
+exports.Pipe = Pipe;
+
+},{}],26:[function(require,module,exports){
+
+var Processor = function Processor(options){
+	this.selfOptions = options;
+	this.pipes = {};
+};
+
+Processor.prototype.options = function(options) {
+	if (options) {
+		this.selfOptions = options;
+	}
+	return this.selfOptions;
+};
+
+Processor.prototype.pipe = function(name, pipe) {
+	if (typeof name === 'string') {
+		if (typeof pipe === 'undefined') {
+			return this.pipes[name];
+		} else {
+			this.pipes[name] = pipe;
+		}
+	}
+	if (name && name.name) {
+		pipe = name;
+		if (pipe.processor === this) { return pipe; }
+		this.pipes[pipe.name] = pipe;
+	}
+	pipe.processor = this;
+	return pipe;
+};
+
+Processor.prototype.process = function(input, pipe) {
+	var context = input;
+	context.options = this.options();
+	var nextPipe = pipe || input.pipe || 'default';
+	var lastPipe, lastContext;
+	while (nextPipe) {
+		if (typeof context.nextAfterChildren !== 'undefined') {
+			// children processed and coming back to parent
+			context.next = context.nextAfterChildren;
+			context.nextAfterChildren = null;
+		}
+
+		if (typeof nextPipe === 'string') {
+			nextPipe = this.pipe(nextPipe);
+		}
+		nextPipe.process(context);
+		lastContext = context;
+		lastPipe = nextPipe;
+		nextPipe = null;
+		if (context) {
+			if (context.next) {
+				context = context.next;
+				nextPipe = lastContext.nextPipe || context.pipe || lastPipe;
+			}
+		}
+	}
+	return context.hasResult ? context.result : undefined;
+};
+
+exports.Processor = Processor;
+
+},{}],27:[function(require,module,exports){
 /*
 * loglevel - https://github.com/pimterry/loglevel
 *
@@ -1755,7 +3152,7 @@ process.umask = function() { return 0; };
     return self;
 }));
 
-},{}],12:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 "use strict";
 
 var utils = require('./utils');
@@ -2540,7 +3937,7 @@ AbstractPouchDB.prototype.destroy =
   });
 });
 
-},{"./changes":24,"./deps/errors":30,"./deps/upsert":38,"./merge":43,"./utils":48,"events":7}],13:[function(require,module,exports){
+},{"./changes":40,"./deps/errors":46,"./deps/upsert":54,"./merge":59,"./utils":64,"events":7}],29:[function(require,module,exports){
 (function (process){
 "use strict";
 
@@ -3595,7 +4992,7 @@ HttpPouch.valid = function () {
 module.exports = HttpPouch;
 
 }).call(this,require('_process'))
-},{"../../deps/buffer":29,"../../deps/errors":30,"../../utils":48,"_process":8,"debug":51}],14:[function(require,module,exports){
+},{"../../deps/buffer":45,"../../deps/errors":46,"../../utils":64,"_process":8,"debug":67}],30:[function(require,module,exports){
 'use strict';
 
 var merge = require('../../merge');
@@ -3780,7 +5177,7 @@ function idbAllDocs(opts, api, idb, callback) {
 }
 
 module.exports = idbAllDocs;
-},{"../../deps/errors":30,"../../merge":43,"./idb-constants":17,"./idb-utils":18}],15:[function(require,module,exports){
+},{"../../deps/errors":46,"../../merge":59,"./idb-constants":33,"./idb-utils":34}],31:[function(require,module,exports){
 'use strict';
 
 var utils = require('../../utils');
@@ -3844,7 +5241,7 @@ function checkBlobSupport(txn, idb) {
 }
 
 module.exports = checkBlobSupport;
-},{"../../utils":48,"./idb-constants":17}],16:[function(require,module,exports){
+},{"../../utils":64,"./idb-constants":33}],32:[function(require,module,exports){
 'use strict';
 
 var utils = require('../../utils');
@@ -4207,7 +5604,7 @@ function idbBulkDocs(req, opts, api, idb, Changes, callback) {
 }
 
 module.exports = idbBulkDocs;
-},{"../../deps/errors":30,"../../utils":48,"./idb-constants":17,"./idb-utils":18}],17:[function(require,module,exports){
+},{"../../deps/errors":46,"../../utils":64,"./idb-constants":33,"./idb-utils":34}],33:[function(require,module,exports){
 'use strict';
 
 // IndexedDB requires a versioned database structure, so we use the
@@ -4234,7 +5631,7 @@ exports.META_STORE = 'meta-store';
 exports.LOCAL_STORE = 'local-store';
 // Where we detect blob support
 exports.DETECT_BLOB_SUPPORT_STORE = 'detect-blob-support';
-},{}],18:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -4480,7 +5877,7 @@ exports.openTransactionSafely = function (idb, stores, mode) {
   }
 };
 }).call(this,require('_process'))
-},{"../../deps/errors":30,"../../utils":48,"./idb-constants":17,"_process":8}],19:[function(require,module,exports){
+},{"../../deps/errors":46,"../../utils":64,"./idb-constants":33,"_process":8}],35:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -5435,7 +6832,7 @@ IdbPouch.Changes = new utils.Changes();
 module.exports = IdbPouch;
 
 }).call(this,require('_process'))
-},{"../../deps/errors":30,"../../merge":43,"../../utils":48,"./idb-all-docs":14,"./idb-blob-support":15,"./idb-bulk-docs":16,"./idb-constants":17,"./idb-utils":18,"_process":8}],20:[function(require,module,exports){
+},{"../../deps/errors":46,"../../merge":59,"../../utils":64,"./idb-all-docs":30,"./idb-blob-support":31,"./idb-bulk-docs":32,"./idb-constants":33,"./idb-utils":34,"_process":8}],36:[function(require,module,exports){
 'use strict';
 
 var utils = require('../../utils');
@@ -5760,7 +7157,7 @@ function websqlBulkDocs(req, opts, api, db, Changes, callback) {
 
 module.exports = websqlBulkDocs;
 
-},{"../../deps/errors":30,"../../utils":48,"./websql-constants":21,"./websql-utils":22}],21:[function(require,module,exports){
+},{"../../deps/errors":46,"../../utils":64,"./websql-constants":37,"./websql-utils":38}],37:[function(require,module,exports){
 'use strict';
 
 function quote(str) {
@@ -5784,7 +7181,7 @@ exports.META_STORE = quote('metadata-store');
 exports.ATTACH_AND_SEQ_STORE = quote('attach-seq-store');
 
 
-},{}],22:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 'use strict';
 
 var utils = require('../../utils');
@@ -6013,7 +7410,7 @@ module.exports = {
   openDB: openDB,
   valid: valid
 };
-},{"../../deps/errors":30,"../../utils":48,"./websql-constants":21}],23:[function(require,module,exports){
+},{"../../deps/errors":46,"../../utils":64,"./websql-constants":37}],39:[function(require,module,exports){
 'use strict';
 
 var utils = require('../../utils');
@@ -7022,7 +8419,7 @@ WebSqlPouch.Changes = new utils.Changes();
 
 module.exports = WebSqlPouch;
 
-},{"../../deps/errors":30,"../../deps/parse-hex":34,"../../merge":43,"../../utils":48,"./websql-bulk-docs":20,"./websql-constants":21,"./websql-utils":22}],24:[function(require,module,exports){
+},{"../../deps/errors":46,"../../deps/parse-hex":50,"../../merge":59,"../../utils":64,"./websql-bulk-docs":36,"./websql-constants":37,"./websql-utils":38}],40:[function(require,module,exports){
 'use strict';
 var utils = require('./utils');
 var merge = require('./merge');
@@ -7278,7 +8675,7 @@ Changes.prototype.filterChanges = function (opts) {
     });
   }
 };
-},{"./deps/errors":30,"./evalFilter":40,"./evalView":41,"./merge":43,"./utils":48,"events":7}],25:[function(require,module,exports){
+},{"./deps/errors":46,"./evalFilter":56,"./evalView":57,"./merge":59,"./utils":64,"events":7}],41:[function(require,module,exports){
 'use strict';
 
 var Promise = require('./deps/promise');
@@ -7381,7 +8778,7 @@ Checkpointer.prototype.getCheckpoint = function () {
 
 module.exports = Checkpointer;
 
-},{"./deps/explain404":31,"./deps/promise":36,"pouchdb-collate":73}],26:[function(require,module,exports){
+},{"./deps/explain404":47,"./deps/promise":52,"pouchdb-collate":89}],42:[function(require,module,exports){
 (function (process,global){
 /*globals cordova */
 "use strict";
@@ -7545,7 +8942,7 @@ PouchDB.debug = require('debug');
 module.exports = PouchDB;
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./adapter":12,"./taskqueue":47,"./utils":48,"_process":8,"debug":51}],27:[function(require,module,exports){
+},{"./adapter":28,"./taskqueue":63,"./utils":64,"_process":8,"debug":67}],43:[function(require,module,exports){
 (function (process){
 "use strict";
 
@@ -7686,7 +9083,7 @@ function ajax(options, adapterCallback) {
 module.exports = ajax;
 
 }).call(this,require('_process'))
-},{"../utils":48,"./buffer":29,"./errors":30,"_process":8,"request":37}],28:[function(require,module,exports){
+},{"../utils":64,"./buffer":45,"./errors":46,"_process":8,"request":53}],44:[function(require,module,exports){
 (function (global){
 "use strict";
 
@@ -7718,10 +9115,10 @@ module.exports = createBlob;
 
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],29:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 // hey guess what, we don't need this in the browser
 module.exports = {};
-},{}],30:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 "use strict";
 
 var inherits = require('inherits');
@@ -7983,7 +9380,7 @@ exports.generateErrorFromResponse = function (res) {
   return error;
 };
 
-},{"inherits":54}],31:[function(require,module,exports){
+},{"inherits":70}],47:[function(require,module,exports){
 (function (process,global){
 'use strict';
 
@@ -7997,7 +9394,7 @@ function explain404(str) {
 
 module.exports = explain404;
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"_process":8}],32:[function(require,module,exports){
+},{"_process":8}],48:[function(require,module,exports){
 (function (process,global){
 'use strict';
 
@@ -8080,7 +9477,7 @@ module.exports = function (data, callback) {
 };
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"_process":8,"crypto":6,"spark-md5":84}],33:[function(require,module,exports){
+},{"_process":8,"crypto":6,"spark-md5":100}],49:[function(require,module,exports){
 'use strict';
 
 var errors = require('./errors');
@@ -8248,7 +9645,7 @@ exports.parseDoc = function (doc, newEdits) {
   }
   return result;
 };
-},{"./errors":30,"./uuid":39}],34:[function(require,module,exports){
+},{"./errors":46,"./uuid":55}],50:[function(require,module,exports){
 'use strict';
 
 //
@@ -8316,7 +9713,7 @@ function parseHexString(str, encoding) {
 }
 
 module.exports = parseHexString;
-},{}],35:[function(require,module,exports){
+},{}],51:[function(require,module,exports){
 'use strict';
 
 // originally parseUri 1.2.2, now patched by us
@@ -8362,7 +9759,7 @@ function parseUri(str) {
 
 
 module.exports = parseUri;
-},{}],36:[function(require,module,exports){
+},{}],52:[function(require,module,exports){
 'use strict';
 
 if (typeof Promise === 'function') {
@@ -8370,7 +9767,7 @@ if (typeof Promise === 'function') {
 } else {
   module.exports = require('bluebird');
 }
-},{"bluebird":58}],37:[function(require,module,exports){
+},{"bluebird":74}],53:[function(require,module,exports){
 /* global fetch */
 /* global Headers */
 'use strict';
@@ -8594,7 +9991,7 @@ module.exports = function(options, callback) {
   }
 };
 
-},{"../utils":48,"./blob.js":28}],38:[function(require,module,exports){
+},{"../utils":64,"./blob.js":44}],54:[function(require,module,exports){
 'use strict';
 
 var upsert = require('pouchdb-upsert').upsert;
@@ -8603,7 +10000,7 @@ module.exports = function (db, doc, diffFun, cb) {
   return upsert.call(db, doc, diffFun, cb);
 };
 
-},{"pouchdb-upsert":83}],39:[function(require,module,exports){
+},{"pouchdb-upsert":99}],55:[function(require,module,exports){
 "use strict";
 
 // BEGIN Math.uuid.js
@@ -8688,7 +10085,7 @@ function uuid(len, radix) {
 module.exports = uuid;
 
 
-},{}],40:[function(require,module,exports){
+},{}],56:[function(require,module,exports){
 'use strict';
 
 module.exports = evalFilter;
@@ -8700,7 +10097,7 @@ function evalFilter(input) {
     ' })()'
   ].join(''));
 }
-},{}],41:[function(require,module,exports){
+},{}],57:[function(require,module,exports){
 'use strict';
 
 module.exports = evalView;
@@ -8722,7 +10119,7 @@ function evalView(input) {
     '})()'
   ].join('\n'));
 }
-},{}],42:[function(require,module,exports){
+},{}],58:[function(require,module,exports){
 (function (process){
 "use strict";
 
@@ -8750,7 +10147,7 @@ if (!process.browser) {
 }
 
 }).call(this,require('_process'))
-},{"./adapters/http/http":13,"./adapters/idb/idb":19,"./adapters/leveldb/leveldb":6,"./adapters/websql/websql":23,"./deps/ajax":27,"./deps/errors":30,"./replicate":44,"./setup":45,"./sync":46,"./utils":48,"./version":49,"_process":8,"pouchdb-mapreduce":79}],43:[function(require,module,exports){
+},{"./adapters/http/http":29,"./adapters/idb/idb":35,"./adapters/leveldb/leveldb":6,"./adapters/websql/websql":39,"./deps/ajax":43,"./deps/errors":46,"./replicate":60,"./setup":61,"./sync":62,"./utils":64,"./version":65,"_process":8,"pouchdb-mapreduce":95}],59:[function(require,module,exports){
 'use strict';
 var extend = require('pouchdb-extend');
 
@@ -9052,7 +10449,7 @@ PouchMerge.rootToLeaf = function (tree) {
 
 module.exports = PouchMerge;
 
-},{"pouchdb-extend":76}],44:[function(require,module,exports){
+},{"pouchdb-extend":92}],60:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -9683,7 +11080,7 @@ function replicateWrapper(src, target, opts, callback) {
   return replicateRet;
 }
 
-},{"./checkpointer":25,"./utils":48,"events":7}],45:[function(require,module,exports){
+},{"./checkpointer":41,"./utils":64,"events":7}],61:[function(require,module,exports){
 "use strict";
 
 var PouchDB = require("./constructor");
@@ -9845,7 +11242,7 @@ PouchDB.defaults = function (defaultOpts) {
 
 module.exports = PouchDB;
 
-},{"./constructor":26,"./utils":48,"events":7}],46:[function(require,module,exports){
+},{"./constructor":42,"./utils":64,"events":7}],62:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -10031,7 +11428,7 @@ Sync.prototype.cancel = function () {
   }
 };
 
-},{"./replicate":44,"./utils":48,"events":7}],47:[function(require,module,exports){
+},{"./replicate":60,"./utils":64,"events":7}],63:[function(require,module,exports){
 'use strict';
 
 module.exports = TaskQueue;
@@ -10101,7 +11498,7 @@ TaskQueue.prototype.addTask = function (name, parameters) {
   }
 };
 
-},{}],48:[function(require,module,exports){
+},{}],64:[function(require,module,exports){
 (function (process){
 /*jshint strict: false */
 /*global chrome */
@@ -10918,10 +12315,10 @@ exports.safeJsonStringify = function safeJsonStringify(json) {
 };
 
 }).call(this,require('_process'))
-},{"./deps/ajax":27,"./deps/blob":28,"./deps/buffer":29,"./deps/errors":30,"./deps/explain404":31,"./deps/md5":32,"./deps/parse-doc":33,"./deps/parse-uri":35,"./deps/promise":36,"./deps/uuid":39,"./merge":43,"_process":8,"argsarray":50,"debug":51,"events":7,"inherits":54,"pouchdb-collections":75,"pouchdb-extend":76,"vuvuzela":85}],49:[function(require,module,exports){
+},{"./deps/ajax":43,"./deps/blob":44,"./deps/buffer":45,"./deps/errors":46,"./deps/explain404":47,"./deps/md5":48,"./deps/parse-doc":49,"./deps/parse-uri":51,"./deps/promise":52,"./deps/uuid":55,"./merge":59,"_process":8,"argsarray":66,"debug":67,"events":7,"inherits":70,"pouchdb-collections":91,"pouchdb-extend":92,"vuvuzela":101}],65:[function(require,module,exports){
 module.exports = "3.5.0";
 
-},{}],50:[function(require,module,exports){
+},{}],66:[function(require,module,exports){
 'use strict';
 
 module.exports = argsArray;
@@ -10941,7 +12338,7 @@ function argsArray(fun) {
     }
   };
 }
-},{}],51:[function(require,module,exports){
+},{}],67:[function(require,module,exports){
 
 /**
  * This is the web browser implementation of `debug()`.
@@ -11111,7 +12508,7 @@ function localstorage(){
   } catch (e) {}
 }
 
-},{"./debug":52}],52:[function(require,module,exports){
+},{"./debug":68}],68:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -11310,7 +12707,7 @@ function coerce(val) {
   return val;
 }
 
-},{"ms":53}],53:[function(require,module,exports){
+},{"ms":69}],69:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -11437,7 +12834,7 @@ function plural(ms, n, name) {
   return Math.ceil(ms / n) + ' ' + name + 's';
 }
 
-},{}],54:[function(require,module,exports){
+},{}],70:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -11462,13 +12859,13 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],55:[function(require,module,exports){
+},{}],71:[function(require,module,exports){
 'use strict';
 
 module.exports = INTERNAL;
 
 function INTERNAL() {}
-},{}],56:[function(require,module,exports){
+},{}],72:[function(require,module,exports){
 'use strict';
 var Promise = require('./promise');
 var reject = require('./reject');
@@ -11512,7 +12909,7 @@ function all(iterable) {
     }
   }
 }
-},{"./INTERNAL":55,"./handlers":57,"./promise":59,"./reject":62,"./resolve":63}],57:[function(require,module,exports){
+},{"./INTERNAL":71,"./handlers":73,"./promise":75,"./reject":78,"./resolve":79}],73:[function(require,module,exports){
 'use strict';
 var tryCatch = require('./tryCatch');
 var resolveThenable = require('./resolveThenable');
@@ -11558,14 +12955,14 @@ function getThen(obj) {
     };
   }
 }
-},{"./resolveThenable":64,"./states":65,"./tryCatch":66}],58:[function(require,module,exports){
+},{"./resolveThenable":80,"./states":81,"./tryCatch":82}],74:[function(require,module,exports){
 module.exports = exports = require('./promise');
 
 exports.resolve = require('./resolve');
 exports.reject = require('./reject');
 exports.all = require('./all');
 exports.race = require('./race');
-},{"./all":56,"./promise":59,"./race":61,"./reject":62,"./resolve":63}],59:[function(require,module,exports){
+},{"./all":72,"./promise":75,"./race":77,"./reject":78,"./resolve":79}],75:[function(require,module,exports){
 'use strict';
 
 var unwrap = require('./unwrap');
@@ -11611,7 +13008,7 @@ Promise.prototype.then = function (onFulfilled, onRejected) {
   return promise;
 };
 
-},{"./INTERNAL":55,"./queueItem":60,"./resolveThenable":64,"./states":65,"./unwrap":67}],60:[function(require,module,exports){
+},{"./INTERNAL":71,"./queueItem":76,"./resolveThenable":80,"./states":81,"./unwrap":83}],76:[function(require,module,exports){
 'use strict';
 var handlers = require('./handlers');
 var unwrap = require('./unwrap');
@@ -11640,7 +13037,7 @@ QueueItem.prototype.callRejected = function (value) {
 QueueItem.prototype.otherCallRejected = function (value) {
   unwrap(this.promise, this.onRejected, value);
 };
-},{"./handlers":57,"./unwrap":67}],61:[function(require,module,exports){
+},{"./handlers":73,"./unwrap":83}],77:[function(require,module,exports){
 'use strict';
 var Promise = require('./promise');
 var reject = require('./reject');
@@ -11681,7 +13078,7 @@ function race(iterable) {
     });
   }
 }
-},{"./INTERNAL":55,"./handlers":57,"./promise":59,"./reject":62,"./resolve":63}],62:[function(require,module,exports){
+},{"./INTERNAL":71,"./handlers":73,"./promise":75,"./reject":78,"./resolve":79}],78:[function(require,module,exports){
 'use strict';
 
 var Promise = require('./promise');
@@ -11693,7 +13090,7 @@ function reject(reason) {
 	var promise = new Promise(INTERNAL);
 	return handlers.reject(promise, reason);
 }
-},{"./INTERNAL":55,"./handlers":57,"./promise":59}],63:[function(require,module,exports){
+},{"./INTERNAL":71,"./handlers":73,"./promise":75}],79:[function(require,module,exports){
 'use strict';
 
 var Promise = require('./promise');
@@ -11728,7 +13125,7 @@ function resolve(value) {
       return EMPTYSTRING;
   }
 }
-},{"./INTERNAL":55,"./handlers":57,"./promise":59}],64:[function(require,module,exports){
+},{"./INTERNAL":71,"./handlers":73,"./promise":75}],80:[function(require,module,exports){
 'use strict';
 var handlers = require('./handlers');
 var tryCatch = require('./tryCatch');
@@ -11761,13 +13158,13 @@ function safelyResolveThenable(self, thenable) {
   }
 }
 exports.safely = safelyResolveThenable;
-},{"./handlers":57,"./tryCatch":66}],65:[function(require,module,exports){
+},{"./handlers":73,"./tryCatch":82}],81:[function(require,module,exports){
 // Lazy man's symbols for states
 
 exports.REJECTED = ['REJECTED'];
 exports.FULFILLED = ['FULFILLED'];
 exports.PENDING = ['PENDING'];
-},{}],66:[function(require,module,exports){
+},{}],82:[function(require,module,exports){
 'use strict';
 
 module.exports = tryCatch;
@@ -11783,7 +13180,7 @@ function tryCatch(func, value) {
   }
   return out;
 }
-},{}],67:[function(require,module,exports){
+},{}],83:[function(require,module,exports){
 'use strict';
 
 var immediate = require('immediate');
@@ -11805,7 +13202,7 @@ function unwrap(promise, func, value) {
     }
   });
 }
-},{"./handlers":57,"immediate":68}],68:[function(require,module,exports){
+},{"./handlers":73,"immediate":84}],84:[function(require,module,exports){
 'use strict';
 var types = [
   require('./nextTick'),
@@ -11863,7 +13260,7 @@ function immediate(task) {
     scheduleDrain();
   }
 }
-},{"./messageChannel":69,"./mutation.js":70,"./nextTick":6,"./stateChange":71,"./timeout":72}],69:[function(require,module,exports){
+},{"./messageChannel":85,"./mutation.js":86,"./nextTick":6,"./stateChange":87,"./timeout":88}],85:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -11884,7 +13281,7 @@ exports.install = function (func) {
   };
 };
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],70:[function(require,module,exports){
+},{}],86:[function(require,module,exports){
 (function (global){
 'use strict';
 //based off rsvp https://github.com/tildeio/rsvp.js
@@ -11909,7 +13306,7 @@ exports.install = function (handle) {
   };
 };
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],71:[function(require,module,exports){
+},{}],87:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -11936,7 +13333,7 @@ exports.install = function (handle) {
   };
 };
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],72:[function(require,module,exports){
+},{}],88:[function(require,module,exports){
 'use strict';
 exports.test = function () {
   return true;
@@ -11947,7 +13344,7 @@ exports.install = function (t) {
     setTimeout(t, 0);
   };
 };
-},{}],73:[function(require,module,exports){
+},{}],89:[function(require,module,exports){
 'use strict';
 
 var MIN_MAGNITUDE = -324; // verified by -Number.MIN_VALUE
@@ -12302,7 +13699,7 @@ function numToIndexableString(num) {
   return result;
 }
 
-},{"./utils":74}],74:[function(require,module,exports){
+},{"./utils":90}],90:[function(require,module,exports){
 'use strict';
 
 function pad(str, padWith, upToLength) {
@@ -12373,7 +13770,7 @@ exports.intToDecimalForm = function (int) {
 
   return result;
 };
-},{}],75:[function(require,module,exports){
+},{}],91:[function(require,module,exports){
 'use strict';
 exports.Map = LazyMap; // TODO: use ES6 map
 exports.Set = LazySet; // TODO: use ES6 set
@@ -12445,7 +13842,7 @@ LazySet.prototype.delete = function (key) {
   return this.store.delete(key);
 };
 
-},{}],76:[function(require,module,exports){
+},{}],92:[function(require,module,exports){
 "use strict";
 
 // Extends method
@@ -12626,7 +14023,7 @@ module.exports = extend;
 
 
 
-},{}],77:[function(require,module,exports){
+},{}],93:[function(require,module,exports){
 'use strict';
 
 var upsert = require('./upsert');
@@ -12705,7 +14102,7 @@ module.exports = function (opts) {
   });
 };
 
-},{"./upsert":81,"./utils":82}],78:[function(require,module,exports){
+},{"./upsert":97,"./utils":98}],94:[function(require,module,exports){
 'use strict';
 
 module.exports = function (func, emit, sum, log, isArray, toJSON) {
@@ -12713,7 +14110,7 @@ module.exports = function (func, emit, sum, log, isArray, toJSON) {
   return eval("'use strict'; (" + func.replace(/;\s*$/, "") + ");");
 };
 
-},{}],79:[function(require,module,exports){
+},{}],95:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -13587,7 +14984,7 @@ function BuiltInError(message) {
 
 utils.inherits(BuiltInError, Error);
 }).call(this,require('_process'))
-},{"./create-view":77,"./evalfunc":78,"./taskqueue":80,"./utils":82,"_process":8,"pouchdb-collate":73}],80:[function(require,module,exports){
+},{"./create-view":93,"./evalfunc":94,"./taskqueue":96,"./utils":98,"_process":8,"pouchdb-collate":89}],96:[function(require,module,exports){
 'use strict';
 /*
  * Simple task queue to sequentialize actions. Assumes callbacks will eventually fire (once).
@@ -13612,7 +15009,7 @@ TaskQueue.prototype.finish = function () {
 
 module.exports = TaskQueue;
 
-},{"./utils":82}],81:[function(require,module,exports){
+},{"./utils":98}],97:[function(require,module,exports){
 'use strict';
 
 var upsert = require('pouchdb-upsert').upsert;
@@ -13620,7 +15017,7 @@ var upsert = require('pouchdb-upsert').upsert;
 module.exports = function (db, doc, diffFun) {
   return upsert.apply(db, [doc, diffFun]);
 };
-},{"pouchdb-upsert":83}],82:[function(require,module,exports){
+},{"pouchdb-upsert":99}],98:[function(require,module,exports){
 (function (process,global){
 'use strict';
 /* istanbul ignore if */
@@ -13729,7 +15126,7 @@ exports.MD5 = function (string) {
   }
 };
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"_process":8,"argsarray":50,"crypto":6,"inherits":54,"lie":58,"pouchdb-extend":76,"spark-md5":84}],83:[function(require,module,exports){
+},{"_process":8,"argsarray":66,"crypto":6,"inherits":70,"lie":74,"pouchdb-extend":92,"spark-md5":100}],99:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -13836,7 +15233,7 @@ if (typeof window !== 'undefined' && window.PouchDB) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"lie":58}],84:[function(require,module,exports){
+},{"lie":74}],100:[function(require,module,exports){
 /*jshint bitwise:false*/
 /*global unescape*/
 
@@ -14437,7 +15834,7 @@ if (typeof window !== 'undefined' && window.PouchDB) {
     return SparkMD5;
 }));
 
-},{}],85:[function(require,module,exports){
+},{}],101:[function(require,module,exports){
 'use strict';
 
 /**
@@ -14612,11 +16009,11 @@ exports.parse = function (str) {
   }
 };
 
-},{}],86:[function(require,module,exports){
+},{}],102:[function(require,module,exports){
 
 module.exports = require('./lib/');
 
-},{"./lib/":87}],87:[function(require,module,exports){
+},{"./lib/":103}],103:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -14705,7 +16102,7 @@ exports.connect = lookup;
 exports.Manager = require('./manager');
 exports.Socket = require('./socket');
 
-},{"./manager":88,"./socket":90,"./url":91,"debug":95,"socket.io-parser":131}],88:[function(require,module,exports){
+},{"./manager":104,"./socket":106,"./url":107,"debug":111,"socket.io-parser":147}],104:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -15210,7 +16607,7 @@ Manager.prototype.onreconnect = function(){
   this.emitAll('reconnect', attempt);
 };
 
-},{"./on":89,"./socket":90,"./url":91,"backo2":92,"component-bind":93,"component-emitter":94,"debug":95,"engine.io-client":96,"indexof":127,"object-component":128,"socket.io-parser":131}],89:[function(require,module,exports){
+},{"./on":105,"./socket":106,"./url":107,"backo2":108,"component-bind":109,"component-emitter":110,"debug":111,"engine.io-client":112,"indexof":143,"object-component":144,"socket.io-parser":147}],105:[function(require,module,exports){
 
 /**
  * Module exports.
@@ -15236,7 +16633,7 @@ function on(obj, ev, fn) {
   };
 }
 
-},{}],90:[function(require,module,exports){
+},{}],106:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -15623,7 +17020,7 @@ Socket.prototype.disconnect = function(){
   return this;
 };
 
-},{"./on":89,"component-bind":93,"component-emitter":94,"debug":95,"has-binary":125,"socket.io-parser":131,"to-array":135}],91:[function(require,module,exports){
+},{"./on":105,"component-bind":109,"component-emitter":110,"debug":111,"has-binary":141,"socket.io-parser":147,"to-array":151}],107:[function(require,module,exports){
 (function (global){
 
 /**
@@ -15700,7 +17097,7 @@ function url(uri, loc){
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"debug":95,"parseuri":129}],92:[function(require,module,exports){
+},{"debug":111,"parseuri":145}],108:[function(require,module,exports){
 
 /**
  * Expose `Backoff`.
@@ -15787,7 +17184,7 @@ Backoff.prototype.setJitter = function(jitter){
 };
 
 
-},{}],93:[function(require,module,exports){
+},{}],109:[function(require,module,exports){
 /**
  * Slice reference.
  */
@@ -15812,7 +17209,7 @@ module.exports = function(obj, fn){
   }
 };
 
-},{}],94:[function(require,module,exports){
+},{}],110:[function(require,module,exports){
 
 /**
  * Expose `Emitter`.
@@ -15978,7 +17375,7 @@ Emitter.prototype.hasListeners = function(event){
   return !! this.listeners(event).length;
 };
 
-},{}],95:[function(require,module,exports){
+},{}],111:[function(require,module,exports){
 
 /**
  * Expose `debug()` as the module.
@@ -16117,11 +17514,11 @@ try {
   if (window.localStorage) debug.enable(localStorage.debug);
 } catch(e){}
 
-},{}],96:[function(require,module,exports){
+},{}],112:[function(require,module,exports){
 
 module.exports =  require('./lib/');
 
-},{"./lib/":97}],97:[function(require,module,exports){
+},{"./lib/":113}],113:[function(require,module,exports){
 
 module.exports = require('./socket');
 
@@ -16133,7 +17530,7 @@ module.exports = require('./socket');
  */
 module.exports.parser = require('engine.io-parser');
 
-},{"./socket":98,"engine.io-parser":110}],98:[function(require,module,exports){
+},{"./socket":114,"engine.io-parser":126}],114:[function(require,module,exports){
 (function (global){
 /**
  * Module dependencies.
@@ -16842,7 +18239,7 @@ Socket.prototype.filterUpgrades = function (upgrades) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./transport":99,"./transports":100,"component-emitter":94,"debug":107,"engine.io-parser":110,"indexof":127,"parsejson":121,"parseqs":122,"parseuri":123}],99:[function(require,module,exports){
+},{"./transport":115,"./transports":116,"component-emitter":110,"debug":123,"engine.io-parser":126,"indexof":143,"parsejson":137,"parseqs":138,"parseuri":139}],115:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -17003,7 +18400,7 @@ Transport.prototype.onClose = function () {
   this.emit('close');
 };
 
-},{"component-emitter":94,"engine.io-parser":110}],100:[function(require,module,exports){
+},{"component-emitter":110,"engine.io-parser":126}],116:[function(require,module,exports){
 (function (global){
 /**
  * Module dependencies
@@ -17060,7 +18457,7 @@ function polling(opts){
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./polling-jsonp":101,"./polling-xhr":102,"./websocket":104,"xmlhttprequest":105}],101:[function(require,module,exports){
+},{"./polling-jsonp":117,"./polling-xhr":118,"./websocket":120,"xmlhttprequest":121}],117:[function(require,module,exports){
 (function (global){
 
 /**
@@ -17297,7 +18694,7 @@ JSONPPolling.prototype.doWrite = function (data, fn) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./polling":103,"component-inherit":106}],102:[function(require,module,exports){
+},{"./polling":119,"component-inherit":122}],118:[function(require,module,exports){
 (function (global){
 /**
  * Module requirements.
@@ -17685,7 +19082,7 @@ function unloadHandler() {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./polling":103,"component-emitter":94,"component-inherit":106,"debug":107,"xmlhttprequest":105}],103:[function(require,module,exports){
+},{"./polling":119,"component-emitter":110,"component-inherit":122,"debug":123,"xmlhttprequest":121}],119:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -17932,7 +19329,7 @@ Polling.prototype.uri = function(){
   return schema + '://' + this.hostname + port + this.path + query;
 };
 
-},{"../transport":99,"component-inherit":106,"debug":107,"engine.io-parser":110,"parseqs":122,"xmlhttprequest":105}],104:[function(require,module,exports){
+},{"../transport":115,"component-inherit":122,"debug":123,"engine.io-parser":126,"parseqs":138,"xmlhttprequest":121}],120:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -18172,7 +19569,7 @@ WS.prototype.check = function(){
   return !!WebSocket && !('__initialize' in WebSocket && this.name === WS.prototype.name);
 };
 
-},{"../transport":99,"component-inherit":106,"debug":107,"engine.io-parser":110,"parseqs":122,"ws":124}],105:[function(require,module,exports){
+},{"../transport":115,"component-inherit":122,"debug":123,"engine.io-parser":126,"parseqs":138,"ws":140}],121:[function(require,module,exports){
 // browser shim for xmlhttprequest module
 var hasCORS = require('has-cors');
 
@@ -18210,7 +19607,7 @@ module.exports = function(opts) {
   }
 }
 
-},{"has-cors":119}],106:[function(require,module,exports){
+},{"has-cors":135}],122:[function(require,module,exports){
 
 module.exports = function(a, b){
   var fn = function(){};
@@ -18218,7 +19615,7 @@ module.exports = function(a, b){
   a.prototype = new fn;
   a.prototype.constructor = a;
 };
-},{}],107:[function(require,module,exports){
+},{}],123:[function(require,module,exports){
 
 /**
  * This is the web browser implementation of `debug()`.
@@ -18367,9 +19764,9 @@ function load() {
 
 exports.enable(load());
 
-},{"./debug":108}],108:[function(require,module,exports){
-arguments[4][52][0].apply(exports,arguments)
-},{"dup":52,"ms":109}],109:[function(require,module,exports){
+},{"./debug":124}],124:[function(require,module,exports){
+arguments[4][68][0].apply(exports,arguments)
+},{"dup":68,"ms":125}],125:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -18482,7 +19879,7 @@ function plural(ms, n, name) {
   return Math.ceil(ms / n) + ' ' + name + 's';
 }
 
-},{}],110:[function(require,module,exports){
+},{}],126:[function(require,module,exports){
 (function (global){
 /**
  * Module dependencies.
@@ -19080,7 +20477,7 @@ exports.decodePayloadAsBinary = function (data, binaryType, callback) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./keys":111,"after":112,"arraybuffer.slice":113,"base64-arraybuffer":114,"blob":115,"has-binary":116,"utf8":118}],111:[function(require,module,exports){
+},{"./keys":127,"after":128,"arraybuffer.slice":129,"base64-arraybuffer":130,"blob":131,"has-binary":132,"utf8":134}],127:[function(require,module,exports){
 
 /**
  * Gets the keys for an object.
@@ -19101,7 +20498,7 @@ module.exports = Object.keys || function keys (obj){
   return arr;
 };
 
-},{}],112:[function(require,module,exports){
+},{}],128:[function(require,module,exports){
 module.exports = after
 
 function after(count, callback, err_cb) {
@@ -19131,7 +20528,7 @@ function after(count, callback, err_cb) {
 
 function noop() {}
 
-},{}],113:[function(require,module,exports){
+},{}],129:[function(require,module,exports){
 /**
  * An abstraction for slicing an arraybuffer even when
  * ArrayBuffer.prototype.slice is not supported
@@ -19162,7 +20559,7 @@ module.exports = function(arraybuffer, start, end) {
   return result.buffer;
 };
 
-},{}],114:[function(require,module,exports){
+},{}],130:[function(require,module,exports){
 /*
  * base64-arraybuffer
  * https://github.com/niklasvh/base64-arraybuffer
@@ -19223,7 +20620,7 @@ module.exports = function(arraybuffer, start, end) {
   };
 })("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/");
 
-},{}],115:[function(require,module,exports){
+},{}],131:[function(require,module,exports){
 (function (global){
 /**
  * Create a blob builder even when vendor prefixes exist
@@ -19276,7 +20673,7 @@ module.exports = (function() {
 })();
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],116:[function(require,module,exports){
+},{}],132:[function(require,module,exports){
 (function (global){
 
 /*
@@ -19338,12 +20735,12 @@ function hasBinary(data) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"isarray":117}],117:[function(require,module,exports){
+},{"isarray":133}],133:[function(require,module,exports){
 module.exports = Array.isArray || function (arr) {
   return Object.prototype.toString.call(arr) == '[object Array]';
 };
 
-},{}],118:[function(require,module,exports){
+},{}],134:[function(require,module,exports){
 (function (global){
 /*! http://mths.be/utf8js v2.0.0 by @mathias */
 ;(function(root) {
@@ -19586,7 +20983,7 @@ module.exports = Array.isArray || function (arr) {
 }(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],119:[function(require,module,exports){
+},{}],135:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -19611,7 +21008,7 @@ try {
   module.exports = false;
 }
 
-},{"global":120}],120:[function(require,module,exports){
+},{"global":136}],136:[function(require,module,exports){
 
 /**
  * Returns `this`. Execute this without a "context" (i.e. without it being
@@ -19621,7 +21018,7 @@ try {
 
 module.exports = (function () { return this; })();
 
-},{}],121:[function(require,module,exports){
+},{}],137:[function(require,module,exports){
 (function (global){
 /**
  * JSON parse.
@@ -19656,7 +21053,7 @@ module.exports = function parsejson(data) {
   }
 };
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],122:[function(require,module,exports){
+},{}],138:[function(require,module,exports){
 /**
  * Compiles a querystring
  * Returns string representation of the object
@@ -19695,7 +21092,7 @@ exports.decode = function(qs){
   return qry;
 };
 
-},{}],123:[function(require,module,exports){
+},{}],139:[function(require,module,exports){
 /**
  * Parses an URI
  *
@@ -19736,7 +21133,7 @@ module.exports = function parseuri(str) {
     return uri;
 };
 
-},{}],124:[function(require,module,exports){
+},{}],140:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -19781,7 +21178,7 @@ function ws(uri, protocols, opts) {
 
 if (WebSocket) ws.prototype = WebSocket.prototype;
 
-},{}],125:[function(require,module,exports){
+},{}],141:[function(require,module,exports){
 (function (global){
 
 /*
@@ -19843,9 +21240,9 @@ function hasBinary(data) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"isarray":126}],126:[function(require,module,exports){
-arguments[4][117][0].apply(exports,arguments)
-},{"dup":117}],127:[function(require,module,exports){
+},{"isarray":142}],142:[function(require,module,exports){
+arguments[4][133][0].apply(exports,arguments)
+},{"dup":133}],143:[function(require,module,exports){
 
 var indexOf = [].indexOf;
 
@@ -19856,7 +21253,7 @@ module.exports = function(arr, obj){
   }
   return -1;
 };
-},{}],128:[function(require,module,exports){
+},{}],144:[function(require,module,exports){
 
 /**
  * HOP ref.
@@ -19941,7 +21338,7 @@ exports.length = function(obj){
 exports.isEmpty = function(obj){
   return 0 == exports.length(obj);
 };
-},{}],129:[function(require,module,exports){
+},{}],145:[function(require,module,exports){
 /**
  * Parses an URI
  *
@@ -19968,7 +21365,7 @@ module.exports = function parseuri(str) {
   return uri;
 };
 
-},{}],130:[function(require,module,exports){
+},{}],146:[function(require,module,exports){
 (function (global){
 /*global Blob,File*/
 
@@ -20113,7 +21510,7 @@ exports.removeBlobs = function(data, callback) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./is-buffer":132,"isarray":133}],131:[function(require,module,exports){
+},{"./is-buffer":148,"isarray":149}],147:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -20515,7 +21912,7 @@ function error(data){
   };
 }
 
-},{"./binary":130,"./is-buffer":132,"component-emitter":94,"debug":95,"isarray":133,"json3":134}],132:[function(require,module,exports){
+},{"./binary":146,"./is-buffer":148,"component-emitter":110,"debug":111,"isarray":149,"json3":150}],148:[function(require,module,exports){
 (function (global){
 
 module.exports = isBuf;
@@ -20532,9 +21929,9 @@ function isBuf(obj) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],133:[function(require,module,exports){
-arguments[4][117][0].apply(exports,arguments)
-},{"dup":117}],134:[function(require,module,exports){
+},{}],149:[function(require,module,exports){
+arguments[4][133][0].apply(exports,arguments)
+},{"dup":133}],150:[function(require,module,exports){
 /*! JSON v3.2.6 | http://bestiejs.github.io/json3 | Copyright 2012-2013, Kit Cambridge | http://kit.mit-license.org */
 ;(function (window) {
   // Convenience aliases.
@@ -21397,7 +22794,7 @@ arguments[4][117][0].apply(exports,arguments)
   }
 }(this));
 
-},{}],135:[function(require,module,exports){
+},{}],151:[function(require,module,exports){
 module.exports = toArray
 
 function toArray(list, index) {
@@ -21412,7 +22809,7 @@ function toArray(list, index) {
     return array
 }
 
-},{}],136:[function(require,module,exports){
+},{}],152:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -22537,9 +23934,9 @@ request.put = function(url, data, fn){
 
 module.exports = request;
 
-},{"emitter":137,"reduce":138}],137:[function(require,module,exports){
-arguments[4][94][0].apply(exports,arguments)
-},{"dup":94}],138:[function(require,module,exports){
+},{"emitter":153,"reduce":154}],153:[function(require,module,exports){
+arguments[4][110][0].apply(exports,arguments)
+},{"dup":110}],154:[function(require,module,exports){
 
 /**
  * Reduce `arr` with `fn`.

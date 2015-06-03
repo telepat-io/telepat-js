@@ -21,6 +21,19 @@
       });
     }
 
+    function addObject() {
+      eventChannel.objects['new'] = {
+        text: 'salut!'
+      };
+    }
+
+    function subscribe() {
+      eventChannel = Telepat.subscribe(Object.keys(Telepat.contexts)[0], 'event', function () {
+        console.log(eventChannel.objects);
+      });
+    }
+
+    var eventChannel;
     window.fbAsyncInit = function() {
         FB.init({
           appId      : '1086083914753251',
@@ -33,6 +46,7 @@
 
         Telepat.on('login', function () {
           console.log("logged in");
+          subscribe();
         });
 
         Telepat.on('logout', function () {
@@ -44,7 +58,7 @@
         });
 
         Telepat.on('contexts-update', function () {
-          Telepat.subscribe(Object.keys(Telepat.contexts)[0], 'event');
+          //Telepat.subscribe(Object.keys(Telepat.contexts)[0], 'event');
         });
 
         Telepat.connect({
@@ -66,6 +80,12 @@
   </fb:login-button>
   <br/>
   <button onclick="Telepat.logout()">Logout</button>
+  <br/>
+  <button onclick="subscribe()">Subscribe</button>
+  <br/>
+  <button onclick="eventChannel.unsubscribe()">Unsubscribe</button>
+  <br/>
+  <button onclick="addObject()">Add Object</button>
 
   <div id="status">
   </div>
