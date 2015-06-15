@@ -27,9 +27,14 @@
       };
     }
 
+    function removeObject() {
+      delete eventChannel.objects['new'];
+    }
+
     function subscribe() {
       eventChannel = Telepat.subscribe(Object.keys(Telepat.contexts)[0], 'event', function () {
-        console.log(eventChannel.objects);
+        eventChannel.objects['1'].text = 'Text modificat';
+        eventChannel.objects['1'].test = 'Da';
       });
     }
 
@@ -42,7 +47,7 @@
           status     : true
         });
 
-        Telepat.setLogLevel('info');
+        Telepat.setLogLevel('debug');
 
         Telepat.on('login', function () {
           console.log("logged in");
@@ -86,6 +91,8 @@
   <button onclick="eventChannel.unsubscribe()">Unsubscribe</button>
   <br/>
   <button onclick="addObject()">Add Object</button>
+  <br/>
+  <button onclick="removeObject()">Remove Object</button>
 
   <div id="status">
   </div>

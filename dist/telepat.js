@@ -76,24 +76,52 @@ var Channel = function (api, log, error, context, channel) {
       if (err) {
         event.emit('error', error('Subscribe failed with error: ' + err));
       } else {
+        self.objects = res.body.message;
         lastObjects = JSON.parse(JSON.stringify(self.objects));
         event.emit('update');
         timer = setInterval(function () {
           var diff = jsondiffpatch.diff(lastObjects, self.objects);
           if (diff !== undefined) {
+            console.log(diff);
             var diffKeys = Object.keys(diff);
             for (var i=0; i<diffKeys.length; i++) {
-              if (diff[diffKeys[i]].length == 1) {
-                self.add(self.objects[diffKeys[i]]);
-                delete self.objects[diffKeys[i]];
-              } else if (diff[diffKeys[i]].length == 2) {
-                // update
-              } else if (diff[diffKeys[i]].length == 3) {
-                // delete
+              var key = diffKeys[i];
+              var obj = diff[key];
+
+              if (Array.isArray(obj)) {
+                if (obj.length == 1) {
+                  self.add(self.objects[key]);
+                  delete self.objects[key];
+                  log.debug('Adding object to ' + channel + ' channel');
+                } else if (obj.length == 3) {
+                  self.remove(key);
+                  log.debug('Removing object from ' + channel + ' channel');
+                }
+              } else {
+                var objKeys = Object.keys(obj);
+                var patch = [];
+
+                for (var j=0; j<objKeys.length; j++) {
+                  var objKey = objKeys[j];
+                  var delta = obj[objKey];
+                  if (delta.length == 1) {
+                    patch.push({'op': 'add', 'path': channel + '/' + key + '/' + objKey, 'value': delta[0]});
+                    log.debug('Added ' + objKey + ' property to object ' + key + ', ' + channel + ' channel');
+                  } else if (delta.length == 2) {
+                    patch.push({'op': 'replace', 'path': channel + '/' + key + '/' + objKey, 'value': delta[1]});
+                    log.debug('Modified ' + objKey + ' property on object ' + key + ', ' + channel + ' channel');
+                  } else if (delta.length == 3) {
+                    patch.push({'op': 'remove', 'path': channel + '/' + key + '/' + objKey});
+                    log.debug('Removed ' + objKey + ' property from object ' + key + ', ' + channel + ' channel');
+                  }
+                }
+
+                self.update(key, patch);
+                log.debug('Sending patch to object ' + key + ' on ' + channel + ' channel: ' + JSON.stringify(patch));
               }
             }
+            lastObjects = JSON.parse(JSON.stringify(self.objects));
           }
-          lastObjects = JSON.parse(JSON.stringify(self.objects));
         }, 50);
       }
     });
@@ -122,11 +150,45 @@ var Channel = function (api, log, error, context, channel) {
     api.call('object/create',
       {
         model: channel,
+        context: context,
         content: object
       },
       function (err, res) {
         if (err) {
           event.emit('error', error('Adding object failed with error: ' + err));
+        } else {
+          //event.emit('update');
+        }
+      });
+  }
+
+  this.remove = function(id) {
+    api.call('object/delete',
+      {
+        model: channel,
+        context: context,
+        id: id
+      },
+      function (err, res) {
+        if (err) {
+          event.emit('error', error('Removing object failed with error: ' + err));
+        } else {
+          //event.emit('update');
+        }
+      });
+  }
+
+  this.update = function(id, patch) {
+    api.call('object/update',
+      {
+        model: channel,
+        context: context,
+        id: id,
+        patch: patch
+      },
+      function (err, res) {
+        if (err) {
+          event.emit('error', error('Updating object failed with error: ' + err));
         } else {
           //event.emit('update');
         }
@@ -187,7 +249,7 @@ var Telepat = {
   contexts: null
 };
 
-var rootEndpoint = 'http://blg-node-front.cloudapp.net';
+var rootEndpoint = 'http://blg-octopus-api.cloudapp.net';
 var apiPort = 3100;
 
 var socket;
@@ -211,7 +273,8 @@ function registerDevice() {
       'os': 'web',
       'volatile': {
         'type': 'sockets',
-        'token': ioSessionId
+        'token': ioSessionId,
+        'active': 1
       }
     }, function (err, res) {
       if (err) {
@@ -230,6 +293,7 @@ function registerDevice() {
           };
           db.get(':deviceId').then(function(doc) {
             newObject._rev = doc._rev;
+            log.warn('Replacing existing UDID');
             db.put(newObject).catch(function(err) {
               log.warn('Could not persist UDID. Error: ' + err);
             });
