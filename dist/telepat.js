@@ -78,7 +78,7 @@ var Channel = function (api, log, error, context, channel) {
       } else {
         self.objects = res.body.message;
         lastObjects = JSON.parse(JSON.stringify(self.objects));
-        event.emit('update');
+        event.emit('subscribe');
         timer = setInterval(function () {
           var diff = jsondiffpatch.diff(lastObjects, self.objects);
           if (diff !== undefined) {
@@ -116,7 +116,7 @@ var Channel = function (api, log, error, context, channel) {
                   }
                 }
 
-                self.update(key, patch);
+                //self.update(key, patch);
                 log.debug('Sending patch to object ' + key + ' on ' + channel + ' channel: ' + JSON.stringify(patch));
               }
             }
@@ -195,6 +195,56 @@ var Channel = function (api, log, error, context, channel) {
       });
   }
 
+  this.processPatch = function (patch) {
+    function findParent(pathComponents) {
+      var parentObject = this.objects;
+      for (var j=0; j<(pathComponents-1); j++) {
+        if (parentObject.hasOwnProperty(pathComponents[j])) {
+          parentObject = parentObject[pathComponents[j]]
+        }
+        else {
+          return false;
+        }
+      }
+      return parentObject;
+    }
+
+    for (var i=0; i<patch.length; i++) {
+      var operation = patch[i];
+      var path = operation['path'];
+      var value = operation['value'];
+      var pathComponents = path.split("/");
+      var lastPathComponent = pathComponents[pathComponents.length - 1];
+      var parentObject = findParent(pathComponents);
+      if (parentObject) {
+        if (operation['op'] == 'add') {
+          if (parentObject.hasOwnProperty(lastPathComponent)) {
+            event.emit('error', error('Error in add operation: existing property ' + path));
+          } else {
+            parentObject[lastPathComponent] = value;
+            log.debug('Added ' + path + ' property with value ' + value);
+          }
+        } else if (operation['op'] == 'remove') {
+          if (parentObject.hasOwnProperty(lastPathComponent)) {
+            delete parentObject[lastPathComponent];
+            log.debug('Removed ' + path + ' property');
+          } else {
+            event.emit('error', error('Error in remove operation: non-existing property ' + path));
+          }
+        } else if (operation['op'] == 'replace') {
+          if (parentObject.hasOwnProperty(lastPathComponent)) {
+            parentObject[lastPathComponent] = value;
+            log.debug('Replaced ' + path + ' property with value ' + value);
+          } else {
+            event.emit('error', error('Error in replace operation: non-existing property ' + path));
+          }
+        }
+      } else {
+        event.emit('error', error('Error in operation: path not found ' + path));
+      }
+    }
+  }
+
   this.on = function(name, callback) {
     return event.on(name, callback);
   }
@@ -254,7 +304,7 @@ var apiPort = 3100;
 
 var socket;
 var ioSessionId;
-var subscriptions = [];
+var subscriptions = {};
 
 function error(string) {
   log.error(string);
@@ -393,17 +443,15 @@ Telepat.connect = function (options) {
   return this;
 };
 
-Telepat.subscribe = function (context, channel, onUpdate) {
-  var channel = new Channel(API, log, error, context, channel);
-  subscriptions.push(channel);
-  if (onUpdate !== undefined) {
-    channel.on("update", onUpdate);
+Telepat.subscribe = function (context, channelId, onSubscribe) {
+  var channel = new Channel(API, log, error, context, channelId);
+  var key = 'blg:'+context+':'+channelId;
+  subscriptions[key] = channel;
+  if (onSubscribe !== undefined) {
+    channel.on("subscribe", onSubscribe);
   }
   channel.on("_unsubscribe", function () {
-    var index = subscriptions.indexOf(channel);
-    if (index > -1) {
-      subscriptions.splice(index, 1);
-    }
+    delete subscriptions[key];
   });
   return channel;
 }

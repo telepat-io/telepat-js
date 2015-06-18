@@ -31,10 +31,14 @@
       delete eventChannel.objects['new'];
     }
 
+    function editObject() {
+      eventChannel.objects['1'].text = 'Text modificat';
+      eventChannel.objects['1'].test = {test: 'Da'};
+    }
+
     function subscribe() {
       eventChannel = Telepat.subscribe(Object.keys(Telepat.contexts)[0], 'event', function () {
-        eventChannel.objects['1'].text = 'Text modificat';
-        eventChannel.objects['1'].test = 'Da';
+        console.log(eventChannel.objects);
       });
     }
 
@@ -93,6 +97,8 @@
   <button onclick="addObject()">Add Object</button>
   <br/>
   <button onclick="removeObject()">Remove Object</button>
+  <br/>
+  <button onclick="editObject()">Edit Object</button>
 
   <div id="status">
   </div>
