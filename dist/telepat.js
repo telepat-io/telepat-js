@@ -62,10 +62,32 @@ var Channel = function (api, log, error, context, channel) {
   var self = this;
   var timer;
   var lastObjects;
+  var processingPatch = false;
+  jsondiffpatch.processor.pipes.diff.before('objects', objectPropertyTrimFilter);
+
+  function trimObject(obj) {
+    trimmedObject = {};
+    for (var name in obj) {
+      if (name.slice(0, 2) !== '$$') {
+        trimmedObject[name] = obj[name];
+      }
+    }
+    return trimmedObject;
+  }
+
+  function objectPropertyTrimFilter(context) {
+    if (!context.leftIsArray && context.leftType === 'object') {
+      context.left = trimObject(context.left);
+    }
+    if (!context.rightIsArray && context.rightType === 'object') {
+      context.right = trimObject(context.right);
+    }
+  }
 
   this.objects = {};
 
-  api.call('object/subscribe',
+  this.subscribe = function() {
+    api.call('object/subscribe',
     {
       'channel': {
         'context': context,
@@ -77,12 +99,18 @@ var Channel = function (api, log, error, context, channel) {
         event.emit('error', error('Subscribe failed with error: ' + err));
       } else {
         self.objects = res.body.message;
+        var objectKeys = Object.keys(self.objects);
+        for (var i=0; i<objectKeys.length; i++) {
+          self.objects[objectKeys[i]].$$event = new EventObject(log);
+        }
         lastObjects = JSON.parse(JSON.stringify(self.objects));
         event.emit('subscribe');
         timer = setInterval(function () {
+          if (self.processingPatch)
+            return;
           var diff = jsondiffpatch.diff(lastObjects, self.objects);
           if (diff !== undefined) {
-            console.log(diff);
+            log.debug('Found diff: ' + JSON.stringify(diff));
             var diffKeys = Object.keys(diff);
             for (var i=0; i<diffKeys.length; i++) {
               var key = diffKeys[i];
@@ -105,26 +133,26 @@ var Channel = function (api, log, error, context, channel) {
                   var objKey = objKeys[j];
                   var delta = obj[objKey];
                   if (delta.length == 1) {
-                    patch.push({'op': 'add', 'path': channel + '/' + key + '/' + objKey, 'value': delta[0]});
+                    patch.push({'op': 'replace', 'path': channel + '/' + key + '/' + objKey, 'value': delta[0]});
                     log.debug('Added ' + objKey + ' property to object ' + key + ', ' + channel + ' channel');
                   } else if (delta.length == 2) {
                     patch.push({'op': 'replace', 'path': channel + '/' + key + '/' + objKey, 'value': delta[1]});
                     log.debug('Modified ' + objKey + ' property on object ' + key + ', ' + channel + ' channel');
                   } else if (delta.length == 3) {
-                    patch.push({'op': 'remove', 'path': channel + '/' + key + '/' + objKey});
-                    log.debug('Removed ' + objKey + ' property from object ' + key + ', ' + channel + ' channel');
+                    log.info('Removing object properties is not supported in this version. Try setting to an empty value instead.');
                   }
                 }
 
-                //self.update(key, patch);
+                self.update(key, patch);
                 log.debug('Sending patch to object ' + key + ' on ' + channel + ' channel: ' + JSON.stringify(patch));
               }
             }
             lastObjects = JSON.parse(JSON.stringify(self.objects));
           }
-        }, 50);
+        }, 100);
       }
     });
+  }
 
   this.unsubscribe = function() {
     api.call('object/unsubscribe',
@@ -157,7 +185,6 @@ var Channel = function (api, log, error, context, channel) {
         if (err) {
           event.emit('error', error('Adding object failed with error: ' + err));
         } else {
-          //event.emit('update');
         }
       });
   }
@@ -173,7 +200,6 @@ var Channel = function (api, log, error, context, channel) {
         if (err) {
           event.emit('error', error('Removing object failed with error: ' + err));
         } else {
-          //event.emit('update');
         }
       });
   }
@@ -190,59 +216,54 @@ var Channel = function (api, log, error, context, channel) {
         if (err) {
           event.emit('error', error('Updating object failed with error: ' + err));
         } else {
-          //event.emit('update');
         }
       });
   }
 
-  this.processPatch = function (patch) {
-    function findParent(pathComponents) {
-      var parentObject = this.objects;
-      for (var j=0; j<(pathComponents-1); j++) {
-        if (parentObject.hasOwnProperty(pathComponents[j])) {
-          parentObject = parentObject[pathComponents[j]]
-        }
-        else {
-          return false;
-        }
-      }
-      return parentObject;
-    }
-
-    for (var i=0; i<patch.length; i++) {
-      var operation = patch[i];
-      var path = operation['path'];
-      var value = operation['value'];
-      var pathComponents = path.split("/");
-      var lastPathComponent = pathComponents[pathComponents.length - 1];
-      var parentObject = findParent(pathComponents);
-      if (parentObject) {
-        if (operation['op'] == 'add') {
-          if (parentObject.hasOwnProperty(lastPathComponent)) {
-            event.emit('error', error('Error in add operation: existing property ' + path));
+  this.processPatch = function (operation) {
+    this.processingPatch = true;
+    if (operation.hasOwnProperty('path')) {
+      var pathComponents = operation.path.split('/');
+      if (operation.hasOwnProperty('op')) {
+        if (operation.op == 'replace') {
+          if (!this.objects.hasOwnProperty(pathComponents[1])) {
+            event.emit('error', error('Object id doesn\'t exist ' + operation));
+          } else if (operation.hasOwnProperty('value')) {
+            var parent = this.objects[pathComponents[1]];
+            var oldValue = parent[pathComponents[2]];
+            parent[pathComponents[2]] = operation.value;
+            event.emit('update', 'replace', pathComponents[1], parent, { path: pathComponents[2], oldValue: oldValue });
+            log.debug('Replaced property ' + pathComponents[2] + ' of object id ' + pathComponents[1] + ' with  value ' + operation.value);
           } else {
-            parentObject[lastPathComponent] = value;
-            log.debug('Added ' + path + ' property with value ' + value);
+            event.emit('error', error('Invalid operation ' + operation));
           }
-        } else if (operation['op'] == 'remove') {
-          if (parentObject.hasOwnProperty(lastPathComponent)) {
-            delete parentObject[lastPathComponent];
-            log.debug('Removed ' + path + ' property');
-          } else {
-            event.emit('error', error('Error in remove operation: non-existing property ' + path));
-          }
-        } else if (operation['op'] == 'replace') {
-          if (parentObject.hasOwnProperty(lastPathComponent)) {
-            parentObject[lastPathComponent] = value;
-            log.debug('Replaced ' + path + ' property with value ' + value);
-          } else {
-            event.emit('error', error('Error in replace operation: non-existing property ' + path));
-          }
+        } else if (operation.op == 'delete') {
+          var oldValue = this.objects[pathComponents[1]];
+          delete this.objects[pathComponents[1]];
+          event.emit('update', 'delete', pathComponents[1], oldValue);
+          log.debug('Removed object id ' + pathComponents[1]);
+        } else {
+          event.emit('error', error('Unsupported operation ' + operation));
         }
       } else {
-        event.emit('error', error('Error in operation: path not found ' + path));
+        event.emit('error', error('Invalid operation ' + operation));
+      }
+    } else {
+      if (operation.hasOwnProperty('value') && operation.value.hasOwnProperty('id')) {
+        if (!this.objects.hasOwnProperty(operation.value.id)) {
+          operation.value.$$event = new EventObject(log);
+          this.objects[operation.value.id] = operation.value;
+          event.emit('update', 'add', operation.value.id, operation.value);
+          log.debug('Added object with id ' + operation.value.id);
+        } else {
+          event.emit('error', error('Object id already exists ' + operation));
+        }
+      } else {
+        event.emit('error', error('Invalid add operation ' + operation));
       }
     }
+    lastObjects = JSON.parse(JSON.stringify(self.objects));
+    this.processingPatch = false;
   }
 
   this.on = function(name, callback) {
@@ -268,6 +289,7 @@ Event.prototype.on = function (name, callback) {
 Event.prototype.emit = function (args) {
   this.log.debug('Emitting ' + arguments[0] + ' event');
   var params = Array.prototype.slice.call(arguments);
+  params.shift();
   if (typeof this.eventFunctions[arguments[0]] !== 'undefined')
     this.eventFunctions[arguments[0]].apply(this, params);
 }
@@ -296,15 +318,14 @@ var Event = new EventObject(log);
 var Channel = require('./channel');
 
 var Telepat = {
-  contexts: null
+  contexts: null,
+  subscriptions: {}
 };
 
-var rootEndpoint = 'http://blg-octopus-api.cloudapp.net';
-var apiPort = 3100;
+var apiEndpoint, socketEndpoint;
 
 var socket;
 var ioSessionId;
-var subscriptions = {};
 
 function error(string) {
   log.error(string);
@@ -398,27 +419,37 @@ Telepat.logout = function () {
 
 Telepat.connect = function (options) {
   if (typeof options !== 'undefined') {
-    if (typeof options.apiKey !== 'undefined')
+    if (typeof options.apiKey !== 'undefined') {
       API.apiKey = options.apiKey;
-    else {
+    } else {
       return error('Connect options must provide an apiKey property');
     }
-    if (typeof options.appId !== 'undefined')
+    if (typeof options.appId !== 'undefined') {
       API.appId = options.appId;
-    else {
+    } else {
       return error('Connect options must provide an appId property');
     }
 
-    if (typeof options.endpoint !== 'undefined')
-      rootEndpoint = options.endpoint;
+    if (typeof options.apiEndpoint !== 'undefined') {
+      apiEndpoint = options.apiEndpoint;
+    } else {
+      return error('Connect options must provide an apiEndpoint property');
+    }
+
+    if (typeof options.socketEndpoint !== 'undefined') {
+      socketEndpoint = options.socketEndpoint;
+    } else {
+      return error('Connect options must provide an socketEndpoint property');
+    }
+
   } else {
     return error('Options object not provided to the connect function');
   }
   
-  API.apiEndpoint = rootEndpoint + ':' + apiPort + '/';
+  API.apiEndpoint = apiEndpoint + '/';
 
-  socket = require('socket.io-client')(rootEndpoint, options.ioOptions || {});
-  log.info('Connecting to socket service ' + rootEndpoint);
+  socket = require('socket.io-client')(socketEndpoint, options.ioOptions || {});
+  log.info('Connecting to socket service ' + socketEndpoint);
 
   socket.on('welcome', function(data) {
     ioSessionId = data.sessionId;
@@ -430,6 +461,31 @@ Telepat.connect = function (options) {
     }).catch(function(err) {
       registerDevice();
     });
+  });
+
+  socket.on('message', function(message) {
+    function processOperation(operation) {
+      if (Telepat.subscriptions.hasOwnProperty(operation.subscription)) {
+        var channel = Telepat.subscriptions[operation.subscription];
+        channel.processPatch(operation);
+      } else {
+        Event.emit('error', error('Received update on non-existent subscription'));
+      }
+    }
+
+    log.debug('Received update: ' + JSON.stringify(message));
+    for (var i=0; i<message.data.new.length; i++) {
+      var operation = message.data.new[i];
+      processOperation(operation);
+    }
+    for (var i=0; i<message.data.updated.length; i++) {
+      var operation = message.data.updated[i];
+      processOperation(operation);
+    }
+    for (var i=0; i<message.data.deleted.length; i++) {
+      var operation = message.data.deleted[i];
+      processOperation(operation);
+    }
   });
 
   socket.on('context-update', function(data) {
@@ -446,12 +502,13 @@ Telepat.connect = function (options) {
 Telepat.subscribe = function (context, channelId, onSubscribe) {
   var channel = new Channel(API, log, error, context, channelId);
   var key = 'blg:'+context+':'+channelId;
-  subscriptions[key] = channel;
+  this.subscriptions[key] = channel;
+  channel.subscribe();
   if (onSubscribe !== undefined) {
     channel.on("subscribe", onSubscribe);
   }
   channel.on("_unsubscribe", function () {
-    delete subscriptions[key];
+    delete this.subscriptions[key];
   });
   return channel;
 }

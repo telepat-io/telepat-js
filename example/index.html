@@ -2,6 +2,7 @@
 <html>
   <head>
     <script src="../dist/telepat.js"></script>
+    <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
   </head>
   <body>
   <script>
@@ -27,18 +28,34 @@
       };
     }
 
-    function removeObject() {
-      delete eventChannel.objects['new'];
+    function removeObject(id) {
+      delete eventChannel.objects[id];
     }
 
-    function editObject() {
-      eventChannel.objects['1'].text = 'Text modificat';
-      eventChannel.objects['1'].test = {test: 'Da'};
+    function editObject(id) {
+      eventChannel.objects[id].text = $('#' + id + '_input').val();
+    }
+
+    function appendToList(key, value) {
+      $('#list').append('<div style="padding:5px; border-bottom:1px solid" id="' + key + '">' + key + ': <input type="text" id="' + key + '_input" value="' + value.text + '" onkeyup="editObject(\'' + key + '\');"><div style="float:right"><a href="#" onclick="removeObject(\'' + key + '\'); return false;">Delete</a></div></div>');
     }
 
     function subscribe() {
-      eventChannel = Telepat.subscribe(Object.keys(Telepat.contexts)[0], 'event', function () {
-        console.log(eventChannel.objects);
+      eventChannel = Telepat.subscribe(Object.keys(Telepat.contexts)[0], 'events', function () {
+        $.each(eventChannel.objects, function (key, value) {
+          appendToList(key, value);
+        });
+      });
+      eventChannel.on('update', function (operation, parentId, parentObject, delta) {
+        console.log(operation, parentId, parentObject, delta);
+        if (operation == 'delete') {
+          $('#' + parentId).remove();
+        } else if (operation == 'add') {
+          appendToList(parentId, parentObject);
+        } else if (operation == 'replace') {
+          //$('#' + parentId + '_input').val(parentObject[delta.path]);
+          $('#status').append('<div>' + parentObject[delta.path] + '</div>');
+        }
       });
     }
 
@@ -72,7 +89,9 @@
 
         Telepat.connect({
           apiKey: '3406870085495689e34d878f09faf52c',
-          appId: 1
+          appId: 1,
+          apiEndpoint: 'http://blg-octopus-api.cloudapp.net:3000',
+          socketEndpoint: 'http://blg-octopus-api.cloudapp.net'
         });
       };
 
@@ -85,22 +104,23 @@
        }(document, 'script', 'facebook-jssdk'));
   </script>
 
-  <fb:login-button scope="public_profile,email" onlogin="checkLoginState();">
-  </fb:login-button>
-  <br/>
-  <button onclick="Telepat.logout()">Logout</button>
-  <br/>
-  <button onclick="subscribe()">Subscribe</button>
-  <br/>
-  <button onclick="eventChannel.unsubscribe()">Unsubscribe</button>
-  <br/>
-  <button onclick="addObject()">Add Object</button>
-  <br/>
-  <button onclick="removeObject()">Remove Object</button>
-  <br/>
-  <button onclick="editObject()">Edit Object</button>
+  <div style="float:left">
+    <fb:login-button scope="public_profile,email" onlogin="checkLoginState();">
+    </fb:login-button>
+    <br/>
+    <button onclick="Telepat.logout()">Logout</button>
+    <br/>
+    <button onclick="subscribe()">Subscribe</button>
+    <br/>
+    <button onclick="eventChannel.unsubscribe()">Unsubscribe</button>
+    <br/>
+    <button onclick="addObject()">Add Object</button>
 
-  <div id="status">
+    <div id="status">
+    </div>
+  </div>
+  <div id="list" style="margin-left: 200px">
+    
   </div>
   </body>
 </html>
