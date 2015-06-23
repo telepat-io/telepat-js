@@ -496,7 +496,7 @@
 </div>
 
 
-<p>Use the <code>Channel.on('update', ...)</code> function to subscribe to object updates. This will only notify you of changes made from the 'outside' - don't expect events to be triggered on changes you make to objects.</p>
+<p>Use the <code>Channel.on('update', ...)</code> function to subscribe to object updates. This will only notify you of changes received from the 'outside' - you'll only see events when the backend notifies the client that there are updates available, either made by you or by someone else.</p>
 
 
 <div class="highlight"><pre><code><span class="nx">Channel</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="s1">&#39;update&#39;</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">operation</span><span class="p">,</span> <span class="nx">parentId</span><span class="p">,</span> <span class="nx">parentObject</span><span class="p">,</span> <span class="nx">delta</span><span class="p">)</span> <span class="p">{</span>
