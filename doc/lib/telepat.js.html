@@ -144,14 +144,21 @@
         <td class="code highlight"><div class="highlight"><pre>
 <span class="nx">Telepat</span><span class="p">.</span><span class="nx">connect</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">options</span><span class="p">)</span> <span class="p">{</span>
   <span class="kd">function</span> <span class="nx">registerDevice</span><span class="p">()</span> <span class="p">{</span>
-    <span class="nx">API</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="s1">&#39;device/register&#39;</span><span class="p">,</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">request</span> <span class="o">=</span> <span class="p">{</span>
+      <span class="s1">&#39;info&#39;</span><span class="o">:</span><span class="p">{</span>
         <span class="s1">&#39;os&#39;</span><span class="o">:</span> <span class="s1">&#39;web&#39;</span><span class="p">,</span>
-        <span class="s1">&#39;volatile&#39;</span><span class="o">:</span> <span class="p">{</span>
-          <span class="s1">&#39;type&#39;</span><span class="o">:</span> <span class="s1">&#39;sockets&#39;</span><span class="p">,</span>
-          <span class="s1">&#39;token&#39;</span><span class="o">:</span> <span class="nx">ioSessionId</span><span class="p">,</span>
-          <span class="s1">&#39;active&#39;</span><span class="o">:</span> <span class="mi">1</span>
-        <span class="p">}</span>
-      <span class="p">},</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">err</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span> <span class="p">{</span>
+        <span class="s1">&#39;userAgent&#39;</span><span class="o">:</span> <span class="p">((</span><span class="k">typeof</span> <span class="nx">navigator</span> <span class="o">!==</span> <span class="s2">&quot;undefined&quot;</span><span class="p">)</span><span class="o">?</span><span class="nx">navigator</span><span class="p">.</span><span class="nx">userAgent</span><span class="o">:</span><span class="s1">&#39;node&#39;</span><span class="p">)</span>
+      <span class="p">},</span>
+      <span class="s1">&#39;volatile&#39;</span><span class="o">:</span> <span class="p">{</span>
+        <span class="s1">&#39;type&#39;</span><span class="o">:</span> <span class="s1">&#39;sockets&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;token&#39;</span><span class="o">:</span> <span class="nx">ioSessionId</span><span class="p">,</span>
+        <span class="s1">&#39;active&#39;</span><span class="o">:</span> <span class="mi">1</span>
+      <span class="p">}</span>
+    <span class="p">};</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">API</span><span class="p">.</span><span class="nx">UDID</span> <span class="o">!==</span> <span class="kc">null</span><span class="p">)</span> <span class="p">{</span>
+      <span class="nx">request</span><span class="p">[</span><span class="s1">&#39;info&#39;</span><span class="p">][</span><span class="s1">&#39;udid&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nx">API</span><span class="p">.</span><span class="nx">UDID</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="nx">API</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="s1">&#39;device/register&#39;</span><span class="p">,</span> <span class="nx">request</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">err</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span> <span class="p">{</span>
         <span class="k">if</span> <span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="p">{</span>
           <span class="nx">socket</span><span class="p">.</span><span class="nx">disconnect</span><span class="p">();</span>
           <span class="nx">Event</span><span class="p">.</span><span class="nx">emit</span><span class="p">(</span><span class="s1">&#39;disconnect&#39;</span><span class="p">,</span> <span class="nx">err</span><span class="p">);</span>
@@ -560,13 +567,14 @@ Two events can be asynchronously triggered by this function:</p>
 <span class="nx">Telepat</span><span class="p">.</span><span class="nx">subscribe</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">contextId</span><span class="p">,</span> <span class="nx">channelId</span><span class="p">,</span> <span class="nx">onSubscribe</span><span class="p">)</span> <span class="p">{</span>
   <span class="kd">var</span> <span class="nx">channel</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Channel</span><span class="p">(</span><span class="nx">API</span><span class="p">,</span> <span class="nx">log</span><span class="p">,</span> <span class="nx">error</span><span class="p">,</span> <span class="nx">contextId</span><span class="p">,</span> <span class="nx">channelId</span><span class="p">);</span>
   <span class="kd">var</span> <span class="nx">key</span> <span class="o">=</span> <span class="s1">&#39;blg:&#39;</span><span class="o">+</span><span class="nx">contextId</span><span class="o">+</span><span class="s1">&#39;:&#39;</span><span class="o">+</span><span class="nx">channelId</span><span class="p">;</span>
+  <span class="kd">var</span> <span class="nx">self</span> <span class="o">=</span> <span class="k">this</span><span class="p">;</span>
   <span class="k">this</span><span class="p">.</span><span class="nx">subscriptions</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span> <span class="o">=</span> <span class="nx">channel</span><span class="p">;</span>
   <span class="nx">channel</span><span class="p">.</span><span class="nx">subscribe</span><span class="p">();</span>
   <span class="k">if</span> <span class="p">(</span><span class="nx">onSubscribe</span> <span class="o">!==</span> <span class="kc">undefined</span><span class="p">)</span> <span class="p">{</span>
     <span class="nx">channel</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="s2">&quot;subscribe&quot;</span><span class="p">,</span> <span class="nx">onSubscribe</span><span class="p">);</span>
   <span class="p">}</span>
   <span class="nx">channel</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="s2">&quot;_unsubscribe&quot;</span><span class="p">,</span> <span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
-    <span class="k">delete</span> <span class="k">this</span><span class="p">.</span><span class="nx">subscriptions</span><span class="p">[</span><span class="nx">key</span><span class="p">];</span>
+    <span class="k">delete</span> <span class="nx">self</span><span class="p">.</span><span class="nx">subscriptions</span><span class="p">[</span><span class="nx">key</span><span class="p">];</span>
   <span class="p">});</span>
   <span class="k">return</span> <span class="nx">channel</span><span class="p">;</span>
 <span class="p">}</span>
