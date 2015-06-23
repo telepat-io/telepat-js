@@ -19,8 +19,8 @@ Documentation is available [here](http://docs.telepat.io/js-sdk.html), and you c
 
 Read on about working with the library:
 
-- [Telepat](http://docs.telepat.io/js-sdk.html#telepat)
-- [Channel](http://docs.telepat.io/js-sdk.html#channel)
+- [Telepat](http://docs.telepat.io/javascript-sdk/lib/telepat.js.html)
+- [Channel](http://docs.telepat.io/javascript-sdk/lib/channel.js.html)
 
 ## Building from source
 
