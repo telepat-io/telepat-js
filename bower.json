@@ -8,7 +8,7 @@
   "homepage": "http://telepat.io",
   "repository": {
     "type": "git",
-    "url": "git://telepat-io/telepat-js.git"
+    "url": "git://github.com/telepat-io/telepat-js.git"
   },
   "description": "Javascript Client for Telepat",
   "main": "dist/telepat.js",
