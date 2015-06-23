@@ -1,7 +1,28 @@
 {
   "name": "telepat-js",
-  "version": "0.0.1",
-  "description": "Javscript client for Telepat",
+  "version": "0.1.0",
+  "license": "MIT",
+  "repository" :
+  { 
+    "type" : "git",
+    "url" : "https://github.com/telepat-io/telepat-js.git"
+  },
+  "author": "Telepat <founders@telepat.io>",
+  "contributors": [{
+    "name": "Gabi Dobocan",
+    "email": "gabi@telepat.io"
+  }],
+  "bugs": {
+    "url": "https://github.com/telepat-io/telepat-js/issues"
+  },
+  "keywords": [
+    "telepat",
+    "real-time",
+    "data",
+    "synchronization",
+    "sockets"
+  ],
+  "description": "Javscript Client for Telepat",
   "main": "lib/telepat.js",
   "scripts": {},
   "ignore": [

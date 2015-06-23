@@ -1,1 +1,1 @@
-var tree={"files":["channel.js","telepat.js"]};
+var tree={"files":["README.md"],"dirs":{"lib":{"files":["channel.js","telepat.js"]}}};

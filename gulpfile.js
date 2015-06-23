@@ -15,8 +15,8 @@ gulp.task('build', function () {
 });
 
 gulp.task('docs', function () {
-  var docker = new Docker({ inDir: 'lib', css: ['doc/custom.css'] });
-  docker.doc(['telepat.js', 'channel.js']);
+  var docker = new Docker({ inDir: '.', css: ['doc/custom.css'] });
+  docker.doc(['README.md', 'lib/telepat.js', 'lib/channel.js']);
 });
 
 gulp.task('js-watch', ['build'], browserSync.reload);
@@ -25,7 +25,7 @@ gulp.task('serve', function() {
     browserSync.init({
         port: 3002,
         server: {
-            baseDir: "./example"
+            baseDir: "./"
         }
     });
 

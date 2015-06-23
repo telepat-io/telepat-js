@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>channel.js</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <link rel="stylesheet" media="all" href="../doc-style.css" />
+  <script src="../doc-filelist.js"></script>
+  <script>
+    var relativeDir = "../", thisFile = "projects/Telepat/javascript-sdk/lib/channeljs", defaultSidebar = true;
+  </script>
+  <script src="../doc-script.js"></script>
+  <link rel="stylesheet" href="../custom.css" />
+</head>
+<body>
+  <div id="sidebar_wrapper">
+    <div id="sidebar_switch">
+      <span class="tree">Files</span>
+      <span class="headings">Headings</span>
+    </div>
+    <div id="tree"></div>
+    <div id="headings">
+      <div class="heading h1">
+        <a href="#telepat%20channel%20class">Telepat Channel Class</a>
+      </div>
+      <div class="heading h2">
+        <a href="#channel%20constructor">Channel Constructor</a>
+      </div>
+      <div class="heading h2">
+        <a href="#channel.objects">Channel.objects</a>
+      </div>
+      <div class="heading h2">
+        <a href="#channel.subscribe">Channel.subscribe</a>
+      </div>
+      <div class="heading h2">
+        <a href="#modifying%20objects">Modifying objects</a>
+      </div>
+      <div class="heading h2">
+        <a href="#channel.unsubscribe">Channel.unsubscribe</a>
+      </div>
+      <div class="heading h2">
+        <a href="#channel.add">Channel.add</a>
+      </div>
+      <div class="heading h2">
+        <a href="#channel.remove">Channel.remove</a>
+      </div>
+      <div class="heading h2">
+        <a href="#channel.update">Channel.update</a>
+      </div>
+      <div class="heading h2">
+        <a href="#getting%20notified%20of%20object%20modifications">Getting notified of object modifications</a>
+      </div>
+      <div class="heading h2">
+        <a href="#channel.on">Channel.on</a>
+      </div>
+    </div>
+  </div>
+  <div id="sidebar-toggle"></div>
+  <div id="container"><div class="background highlight"></div>
+<table cellpadding="0" cellspacing="0">
+  <tbody>
+      <tr>
+        <td class="docs">
+<div class="pilwrap" id="telepat%20channel%20class">
+  <h1>
+    <a href="#telepat%20channel%20class" name="telepat%20channel%20class" class="pilcrow">&#182;</a>
+    Telepat Channel Class
+  </h1>
+</div>
+
+
+<p>Use Channels to create, update and remove Telepat objects. You can create new Channels using the <code>subscribe</code> function of the main <a href="http://docs.telepat.io/js-sdk.html#telepat" target="_parent">Telepat</a> object.</p>
+        </td>
+        <td class="code highlight"><div class="highlight"><pre><span class="kd">var</span> <span class="nx">EventObject</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;./event&#39;</span><span class="p">);</span>
+<span class="kd">var</span> <span class="nx">jsondiffpatch</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;jsondiffpatch&#39;</span><span class="p">).</span><span class="nx">create</span><span class="p">({</span>
+  <span class="nx">objectHash</span><span class="o">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">obj</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">obj</span><span class="p">.</span><span class="nx">_id</span> <span class="o">||</span> <span class="nx">obj</span><span class="p">.</span><span class="nx">id</span><span class="p">;</span>
+  <span class="p">}</span>
+<span class="p">});</span>
+
+
+</pre></div>
+        </td>
+      </tr>
+      <tr>
+        <td class="docs"><div class="dox">
+  <div class="summary">
+<div class="pilwrap" id="channel%20constructor">
+  <h2>
+    <a href="#channel%20constructor" name="channel%20constructor" class="pilcrow">&#182;</a>
+    Channel Constructor
+  </h2>
+</div>
+
+  </div>
+  <div class="body"><p>This is generally invoked by the main <a href="http://docs.telepat.io/js-sdk.html#telepat" target="_parent">Telepat</a> object, when calling the <code>subscribe</code> function.</p>
+  </div>
+  <div class="details">
+    <div class="dox_tag_title">Params</div>
+    <div class="dox_tag_detail">
+      <span class="dox_tag_name">api</span>
+      <span class="dox_type">Object</span>
+      <span>The API connection object. This is injected by Telepat.</span>
+    </div>
+    <div class="dox_tag_detail">
+      <span class="dox_tag_name">log</span>
+      <span class="dox_type">Object</span>
+      <span>The logging-handling object. This is injected by Telepat.</span>
+    </div>
+    <div class="dox_tag_detail">
+      <span class="dox_tag_name">error</span>
+      <span class="dox_type">Object</span>
+      <span>The error-handling object. This is injected by Telepat.</span>
+    </div>
+    <div class="dox_tag_detail">
+      <span class="dox_tag_name">context</span>
+      <span class="dox_type">integer</span>
+      <span>The context id to subscribe to.</span>
+    </div>
+    <div class="dox_tag_detail">
+      <span class="dox_tag_name">channel</span>
+      <span class="dox_type">string</span>
+      <span>The channel id to subscribe to.</span>
+    </div>
+  </div>
+</div>
+        </td>
+        <td class="code highlight"><div class="highlight"><pre>
+<span class="kd">var</span> <span class="nx">Channel</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">api</span><span class="p">,</span> <span class="nx">log</span><span class="p">,</span> <span class="nx">error</span><span class="p">,</span> <span class="nx">context</span><span class="p">,</span> <span class="nx">channel</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx">api</span> <span class="o">=</span> <span class="nx">api</span><span class="p">;</span>
+  <span class="kd">var</span> <span class="nx">error</span> <span class="o">=</span> <span class="nx">error</span><span class="p">;</span>
+  <span class="kd">var</span> <span class="nx">context</span> <span class="o">=</span> <span class="nx">context</span><span class="p">;</span>
+  <span class="kd">var</span> <span class="nx">channel</span> <span class="o">=</span> <span class="nx">channel</span><span class="p">;</span>
+  <span class="kd">var</span> <span class="nx">log</span> <span class="o">=</span> <span class="nx">log</span><span class="p">;</span>
+  <span class="kd">var</span> <span class="nx">event</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">EventObject</span><span class="p">(</span><span class="nx">log</span><span class="p">);</span>
+  <span class="kd">var</span> <span class="nx">self</span> <span class="o">=</span> <span class="k">this</span><span class="p">;</span>
+  <span class="kd">var</span> <span class="nx">timer</span><span class="p">;</span>
+  <span class="kd">var</span> <span class="nx">lastObjects</span><span class="p">;</span>
+  <span class="kd">var</span> <span class="nx">processingPatch</span> <span class="o">=</span> <span class="kc">false</span><span class="p">;</span>
+  <span class="nx">jsondiffpatch</span><span class="p">.</span><span class="nx">processor</span><span class="p">.</span><span class="nx">pipes</span><span class="p">.</span><span class="nx">diff</span><span class="p">.</span><span class="nx">before</span><span class="p">(</span><span class="s1">&#39;objects&#39;</span><span class="p">,</span> <span class="nx">objectPropertyTrimFilter</span><span class="p">);</span>
+
+  <span class="kd">function</span> <span class="nx">trimObject</span><span class="p">(</span><span class="nx">obj</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">trimmedObject</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">name</span> <span class="k">in</span> <span class="nx">obj</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">if</span> <span class="p">(</span><span class="nx">name</span><span class="p">.</span><span class="nx">slice</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="o">!==</span> <span class="s1">&#39;$$&#39;</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">trimmedObject</span><span class="p">[</span><span class="nx">name</span><span class="p">]</span> <span class="o">=</span> <span class="nx">obj</span><span class="p">[</span><span class="nx">name</span><span class="p">];</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="nx">trimmedObject</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="kd">function</span> <span class="nx">objectPropertyTrimFilter</span><span class="p">(</span><span class="nx">context</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">context</span><span class="p">.</span><span class="nx">leftIsArray</span> <span class="o">&amp;&amp;</span> <span class="nx">context</span><span class="p">.</span><span class="nx">leftType</span> <span class="o">===</span> <span class="s1">&#39;object&#39;</span><span class="p">)</span> <span class="p">{</span>
+      <span class="nx">context</span><span class="p">.</span><span class="nx">left</span> <span class="o">=</span> <span class="nx">trimObject</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nx">left</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">context</span><span class="p">.</span><span class="nx">rightIsArray</span> <span class="o">&amp;&amp;</span> <span class="nx">context</span><span class="p">.</span><span class="nx">rightType</span> <span class="o">===</span> <span class="s1">&#39;object&#39;</span><span class="p">)</span> <span class="p">{</span>
+      <span class="nx">context</span><span class="p">.</span><span class="nx">right</span> <span class="o">=</span> <span class="nx">trimObject</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nx">right</span><span class="p">);</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+
+
+</pre></div>
+        </td>
+      </tr>
+      <tr>
+        <td class="docs">
+<div class="pilwrap" id="channel.objects">
+  <h2>
+    <a href="#channel.objects" name="channel.objects" class="pilcrow">&#182;</a>
+    Channel.objects
+  </h2>
+</div>
+
+
+<p>You can access a hash of all the objects on the current channel using this property. Each object is stored on a key named after the object id.</p>
+        </td>
+        <td class="code highlight"><div class="highlight"><pre>
+  <span class="k">this</span><span class="p">.</span><span class="nx">objects</span> <span class="o">=</span> <span class="p">{};</span>
+
+
+</pre></div>
+        </td>
+      </tr>
+      <tr>
+        <td class="docs"><div class="dox">
+  <div class="summary">
+<div class="pilwrap" id="channel.subscribe">
+  <h2>
+    <a href="#channel.subscribe" name="channel.subscribe" class="pilcrow">&#182;</a>
+    Channel.subscribe
+  </h2>
+</div>
+
+  </div>
+  <div class="body"><p>Call this function to actually subscribe to the configured channel. This is usually invoked by the <code>subscribe</code> method on the main Telepat object.</p>
+
+<p>There are two possible events emitted by the Channel as a result:</p>
+
+<ul>
+<li><code>subscribe</code>, after a successful channel subscribe</li>
+<li><code>error</code></li>
+</ul>
+  </div>
+</div>
+        </td>
+        <td class="code highlight"><div class="highlight"><pre>
+  <span class="k">this</span><span class="p">.</span><span class="nx">subscribe</span> <span class="o">=</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">api</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="s1">&#39;object/subscribe&#39;</span><span class="p">,</span>
+    <span class="p">{</span>
+      <span class="s1">&#39;channel&#39;</span><span class="o">:</span> <span class="p">{</span>
+        <span class="s1">&#39;context&#39;</span><span class="o">:</span> <span class="nx">context</span><span class="p">,</span>
+        <span class="s1">&#39;model&#39;</span><span class="o">:</span> <span class="nx">channel</span>
+      <span class="p">}</span>
+    <span class="p">},</span>
+    <span class="kd">function</span> <span class="p">(</span><span class="nx">err</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">if</span> <span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">event</span><span class="p">.</span><span class="nx">emit</span><span class="p">(</span><span class="s1">&#39;error&#39;</span><span class="p">,</span> <span class="nx">error</span><span class="p">(</span><span class="s1">&#39;Subscribe failed with error: &#39;</span> <span class="o">+</span> <span class="nx">err</span><span class="p">));</span>
+      <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="nx">self</span><span class="p">.</span><span class="nx">objects</span> <span class="o">=</span> <span class="nx">res</span><span class="p">.</span><span class="nx">body</span><span class="p">.</span><span class="nx">message</span><span class="p">;</span>
+        <span class="kd">var</span> <span class="nx">objectKeys</span> <span class="o">=</span> <span class="nb">Object</span><span class="p">.</span><span class="nx">keys</span><span class="p">(</span><span class="nx">self</span><span class="p">.</span><span class="nx">objects</span><span class="p">);</span>
+        <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span> <span class="nx">i</span><span class="o">&lt;</span><span class="nx">objectKeys</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+          <span class="nx">self</span><span class="p">.</span><span class="nx">objects</span><span class="p">[</span><span class="nx">objectKeys</span><span class="p">[</span><span class="nx">i</span><span class="p">]].</span><span class="nx">$$event</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">EventObject</span><span class="p">(</span><span class="nx">log</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="nx">lastObjects</span> <span class="o">=</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">self</span><span class="p">.</span><span class="nx">objects</span><span class="p">));</span>
+        <span class="nx">event</span><span class="p">.</span><span class="nx">emit</span><span class="p">(</span><span class="s1">&#39;subscribe&#39;</span><span class="p">);</span>
+
+
+</pre></div>
+        </td>
+      </tr>
+      <tr>
+        <td class="docs">
+<div class="pilwrap" id="modifying%20objects">
+  <h2>
+    <a href="#modifying%20objects" name="modifying%20objects" class="pilcrow">&#182;</a>
+    Modifying objects
+  </h2>
+</div>
+
+
+<ul>
+<li>To create new objects, you can either add a new property on <code>Channel.objects</code> or use the <code>Channel.add</code> function. Any new properties added to <code>Channel.objects</code> will be immediately removed, and then added back (on the proper key, assigned by the server) - therefore, it is probably more convenient to use the <code>Channel.add</code> function for adding new objects.</li>
+<li>To edit or delete objects, simply access them using <code>Channel.objects</code> and make modifications as needed. Alternatively, you can also call the <code>Channel.remove</code> and <code>Channel.update</code> functions.</li>
+</ul>
+        </td>
+        <td class="code highlight"><div class="highlight"><pre>
+        <span class="nx">timer</span> <span class="o">=</span> <span class="nx">setInterval</span><span class="p">(</span><span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+          <span class="k">if</span> <span class="p">(</span><span class="nx">self</span><span class="p">.</span><span class="nx">processingPatch</span><span class="p">)</span>
+            <span class="k">return</span><span class="p">;</span>
+          <span class="kd">var</span> <span class="nx">diff</span> <span class="o">=</span> <span class="nx">jsondiffpatch</span><span class="p">.</span><span class="nx">diff</span><span class="p">(</span><span class="nx">lastObjects</span><span class="p">,</span> <span class="nx">self</span><span class="p">.</span><span class="nx">objects</span><span class="p">);</span>
+          <span class="k">if</span> <span class="p">(</span><span class="nx">diff</span> <span class="o">!==</span> <span class="kc">undefined</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">log</span><span class="p">.</span><span class="nx">debug</span><span class="p">(</span><span class="s1">&#39;Found diff: &#39;</span> <span class="o">+</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">diff</span><span class="p">));</span>
+            <span class="kd">var</span> <span class="nx">diffKeys</span> <span class="o">=</span> <span class="nb">Object</span><span class="p">.</span><span class="nx">keys</span><span class="p">(</span><span class="nx">diff</span><span class="p">);</span>
+            <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span> <span class="nx">i</span><span class="o">&lt;</span><span class="nx">diffKeys</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+              <span class="kd">var</span> <span class="nx">key</span> <span class="o">=</span> <span class="nx">diffKeys</span><span class="p">[</span><span class="nx">i</span><span class="p">];</span>
+              <span class="kd">var</span> <span class="nx">obj</span> <span class="o">=</span> <span class="nx">diff</span><span class="p">[</span><span class="nx">key</span><span class="p">];</span>
+
+              <span class="k">if</span> <span class="p">(</span><span class="nb">Array</span><span class="p">.</span><span class="nx">isArray</span><span class="p">(</span><span class="nx">obj</span><span class="p">))</span> <span class="p">{</span>
+                <span class="k">if</span> <span class="p">(</span><span class="nx">obj</span><span class="p">.</span><span class="nx">length</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+                  <span class="nx">self</span><span class="p">.</span><span class="nx">add</span><span class="p">(</span><span class="nx">self</span><span class="p">.</span><span class="nx">objects</span><span class="p">[</span><span class="nx">key</span><span class="p">]);</span>
+                  <span class="k">delete</span> <span class="nx">self</span><span class="p">.</span><span class="nx">objects</span><span class="p">[</span><span class="nx">key</span><span class="p">];</span>
+                  <span class="nx">log</span><span class="p">.</span><span class="nx">debug</span><span class="p">(</span><span class="s1">&#39;Adding object to &#39;</span> <span class="o">+</span> <span class="nx">channel</span> <span class="o">+</span> <span class="s1">&#39; channel&#39;</span><span class="p">);</span>
+                <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="nx">obj</span><span class="p">.</span><span class="nx">length</span> <span class="o">==</span> <span class="mi">3</span><span class="p">)</span> <span class="p">{</span>
+                  <span class="nx">self</span><span class="p">.</span><span class="nx">remove</span><span class="p">(</span><span class="nx">key</span><span class="p">);</span>
+                  <span class="nx">log</span><span class="p">.</span><span class="nx">debug</span><span class="p">(</span><span class="s1">&#39;Removing object from &#39;</span> <span class="o">+</span> <span class="nx">channel</span> <span class="o">+</span> <span class="s1">&#39; channel&#39;</span><span class="p">);</span>
+                <span class="p">}</span>
+              <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                <span class="kd">var</span> <span class="nx">objKeys</span> <span class="o">=</span> <span class="nb">Object</span><span class="p">.</span><span class="nx">keys</span><span class="p">(</span><span class="nx">obj</span><span class="p">);</span>
+                <span class="kd">var</span> <span class="nx">patch</span> <span class="o">=</span> <span class="p">[];</span>
+
+                <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">j</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span> <span class="nx">j</span><span class="o">&lt;</span><span class="nx">objKeys</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">j</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+                  <span class="kd">var</span> <span class="nx">objKey</span> <span class="o">=</span> <span class="nx">objKeys</span><span class="p">[</span><span class="nx">j</span><span class="p">];</span>
+                  <span class="kd">var</span> <span class="nx">delta</span> <span class="o">=</span> <span class="nx">obj</span><span class="p">[</span><span class="nx">objKey</span><span class="p">];</span>
+                  <span class="k">if</span> <span class="p">(</span><span class="nx">delta</span><span class="p">.</span><span class="nx">length</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+                    <span class="nx">patch</span><span class="p">.</span><span class="nx">push</span><span class="p">({</span><span class="s1">&#39;op&#39;</span><span class="o">:</span> <span class="s1">&#39;replace&#39;</span><span class="p">,</span> <span class="s1">&#39;path&#39;</span><span class="o">:</span> <span class="nx">channel</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span> <span class="nx">key</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span> <span class="nx">objKey</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="o">:</span> <span class="nx">delta</span><span class="p">[</span><span class="mi">0</span><span class="p">]});</span>
+                    <span class="nx">log</span><span class="p">.</span><span class="nx">debug</span><span class="p">(</span><span class="s1">&#39;Added &#39;</span> <span class="o">+</span> <span class="nx">objKey</span> <span class="o">+</span> <span class="s1">&#39; property to object &#39;</span> <span class="o">+</span> <span class="nx">key</span> <span class="o">+</span> <span class="s1">&#39;, &#39;</span> <span class="o">+</span> <span class="nx">channel</span> <span class="o">+</span> <span class="s1">&#39; channel&#39;</span><span class="p">);</span>
+                  <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="nx">delta</span><span class="p">.</span><span class="nx">length</span> <span class="o">==</span> <span class="mi">2</span><span class="p">)</span> <span class="p">{</span>
+                    <span class="nx">patch</span><span class="p">.</span><span class="nx">push</span><span class="p">({</span><span class="s1">&#39;op&#39;</span><span class="o">:</span> <span class="s1">&#39;replace&#39;</span><span class="p">,</span> <span class="s1">&#39;path&#39;</span><span class="o">:</span> <span class="nx">channel</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span> <span class="nx">key</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span> <span class="nx">objKey</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="o">:</span> <span class="nx">delta</span><span class="p">[</span><span class="mi">1</span><span class="p">]});</span>
+                    <span class="nx">log</span><span class="p">.</span><span class="nx">debug</span><span class="p">(</span><span class="s1">&#39;Modified &#39;</span> <span class="o">+</span> <span class="nx">objKey</span> <span class="o">+</span> <span class="s1">&#39; property on object &#39;</span> <span class="o">+</span> <span class="nx">key</span> <span class="o">+</span> <span class="s1">&#39;, &#39;</span> <span class="o">+</span> <span class="nx">channel</span> <span class="o">+</span> <span class="s1">&#39; channel&#39;</span><span class="p">);</span>
+                  <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="nx">delta</span><span class="p">.</span><span class="nx">length</span> <span class="o">==</span> <span class="mi">3</span><span class="p">)</span> <span class="p">{</span>
+                    <span class="nx">log</span><span class="p">.</span><span class="nx">info</span><span class="p">(</span><span class="s1">&#39;Removing object properties is not supported in this version. Try setting to an empty value instead.&#39;</span><span class="p">);</span>
+                  <span class="p">}</span>
+                <span class="p">}</span>
+
+                <span class="nx">self</span><span class="p">.</span><span class="nx">update</span><span class="p">(</span><span class="nx">key</span><span class="p">,</span> <span class="nx">patch</span><span class="p">);</span>
+                <span class="nx">log</span><span class="p">.</span><span class="nx">debug</span><span class="p">(</span><span class="s1">&#39;Sending patch to object &#39;</span> <span class="o">+</span> <span class="nx">key</span> <span class="o">+</span> <span class="s1">&#39; on &#39;</span> <span class="o">+</span> <span class="nx">channel</span> <span class="o">+</span> <span class="s1">&#39; channel: &#39;</span> <span class="o">+</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">patch</span><span class="p">));</span>
+              <span class="p">}</span>
+            <span class="p">}</span>
+            <span class="nx">lastObjects</span> <span class="o">=</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">self</span><span class="p">.</span><span class="nx">objects</span><span class="p">));</span>
+          <span class="p">}</span>
+        <span class="p">},</span> <span class="mi">100</span><span class="p">);</span>
+      <span class="p">}</span>
+    <span class="p">});</span>
+  <span class="p">}</span>
+
+
+</pre></div>
+        </td>
+      </tr>
+      <tr>
+        <td class="docs"><div class="dox">
+  <div class="summary">
+<div class="pilwrap" id="channel.unsubscribe">
+  <h2>
+    <a href="#channel.unsubscribe" name="channel.unsubscribe" class="pilcrow">&#182;</a>
+    Channel.unsubscribe
+  </h2>
+</div>
+
+  </div>
+  <div class="body"><p>Call this function to unsubscribe from the configured channel.</p>
+
+<p>There are two possible events emitted by the Channel as a result:</p>
+
+<ul>
+<li><code>unsubscribe</code>, after a successful channel unsubscribe</li>
+<li><code>error</code></li>
+</ul>
+  </div>
+</div>
+        </td>
+        <td class="code highlight"><div class="highlight"><pre>
+  <span class="k">this</span><span class="p">.</span><span class="nx">unsubscribe</span> <span class="o">=</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">api</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="s1">&#39;object/unsubscribe&#39;</span><span class="p">,</span>
+      <span class="p">{</span>
+        <span class="nx">channel</span><span class="o">:</span> <span class="p">{</span>
+          <span class="nx">context</span><span class="o">:</span> <span class="nx">context</span><span class="p">,</span>
+          <span class="nx">model</span><span class="o">:</span> <span class="nx">channel</span>
+        <span class="p">}</span>
+      <span class="p">},</span>
+      <span class="kd">function</span> <span class="p">(</span><span class="nx">err</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="p">{</span>
+          <span class="nx">event</span><span class="p">.</span><span class="nx">emit</span><span class="p">(</span><span class="s1">&#39;error&#39;</span><span class="p">,</span> <span class="nx">error</span><span class="p">(</span><span class="s1">&#39;Unsubscribe failed with error: &#39;</span> <span class="o">+</span> <span class="nx">err</span><span class="p">));</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+          <span class="nx">self</span><span class="p">.</span><span class="nx">objects</span> <span class="o">=</span> <span class="p">{};</span>
+          <span class="nx">clearInterval</span><span class="p">(</span><span class="nx">timer</span><span class="p">);</span>
+          <span class="nx">event</span><span class="p">.</span><span class="nx">emit</span><span class="p">(</span><span class="s1">&#39;unsubscribe&#39;</span><span class="p">);</span>
+          <span class="nx">event</span><span class="p">.</span><span class="nx">emit</span><span class="p">(</span><span class="s1">&#39;_unsubscribe&#39;</span><span class="p">);</span>
+        <span class="p">}</span>
+      <span class="p">});</span>
+  <span class="p">}</span>
+
+
+</pre></div>
+        </td>
+      </tr>
+      <tr>
+        <td class="docs"><div class="dox">
+  <div class="summary">
+<div class="pilwrap" id="channel.add">
+  <h2>
+    <a href="#channel.add" name="channel.add" class="pilcrow">&#182;</a>
+    Channel.add
+  </h2>
+</div>
+
+  </div>
+  <div class="body"><p>Add a new Telepat object to the current channel. The channel might emit an <code>error</code> if the operation fails.</p>
+  </div>
+  <div class="details">
+    <div class="dox_tag_title">Params</div>
+    <div class="dox_tag_detail">
+      <span class="dox_tag_name">object</span>
+      <span class="dox_type">Object</span>
+      <span>The new object to add</span>
+    </div>
+  </div>
+</div>
+        </td>
+        <td class="code highlight"><div class="highlight"><pre>
+  <span class="k">this</span><span class="p">.</span><span class="nx">add</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">object</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">api</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="s1">&#39;object/create&#39;</span><span class="p">,</span>
+      <span class="p">{</span>
+        <span class="nx">model</span><span class="o">:</span> <span class="nx">channel</span><span class="p">,</span>
+        <span class="nx">context</span><span class="o">:</span> <span class="nx">context</span><span class="p">,</span>
+        <span class="nx">content</span><span class="o">:</span> <span class="nx">object</span>
+      <span class="p">},</span>
+      <span class="kd">function</span> <span class="p">(</span><span class="nx">err</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="p">{</span>
+          <span class="nx">event</span><span class="p">.</span><span class="nx">emit</span><span class="p">(</span><span class="s1">&#39;error&#39;</span><span class="p">,</span> <span class="nx">error</span><span class="p">(</span><span class="s1">&#39;Adding object failed with error: &#39;</span> <span class="o">+</span> <span class="nx">err</span><span class="p">));</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="p">}</span>
+      <span class="p">});</span>
+  <span class="p">}</span>
+
+
+</pre></div>
+        </td>
+      </tr>
+      <tr>
+        <td class="docs"><div class="dox">
+  <div class="summary">
+<div class="pilwrap" id="channel.remove">
+  <h2>
+    <a href="#channel.remove" name="channel.remove" class="pilcrow">&#182;</a>
+    Channel.remove
+  </h2>
+</div>
+
+  </div>
+  <div class="body"><p>Remove a Telepat object from the current channel. The channel might emit an <code>error</code> if the operation fails.</p>
+
+<p>Instead of using this function, you can also delete the object from <code>Channel.objects</code>.</p>
+  </div>
+  <div class="details">
+    <div class="dox_tag_title">Params</div>
+    <div class="dox_tag_detail">
+      <span class="dox_tag_name">id</span>
+      <span class="dox_type">integer</span>
+      <span>The id of the object to delete</span>
+    </div>
+  </div>
+</div>
+        </td>
+        <td class="code highlight"><div class="highlight"><pre>
+  <span class="k">this</span><span class="p">.</span><span class="nx">remove</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">id</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">api</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="s1">&#39;object/delete&#39;</span><span class="p">,</span>
+      <span class="p">{</span>
+        <span class="nx">model</span><span class="o">:</span> <span class="nx">channel</span><span class="p">,</span>
+        <span class="nx">context</span><span class="o">:</span> <span class="nx">context</span><span class="p">,</span>
+        <span class="nx">id</span><span class="o">:</span> <span class="nx">id</span>
+      <span class="p">},</span>
+      <span class="kd">function</span> <span class="p">(</span><span class="nx">err</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="p">{</span>
+          <span class="nx">event</span><span class="p">.</span><span class="nx">emit</span><span class="p">(</span><span class="s1">&#39;error&#39;</span><span class="p">,</span> <span class="nx">error</span><span class="p">(</span><span class="s1">&#39;Removing object failed with error: &#39;</span> <span class="o">+</span> <span class="nx">err</span><span class="p">));</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="p">}</span>
+      <span class="p">});</span>
+  <span class="p">}</span>
+
+
+</pre></div>
+        </td>
+      </tr>
+      <tr>
+        <td class="docs"><div class="dox">
+  <div class="summary">
+<div class="pilwrap" id="channel.update">
+  <h2>
+    <a href="#channel.update" name="channel.update" class="pilcrow">&#182;</a>
+    Channel.update
+  </h2>
+</div>
+
+  </div>
+  <div class="body"><p>Updates a Telepat object from the current channel. The channel might emit an <code>error</code> if the operation fails.</p>
+
+<p>To call this function, you need to create an  array containing 'patch' objects, representing the modifications that need to be persisted. The structure of a patch object is:</p>
+
+<p><code>{'op': 'replace', 'path': channel + '/' + object_id + '/' + object_property, 'value': modified_value}</code></p>
+
+<p>Instead of using this function, you can also update the object directly from <code>Channel.objects</code>.</p>
+  </div>
+  <div class="details">
+    <div class="dox_tag_title">Params</div>
+    <div class="dox_tag_detail">
+      <span class="dox_tag_name">id</span>
+      <span class="dox_type">integer</span>
+      <span>The id of the object to update</span>
+    </div>
+    <div class="dox_tag_detail">
+      <span class="dox_tag_name">patch</span>
+      <span class="dox_type">Array</span>
+      <span>The array of patches representing the modifications that need to be persisted.</span>
+    </div>
+  </div>
+</div>
+        </td>
+        <td class="code highlight"><div class="highlight"><pre>
+  <span class="k">this</span><span class="p">.</span><span class="nx">update</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">id</span><span class="p">,</span> <span class="nx">patch</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">api</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="s1">&#39;object/update&#39;</span><span class="p">,</span>
+      <span class="p">{</span>
+        <span class="nx">model</span><span class="o">:</span> <span class="nx">channel</span><span class="p">,</span>
+        <span class="nx">context</span><span class="o">:</span> <span class="nx">context</span><span class="p">,</span>
+        <span class="nx">id</span><span class="o">:</span> <span class="nx">id</span><span class="p">,</span>
+        <span class="nx">patch</span><span class="o">:</span> <span class="nx">patch</span>
+      <span class="p">},</span>
+      <span class="kd">function</span> <span class="p">(</span><span class="nx">err</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="p">{</span>
+          <span class="nx">event</span><span class="p">.</span><span class="nx">emit</span><span class="p">(</span><span class="s1">&#39;error&#39;</span><span class="p">,</span> <span class="nx">error</span><span class="p">(</span><span class="s1">&#39;Updating object failed with error: &#39;</span> <span class="o">+</span> <span class="nx">err</span><span class="p">));</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="p">}</span>
+      <span class="p">});</span>
+  <span class="p">}</span>
+
+
+</pre></div>
+        </td>
+      </tr>
+      <tr>
+        <td class="docs">
+<div class="pilwrap" id="getting%20notified%20of%20object%20modifications">
+  <h2>
+    <a href="#getting%20notified%20of%20object%20modifications" name="getting%20notified%20of%20object%20modifications" class="pilcrow">&#182;</a>
+    Getting notified of object modifications
+  </h2>
+</div>
+
+
+<p>Use the <code>Channel.on('update', ...)</code> function to subscribe to object updates. This will only notify you of changes made from the 'outside' - don't expect events to be triggered on changes you make to objects.</p>
+
+
+<div class="highlight"><pre><code><span class="nx">Channel</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="s1">&#39;update&#39;</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">operation</span><span class="p">,</span> <span class="nx">parentId</span><span class="p">,</span> <span class="nx">parentObject</span><span class="p">,</span> <span class="nx">delta</span><span class="p">)</span> <span class="p">{</span>
+  <span class="c1">// operation can be one of &#39;replace&#39;, &#39;delete&#39; or &#39;add&#39;.</span>
+  <span class="c1">// parentId is the id of the Telepat object being modified.</span>
+  <span class="c1">// parentObject is the Telepat object being modified.</span>
+  <span class="c1">// delta is available just for the &#39;replace&#39; operation, and is an object that contains two properties: &#39;path&#39; (the name of the modified property on the object) and &#39;oldValue&#39;.</span>
+<span class="p">});</span>
+</code></pre></div>
+
+
+        </td>
+        <td class="code highlight"><div class="highlight"><pre>
+  <span class="k">this</span><span class="p">.</span><span class="nx">processPatch</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">operation</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">this</span><span class="p">.</span><span class="nx">processingPatch</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">operation</span><span class="p">.</span><span class="nx">hasOwnProperty</span><span class="p">(</span><span class="s1">&#39;path&#39;</span><span class="p">))</span> <span class="p">{</span>
+      <span class="kd">var</span> <span class="nx">pathComponents</span> <span class="o">=</span> <span class="nx">operation</span><span class="p">.</span><span class="nx">path</span><span class="p">.</span><span class="nx">split</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">);</span>
+      <span class="k">if</span> <span class="p">(</span><span class="nx">operation</span><span class="p">.</span><span class="nx">hasOwnProperty</span><span class="p">(</span><span class="s1">&#39;op&#39;</span><span class="p">))</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">operation</span><span class="p">.</span><span class="nx">op</span> <span class="o">==</span> <span class="s1">&#39;replace&#39;</span><span class="p">)</span> <span class="p">{</span>
+          <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="k">this</span><span class="p">.</span><span class="nx">objects</span><span class="p">.</span><span class="nx">hasOwnProperty</span><span class="p">(</span><span class="nx">pathComponents</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span> <span class="p">{</span>
+            <span class="nx">event</span><span class="p">.</span><span class="nx">emit</span><span class="p">(</span><span class="s1">&#39;error&#39;</span><span class="p">,</span> <span class="nx">error</span><span class="p">(</span><span class="s1">&#39;Object id doesn\&#39;t exist &#39;</span> <span class="o">+</span> <span class="nx">operation</span><span class="p">));</span>
+          <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="nx">operation</span><span class="p">.</span><span class="nx">hasOwnProperty</span><span class="p">(</span><span class="s1">&#39;value&#39;</span><span class="p">))</span> <span class="p">{</span>
+            <span class="kd">var</span> <span class="nx">parent</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">objects</span><span class="p">[</span><span class="nx">pathComponents</span><span class="p">[</span><span class="mi">1</span><span class="p">]];</span>
+            <span class="kd">var</span> <span class="nx">oldValue</span> <span class="o">=</span> <span class="nx">parent</span><span class="p">[</span><span class="nx">pathComponents</span><span class="p">[</span><span class="mi">2</span><span class="p">]];</span>
+            <span class="nx">parent</span><span class="p">[</span><span class="nx">pathComponents</span><span class="p">[</span><span class="mi">2</span><span class="p">]]</span> <span class="o">=</span> <span class="nx">operation</span><span class="p">.</span><span class="nx">value</span><span class="p">;</span>
+            <span class="nx">event</span><span class="p">.</span><span class="nx">emit</span><span class="p">(</span><span class="s1">&#39;update&#39;</span><span class="p">,</span> <span class="s1">&#39;replace&#39;</span><span class="p">,</span> <span class="nx">pathComponents</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="nx">parent</span><span class="p">,</span> <span class="p">{</span> <span class="nx">path</span><span class="o">:</span> <span class="nx">pathComponents</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="nx">oldValue</span><span class="o">:</span> <span class="nx">oldValue</span> <span class="p">});</span>
+            <span class="nx">log</span><span class="p">.</span><span class="nx">debug</span><span class="p">(</span><span class="s1">&#39;Replaced property &#39;</span> <span class="o">+</span> <span class="nx">pathComponents</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39; of object id &#39;</span> <span class="o">+</span> <span class="nx">pathComponents</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39; with  value &#39;</span> <span class="o">+</span> <span class="nx">operation</span><span class="p">.</span><span class="nx">value</span><span class="p">);</span>
+          <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="nx">event</span><span class="p">.</span><span class="nx">emit</span><span class="p">(</span><span class="s1">&#39;error&#39;</span><span class="p">,</span> <span class="nx">error</span><span class="p">(</span><span class="s1">&#39;Invalid operation &#39;</span> <span class="o">+</span> <span class="nx">operation</span><span class="p">));</span>
+          <span class="p">}</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="nx">operation</span><span class="p">.</span><span class="nx">op</span> <span class="o">==</span> <span class="s1">&#39;delete&#39;</span><span class="p">)</span> <span class="p">{</span>
+          <span class="kd">var</span> <span class="nx">oldValue</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">objects</span><span class="p">[</span><span class="nx">pathComponents</span><span class="p">[</span><span class="mi">1</span><span class="p">]];</span>
+          <span class="k">delete</span> <span class="k">this</span><span class="p">.</span><span class="nx">objects</span><span class="p">[</span><span class="nx">pathComponents</span><span class="p">[</span><span class="mi">1</span><span class="p">]];</span>
+          <span class="nx">event</span><span class="p">.</span><span class="nx">emit</span><span class="p">(</span><span class="s1">&#39;update&#39;</span><span class="p">,</span> <span class="s1">&#39;delete&#39;</span><span class="p">,</span> <span class="nx">pathComponents</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="nx">oldValue</span><span class="p">);</span>
+          <span class="nx">log</span><span class="p">.</span><span class="nx">debug</span><span class="p">(</span><span class="s1">&#39;Removed object id &#39;</span> <span class="o">+</span> <span class="nx">pathComponents</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+          <span class="nx">event</span><span class="p">.</span><span class="nx">emit</span><span class="p">(</span><span class="s1">&#39;error&#39;</span><span class="p">,</span> <span class="nx">error</span><span class="p">(</span><span class="s1">&#39;Unsupported operation &#39;</span> <span class="o">+</span> <span class="nx">operation</span><span class="p">));</span>
+        <span class="p">}</span>
+      <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="nx">event</span><span class="p">.</span><span class="nx">emit</span><span class="p">(</span><span class="s1">&#39;error&#39;</span><span class="p">,</span> <span class="nx">error</span><span class="p">(</span><span class="s1">&#39;Invalid operation &#39;</span> <span class="o">+</span> <span class="nx">operation</span><span class="p">));</span>
+      <span class="p">}</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+      <span class="k">if</span> <span class="p">(</span><span class="nx">operation</span><span class="p">.</span><span class="nx">hasOwnProperty</span><span class="p">(</span><span class="s1">&#39;value&#39;</span><span class="p">)</span> <span class="o">&amp;&amp;</span> <span class="nx">operation</span><span class="p">.</span><span class="nx">value</span><span class="p">.</span><span class="nx">hasOwnProperty</span><span class="p">(</span><span class="s1">&#39;id&#39;</span><span class="p">))</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="k">this</span><span class="p">.</span><span class="nx">objects</span><span class="p">.</span><span class="nx">hasOwnProperty</span><span class="p">(</span><span class="nx">operation</span><span class="p">.</span><span class="nx">value</span><span class="p">.</span><span class="nx">id</span><span class="p">))</span> <span class="p">{</span>
+          <span class="nx">operation</span><span class="p">.</span><span class="nx">value</span><span class="p">.</span><span class="nx">$$event</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">EventObject</span><span class="p">(</span><span class="nx">log</span><span class="p">);</span>
+          <span class="k">this</span><span class="p">.</span><span class="nx">objects</span><span class="p">[</span><span class="nx">operation</span><span class="p">.</span><span class="nx">value</span><span class="p">.</span><span class="nx">id</span><span class="p">]</span> <span class="o">=</span> <span class="nx">operation</span><span class="p">.</span><span class="nx">value</span><span class="p">;</span>
+          <span class="nx">event</span><span class="p">.</span><span class="nx">emit</span><span class="p">(</span><span class="s1">&#39;update&#39;</span><span class="p">,</span> <span class="s1">&#39;add&#39;</span><span class="p">,</span> <span class="nx">operation</span><span class="p">.</span><span class="nx">value</span><span class="p">.</span><span class="nx">id</span><span class="p">,</span> <span class="nx">operation</span><span class="p">.</span><span class="nx">value</span><span class="p">);</span>
+          <span class="nx">log</span><span class="p">.</span><span class="nx">debug</span><span class="p">(</span><span class="s1">&#39;Added object with id &#39;</span> <span class="o">+</span> <span class="nx">operation</span><span class="p">.</span><span class="nx">value</span><span class="p">.</span><span class="nx">id</span><span class="p">);</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+          <span class="nx">event</span><span class="p">.</span><span class="nx">emit</span><span class="p">(</span><span class="s1">&#39;error&#39;</span><span class="p">,</span> <span class="nx">error</span><span class="p">(</span><span class="s1">&#39;Object id already exists &#39;</span> <span class="o">+</span> <span class="nx">operation</span><span class="p">));</span>
+        <span class="p">}</span>
+      <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="nx">event</span><span class="p">.</span><span class="nx">emit</span><span class="p">(</span><span class="s1">&#39;error&#39;</span><span class="p">,</span> <span class="nx">error</span><span class="p">(</span><span class="s1">&#39;Invalid add operation &#39;</span> <span class="o">+</span> <span class="nx">operation</span><span class="p">));</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="nx">lastObjects</span> <span class="o">=</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">self</span><span class="p">.</span><span class="nx">objects</span><span class="p">));</span>
+    <span class="k">this</span><span class="p">.</span><span class="nx">processingPatch</span> <span class="o">=</span> <span class="kc">false</span><span class="p">;</span>
+  <span class="p">}</span>
+
+
+</pre></div>
+        </td>
+      </tr>
+      <tr>
+        <td class="docs"><div class="dox">
+  <div class="summary">
+<div class="pilwrap" id="channel.on">
+  <h2>
+    <a href="#channel.on" name="channel.on" class="pilcrow">&#182;</a>
+    Channel.on
+  </h2>
+</div>
+
+  </div>
+  <div class="body"><p>Call this function to add callbacks to be invoked on event triggers.</p>
+  </div>
+  <div class="details">
+    <div class="dox_tag_title">Params</div>
+    <div class="dox_tag_detail">
+      <span class="dox_tag_name">name</span>
+      <span class="dox_type">string</span>
+      <span>The name of the event to associate the callback with</span>
+    </div>
+    <div class="dox_tag_detail">
+      <span class="dox_tag_name">callback</span>
+      <span class="dox_type">function</span>
+      <span>The callback to be executed</span>
+    </div>
+  </div>
+</div>
+        </td>
+        <td class="code highlight"><div class="highlight"><pre>
+  <span class="k">this</span><span class="p">.</span><span class="nx">on</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">name</span><span class="p">,</span> <span class="nx">callback</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">event</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="nx">name</span><span class="p">,</span> <span class="nx">callback</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="nx">module</span><span class="p">.</span><span class="nx">exports</span> <span class="o">=</span> <span class="nx">Channel</span><span class="p">;</span>
+</pre></div>
+        </td>
+      </tr>
+  </tbody>
+</table>
+  </div>
+</body>
+</html>

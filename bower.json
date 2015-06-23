@@ -1,7 +1,16 @@
 {
   "name": "telepat-js",
-  "version": "0.0.1",
-  "description": "Javascript client for Telepat",
+  "version": "0.1.0",
+  "license": "MIT",
+  "authors": [
+    "Gabi Dobocan", "Gabi Dobocan <gabi@telepat.io>"
+  ],
+  "homepage": "http://telepat.io",
+  "repository": {
+    "type": "git",
+    "url": "git://telepat-io/telepat-js.git"
+  },
+  "description": "Javascript Client for Telepat",
   "main": "dist/telepat.js",
   "ignore": [ "example" ],  
   "dependencies": {}
