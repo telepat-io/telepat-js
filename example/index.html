@@ -24,7 +24,7 @@
 
     function addObject() {
       eventChannel.objects['new'] = {
-        text: 'salut!'
+        text: 'Hello world'
       };
     }
 
@@ -37,11 +37,12 @@
     }
 
     function appendToList(key, value) {
-      $('#list').append('<div style="padding:5px; border-bottom:1px solid" id="' + key + '">' + key + ': <input type="text" id="' + key + '_input" value="' + value.text + '" onkeyup="editObject(\'' + key + '\');"><div style="float:right"><a href="#" onclick="removeObject(\'' + key + '\'); return false;">Delete</a></div></div>');
+      $('#list').append('<div style="padding:5px; border-bottom:1px solid" id="' + key + '">' + key + ': <input type="text" id="' + key + '_input" value="' + value.text + '" onkeyup="editObject(\'' + key + '\');"> <span id="' + key + '_span">' + value.text + '</span><div style="float:right"><a href="#" onclick="removeObject(\'' + key + '\'); return false;">Delete</a></div></div>');
     }
 
     function subscribe() {
       eventChannel = Telepat.subscribe(Object.keys(Telepat.contexts)[0], 'events', function () {
+        $('#list').empty();
         $.each(eventChannel.objects, function (key, value) {
           appendToList(key, value);
         });
@@ -53,9 +54,12 @@
         } else if (operation == 'add') {
           appendToList(parentId, parentObject);
         } else if (operation == 'replace') {
-          //$('#' + parentId + '_input').val(parentObject[delta.path]);
-          $('#status').append('<div>' + parentObject[delta.path] + '</div>');
+          $('#' + parentId + '_span').text(parentObject[delta.path]);
+          //$('#status').append('<div>' + parentObject[delta.path] + '</div>');
         }
+      });
+      eventChannel.on('unsubscribe', function () {
+        $('#list').empty();
       });
     }
 
@@ -77,6 +81,7 @@
 
         Telepat.on('logout', function () {
           console.log("logged out");
+          $('#list').empty();
         })
 
         Telepat.on('connect', function () {
