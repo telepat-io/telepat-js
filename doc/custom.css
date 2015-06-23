@@ -1,0 +1,23 @@
+#tree, #headings {
+  width: 200px;
+}
+
+#sidebar_switch {
+  width: 200px;
+}
+
+.sidebar #sidebar_wrapper {
+  width: 200px; 
+}
+
+.sidebar #sidebar-toggle {
+  left: 200px; 
+}
+
+td.docs {
+  min-width: 340px;
+}
+
+.sidebar #container {
+  left: 205px;
+}
