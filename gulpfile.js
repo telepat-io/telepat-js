@@ -10,7 +10,7 @@ gulp.task('build', function () {
   return browserify([__dirname + '/lib/telepat.js'], {standalone: 'Telepat'}).bundle()
     .pipe(source('telepat.js'))
     .pipe(buffer())
-    .pipe(uglify())
+    //.pipe(uglify())
     .pipe(gulp.dest(__dirname + '/dist'));
 });
 

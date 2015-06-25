@@ -1,69 +1,16 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <title>Telepat example app</title>
+    <link rel="icon" type="image/png" href="favicon-196x196.png">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+    <link href="style.css" rel="stylesheet">
     <script src="../dist/telepat.js"></script>
     <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+    <script src="script.js"></script>
   </head>
   <body>
   <script>
-    function statusChangeCallback(response) {
-      if (response.status === 'connected') {
-        Telepat.login(response.authResponse.accessToken);
-      } else if (response.status === 'not_authorized') {
-        document.getElementById('status').innerHTML = 'Please log into this app.';
-      } else {
-        document.getElementById('status').innerHTML = 'Please log into Facebook.';
-      }
-    }
-
-    function checkLoginState() {
-      FB.getLoginStatus(function(response) {
-        statusChangeCallback(response);
-      });
-    }
-
-    function addObject() {
-      eventChannel.objects['new'] = {
-        text: 'Hello world'
-      };
-    }
-
-    function removeObject(id) {
-      delete eventChannel.objects[id];
-    }
-
-    function editObject(id) {
-      eventChannel.objects[id].text = $('#' + id + '_input').val();
-    }
-
-    function appendToList(key, value) {
-      $('#list').append('<div style="padding:5px; border-bottom:1px solid" id="' + key + '">' + key + ': <input type="text" id="' + key + '_input" value="' + value.text + '" onkeyup="editObject(\'' + key + '\');"> <span id="' + key + '_span">' + value.text + '</span><div style="float:right"><a href="#" onclick="removeObject(\'' + key + '\'); return false;">Delete</a></div></div>');
-    }
-
-    function subscribe() {
-      eventChannel = Telepat.subscribe(Object.keys(Telepat.contexts)[0], 'events', function () {
-        $('#list').empty();
-        $.each(eventChannel.objects, function (key, value) {
-          appendToList(key, value);
-        });
-      });
-      eventChannel.on('update', function (operation, parentId, parentObject, delta) {
-        console.log(operation, parentId, parentObject, delta);
-        if (operation == 'delete') {
-          $('#' + parentId).remove();
-        } else if (operation == 'add') {
-          appendToList(parentId, parentObject);
-        } else if (operation == 'replace') {
-          $('#' + parentId + '_span').text(parentObject[delta.path]);
-          //$('#status').append('<div>' + parentObject[delta.path] + '</div>');
-        }
-      });
-      eventChannel.on('unsubscribe', function () {
-        $('#list').empty();
-      });
-    }
-
-    var eventChannel;
     window.fbAsyncInit = function() {
         FB.init({
           appId      : '1086083914753251',
@@ -71,33 +18,10 @@
           version    : 'v2.3',
           status     : true
         });
+        FB.Event.subscribe("auth.login", checkLoginState);
+        FB.Event.subscribe("auth.logout", checkLoginState);
 
-        Telepat.setLogLevel('debug');
-
-        Telepat.on('login', function () {
-          console.log("logged in");
-          subscribe();
-        });
-
-        Telepat.on('logout', function () {
-          console.log("logged out");
-          $('#list').empty();
-        })
-
-        Telepat.on('connect', function () {
-          checkLoginState();
-        });
-
-        Telepat.on('contexts-update', function () {
-          //Telepat.subscribe(Object.keys(Telepat.contexts)[0], 'event');
-        });
-
-        Telepat.connect({
-          apiKey: '3406870085495689e34d878f09faf52c',
-          appId: 1,
-          apiEndpoint: 'http://blg-octopus-api.cloudapp.net:3000',
-          socketEndpoint: 'http://blg-octopus-api.cloudapp.net'
-        });
+        connect();
       };
 
       (function(d, s, id){
@@ -109,23 +33,39 @@
        }(document, 'script', 'facebook-jssdk'));
   </script>
 
-  <div style="float:left">
-    <fb:login-button scope="public_profile,email,user_about_me,user_friends" onlogin="checkLoginState();">
-    </fb:login-button>
-    <br/>
-    <button onclick="Telepat.logout()">Logout</button>
-    <br/>
-    <button onclick="subscribe()">Subscribe</button>
-    <br/>
-    <button onclick="eventChannel.unsubscribe()">Unsubscribe</button>
-    <br/>
-    <button onclick="addObject()">Add Object</button>
+  <div id="wrapper">
 
-    <div id="status">
+        <!-- Sidebar -->
+        <div id="sidebar-wrapper">
+            <a href="http://telepat.io" title="Telepat Real-Time Backend">
+              <div data-height="70" data-stroke-color="#000000" class="telepat-logo"></div>
+            </a>
+            <script type="text/javascript" src="http://telepat.io/js/telepat-logo.js"></script>
+
+            <fb:login-button autologoutlink="true" id="login-button" scope="public_profile,email,user_about_me,user_friends"></fb:login-button>
+
+            <ul class="sidebar-nav">
+                <li><a href="#" onclick="subscribe(); return false;">Subscribe</a></li>
+                <li><a href="#" onclick="eventChannel.unsubscribe(); return false;">Unsubscribe</a></li>
+                <li><a href="#" onclick="addObject(); return false;">Add object</a></li>
+            </ul>
+        </div>
+        <!-- /#sidebar-wrapper -->
+
+        <!-- Page Content -->
+        <div id="page-content-wrapper">
+            <div class="container-fluid">
+                <div class="row">
+                    <div class="col-lg-12">
+                        <ul class="list-group"></ul>
+                        <div id="message"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- /#page-content-wrapper -->
+
     </div>
-  </div>
-  <div id="list" style="margin-left: 200px">
-    
-  </div>
+    <!-- /#wrapper -->
   </body>
 </html>
