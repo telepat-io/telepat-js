@@ -1,6 +1,6 @@
 # Telepat Javascript Client
 
-version: 0.1.0
+version: 0.1.1
 
 UMD client for Telepat, using [Browserify](http://browserify.org) to run in browsers.
 Available on [GitHub](https://github.com/telepat-io/telepat-js).
