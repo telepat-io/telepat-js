@@ -72,7 +72,7 @@ function appendToList(key, value) {
 
 function subscribe() {
   eventChannel = Telepat.subscribe(Object.keys(Telepat.contexts)[0], channel, function () {
-    $('#list').empty();
+    $('#message').empty();
     $.each(eventChannel.objects, function (key, value) {
       appendToList(key, value);
     });
@@ -85,7 +85,6 @@ function subscribe() {
       appendToList(parentId, parentObject);
     } else if (operation == 'replace') {
       $('#' + parentId + '_span').text(parentObject[delta.path]);
-      //$('#status').append('<div>' + parentObject[delta.path] + '</div>');
     }
   });
   eventChannel.on('unsubscribe', function () {
