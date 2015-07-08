@@ -71,7 +71,7 @@ function appendToList(key, value) {
 }
 
 function subscribe() {
-  eventChannel = Telepat.subscribe(Object.keys(Telepat.contexts)[0], channel, function () {
+  eventChannel = Telepat.subscribe(Telepat.contexts[0].id, channel, function () {
     $('#message').empty();
     $.each(eventChannel.objects, function (key, value) {
       appendToList(key, value);
