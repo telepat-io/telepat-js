@@ -442,7 +442,7 @@ function error(string) {
 
 function updateContexts() {
   API.get('context/all', {}, function(err, res) {
-      Telepat.contexts = res.body;
+      Telepat.contexts = res.body.content;
       Event.emit('contexts-update');
     })
 }
