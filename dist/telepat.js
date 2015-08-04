@@ -63,16 +63,13 @@ var jsondiffpatch = require('jsondiffpatch').create({
  * @param {Object} api The API connection object. This is injected by Telepat.
  * @param {Object} log The logging-handling object. This is injected by Telepat.
  * @param {Object} error The error-handling object. This is injected by Telepat.
- * @param {integer} context The context id to subscribe to.
- * @param {string} channel The channel id to subscribe to.
+ * @param {Object} options The object describing the required subscription (context, channel, filters)
  * @param {integer} interval The time interval in miliseconds between two object-monitoring jobs. Defaults to 150.
  */
-var Channel = function (api, log, error, context, channel, filters, interval) {
+var Channel = function (api, log, error, options, interval) {
   var api = api;
   var error = error;
-  var context = context;
-  var channel = channel;
-  var filters = filters || null;
+  var options = options;
   var log = log;
   var event = new EventObject(log);
   var self = this;
@@ -118,16 +115,6 @@ var Channel = function (api, log, error, context, channel, filters, interval) {
  *
  */
   this.subscribe = function() {
-    var options = {
-      'channel': {
-        'context': context,
-        'model': channel
-      }
-    };
-    if (filters !== null) {
-      options['filters'] = filters;
-    }
-
     api.call('object/subscribe',
     options,
     function (err, res) {
@@ -211,16 +198,6 @@ var Channel = function (api, log, error, context, channel, filters, interval) {
  *
  */
   this.unsubscribe = function() {
-    var options = {
-        channel: {
-          context: context,
-          model: channel
-        }
-      };
-    if (filters !== null) {
-      options['filters'] = filters;
-    }
-
     api.call('object/unsubscribe',
       options,
       function (err, res) {
@@ -246,8 +223,8 @@ var Channel = function (api, log, error, context, channel, filters, interval) {
   this.add = function(object) {
     api.call('object/create',
       {
-        model: channel,
-        context: context,
+        model: options.channel,
+        context: options.context,
         content: object
       },
       function (err, res) {
@@ -271,8 +248,8 @@ var Channel = function (api, log, error, context, channel, filters, interval) {
   this.remove = function(id) {
     api.call('object/delete',
       {
-        model: channel,
-        context: context,
+        model: options.channel,
+        context: options.context,
         id: id
       },
       function (err, res) {
@@ -302,8 +279,8 @@ var Channel = function (api, log, error, context, channel, filters, interval) {
     updateRunning = true;
     api.call('object/update',
       {
-        model: channel,
-        context: context,
+        model: options.channel,
+        context: options.context,
         id: id,
         patch: patch
       },
@@ -730,15 +707,14 @@ Telepat.logout = function () {
  * 
  * You can pass a callback to be invoked on channel subscription. This is equivalent to calling `.on('subscribe' ...)` directly on the returned Channel.
  *
- * @param {integer} contextId The id of the context to subscribe to
- * @param {string} channelId The id of the channel to subscribe to
+ * @param {Object} options The object describing the required subscription (context, channel, filters)
  * @param {function, optional} onSubscribe Callback to be executed on a successful subscribe
  *
  * @return {Channel} The new [Channel](http://docs.telepat.io/javascript-sdk/lib/channel.js.html) object
  */
-Telepat.subscribe = function (contextId, channelId, filters, onSubscribe) {
+Telepat.subscribe = function (options, onSubscribe) {
 
-  var channel = new Channel(API, log, error, contextId, channelId, filters, channelTimerInterval);
+  var channel = new Channel(API, log, error, options, channelTimerInterval);
   var key = 'blg:'+contextId+':'+channelId;
   var self = this;
   this.subscriptions[key] = channel;
