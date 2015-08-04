@@ -441,7 +441,8 @@ var Channel = require('./channel');
 
 var Telepat = {
   contexts: null,
-  subscriptions: {}
+  subscriptions: {},
+  user: null
 };
 
 var apiEndpoint, socketEndpoint;
@@ -664,6 +665,7 @@ Telepat.loginWithFacebook = function (facebookToken) {
     if (err) {
       Event.emit('login_error', error('Login failed with error: ' + err));
     } else {
+      Telepat.user = res.body.content.user;
       API.authenticationToken = res.body.content.token;
       Event.emit('login');
     }
@@ -692,6 +694,7 @@ Telepat.login = function (email, password) {
     if (err) {
       Event.emit('login_error', error('Login failed with error: ' + err));
     } else {
+      Telepat.user = res.body.content.user;
       API.authenticationToken = res.body.content.token;
       Event.emit('login');
     }
