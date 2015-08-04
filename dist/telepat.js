@@ -67,11 +67,12 @@ var jsondiffpatch = require('jsondiffpatch').create({
  * @param {string} channel The channel id to subscribe to.
  * @param {integer} interval The time interval in miliseconds between two object-monitoring jobs. Defaults to 150.
  */
-var Channel = function (api, log, error, context, channel, interval) {
+var Channel = function (api, log, error, context, channel, filters, interval) {
   var api = api;
   var error = error;
   var context = context;
   var channel = channel;
+  var filters = filters || null;
   var log = log;
   var event = new EventObject(log);
   var self = this;
@@ -117,18 +118,25 @@ var Channel = function (api, log, error, context, channel, interval) {
  *
  */
   this.subscribe = function() {
-    api.call('object/subscribe',
-    {
+    var options = {
       'channel': {
         'context': context,
         'model': channel
       }
-    },
+    };
+    if (filters !== null) {
+      options['filters'] = filters;
+    }
+
+    api.call('object/subscribe',
+    options,
     function (err, res) {
       if (err) {
         event.emit('error', error('Subscribe failed with error: ' + err));
       } else {
-        self.objects = res.body.message;
+        for (var i=0; i<res.body.content.length; i++) {
+          self.objects[res.body.content[i].id] = res.body.content[i];
+        }
         var objectKeys = Object.keys(self.objects);
         for (var i=0; i<objectKeys.length; i++) {
           self.objects[objectKeys[i]].$$event = new EventObject(log);
@@ -166,7 +174,10 @@ var Channel = function (api, log, error, context, channel, interval) {
                 for (var j=0; j<objKeys.length; j++) {
                   var objKey = objKeys[j];
                   var delta = obj[objKey];
-                  if (delta.length == 1) {
+                  if (typeof delta === 'object') {
+                    patch.push({'op': 'replace', 'path': channel + '/' + key + '/' + objKey, 'value': self.objects[key][objKey]});
+                    log.debug('Modified ' + objKey + ' property on object ' + key + ', ' + channel + ' channel');
+                  } else if (delta.length == 1) {
                     patch.push({'op': 'replace', 'path': channel + '/' + key + '/' + objKey, 'value': delta[0]});
                     log.debug('Added ' + objKey + ' property to object ' + key + ', ' + channel + ' channel');
                   } else if (delta.length == 2) {
@@ -200,13 +211,18 @@ var Channel = function (api, log, error, context, channel, interval) {
  *
  */
   this.unsubscribe = function() {
-    api.call('object/unsubscribe',
-      {
+    var options = {
         channel: {
           context: context,
           model: channel
         }
-      },
+      };
+    if (filters !== null) {
+      options['filters'] = filters;
+    }
+
+    api.call('object/unsubscribe',
+      options,
       function (err, res) {
         if (err) {
           event.emit('error', error('Unsubscribe failed with error: ' + err));
@@ -442,7 +458,7 @@ function error(string) {
 
 function updateContexts() {
   API.get('context/all', {}, function(err, res) {
-      Telepat.contexts = res.body;
+      Telepat.contexts = res.body.content;
       Event.emit('contexts-update');
     })
 }
@@ -455,6 +471,39 @@ function updateContexts() {
  * @param {object} options Object containing all configuration options for connection
  */
 Telepat.connect = function (options) {
+  function completeRegistration(res) {
+    if (res.body.content.identifier !== undefined) {
+      API.UDID = res.body.content.identifier;
+      log.info('Received new UDID: ' + API.UDID);
+
+      var revision = null;
+      var newObject = {
+        _id: ':deviceId',
+        value: res.body.content.identifier
+      };
+      db.get(':deviceId').then(function(doc) {
+        newObject._rev = doc._rev;
+        log.warn('Replacing existing UDID');
+        db.put(newObject).catch(function(err) {
+          log.warn('Could not persist UDID. Error: ' + err);
+        });
+      }).catch(function(err) {
+        db.put(newObject).catch(function(err) {
+          log.warn('Could not persist UDID. Error: ' + err);
+        });
+      });
+    }
+    log.info('Connection established');
+    // On a successful connection, the `connect` event is emitted by the Telepat object. To listen for a connection, use:
+    //
+    //     Telepat.on('connect', function () {
+    //       // Connected
+    //     });
+    Event.emit('connect');
+    updateContexts();
+    return true;
+  }
+
   function registerDevice() {
     var request = {
       'info':{
@@ -469,40 +518,18 @@ Telepat.connect = function (options) {
     };
     API.call('device/register', request, function (err, res) {
         if (err) {
-          socket.disconnect();
-          Event.emit('disconnect', err);
-          return error('Device registration failed with error: ' + err);
+          API.UDID = null;
+          API.call('device/register', request, function (err, res) {
+            if (err) {
+              socket.disconnect();
+              Event.emit('disconnect', err);
+              return error('Device registration failed with error: ' + err);
+            } else {
+              return completeRegistration(res);
+            }
+          });
         } else {
-          if (res.body.identifier !== undefined) {
-            API.UDID = res.body.identifier;
-            log.info('Received new UDID: ' + API.UDID);
-
-            var revision = null;
-            var newObject = {
-              _id: ':deviceId',
-              value: res.body.identifier
-            };
-            db.get(':deviceId').then(function(doc) {
-              newObject._rev = doc._rev;
-              log.warn('Replacing existing UDID');
-              db.put(newObject).catch(function(err) {
-                log.warn('Could not persist UDID. Error: ' + err);
-              });
-            }).catch(function(err) {
-              db.put(newObject).catch(function(err) {
-                log.warn('Could not persist UDID. Error: ' + err);
-              });
-            });
-          }
-          log.info('Connection established');
-          // On a successful connection, the `connect` event is emitted by the Telepat object. To listen for a connection, use:
-          //
-          //     Telepat.on('connect', function () {
-          //       // Connected
-          //     });
-          Event.emit('connect');
-          updateContexts();
-          return true;
+          return completeRegistration(res);
         }
       });
   }
@@ -619,9 +646,9 @@ Telepat.on = function(name, callback) {
 }
 
 /**
- * ## Telepat.login
+ * ## Telepat.loginWithFacebook
  *
- * This function associates the current anonymous device to a Telepat user profile.
+ * This function associates the current anonymous device to a Telepat user profile, using a Facebook account for authentication.
  * 
  * Two events can be asynchronously triggered by this function:
  *
@@ -630,14 +657,42 @@ Telepat.on = function(name, callback) {
  *
  * @param {string} facebookToken The user token obtained from Facebook after login
  */
-Telepat.login = function (facebookToken) {
+Telepat.loginWithFacebook = function (facebookToken) {
   API.call('user/login', {
     access_token: facebookToken
   }, function (err, res) {
     if (err) {
       Event.emit('login_error', error('Login failed with error: ' + err));
     } else {
-      API.authenticationToken = res.body.token;
+      API.authenticationToken = res.body.content.token;
+      Event.emit('login');
+    }
+  });
+  return this;
+}
+
+/**
+ * ## Telepat.login
+ *
+ * This function associates the current anonymous device to a Telepat user profile, using a password for authentication.
+ * 
+ * Two events can be asynchronously triggered by this function:
+ *
+ * - `login`, on success
+ * - `login_error`, on error
+ *
+ * @param {string} email The user's email address
+ * @param {string} password The user's password
+ */
+Telepat.login = function (email, password) {
+  API.call('user/login_password', {
+    email: email,
+    password: password
+  }, function (err, res) {
+    if (err) {
+      Event.emit('login_error', error('Login failed with error: ' + err));
+    } else {
+      API.authenticationToken = res.body.content.token;
       Event.emit('login');
     }
   });
@@ -678,8 +733,9 @@ Telepat.logout = function () {
  *
  * @return {Channel} The new [Channel](http://docs.telepat.io/javascript-sdk/lib/channel.js.html) object
  */
-Telepat.subscribe = function (contextId, channelId, onSubscribe) {
-  var channel = new Channel(API, log, error, contextId, channelId, channelTimerInterval);
+Telepat.subscribe = function (contextId, channelId, filters, onSubscribe) {
+
+  var channel = new Channel(API, log, error, contextId, channelId, filters, channelTimerInterval);
   var key = 'blg:'+contextId+':'+channelId;
   var self = this;
   this.subscriptions[key] = channel;

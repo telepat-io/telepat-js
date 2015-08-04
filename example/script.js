@@ -36,7 +36,7 @@ function connect() {
 
 function statusChangeCallback(response) {
   if (response.status === 'connected') {
-    Telepat.login(response.authResponse.accessToken);
+    Telepat.loginWithFacebook(response.authResponse.accessToken);
   } else if (response.status === 'not_authorized') {
     $('#message').html('Please log into this app.');
     Telepat.logout();
@@ -71,7 +71,7 @@ function appendToList(key, value) {
 }
 
 function subscribe() {
-  eventChannel = Telepat.subscribe(Object.keys(Telepat.contexts)[0], channel, function () {
+  eventChannel = Telepat.subscribe(Telepat.contexts[0].id, channel, null, function () {
     $('#message').empty();
     $.each(eventChannel.objects, function (key, value) {
       appendToList(key, value);
@@ -88,6 +88,6 @@ function subscribe() {
     }
   });
   eventChannel.on('unsubscribe', function () {
-    $('#list').empty();
+    $('.list-group').empty();
   });
 }
