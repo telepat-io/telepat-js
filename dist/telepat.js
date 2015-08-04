@@ -715,7 +715,7 @@ Telepat.logout = function () {
 Telepat.subscribe = function (options, onSubscribe) {
 
   var channel = new Channel(API, log, error, options, channelTimerInterval);
-  var key = 'blg:'+contextId+':'+channelId;
+  var key = 'blg:'+options.context+':'+options.model;
   var self = this;
   this.subscriptions[key] = channel;
   channel.subscribe();
