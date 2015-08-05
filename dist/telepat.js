@@ -1,6 +1,48 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.Telepat = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+'use strict';
+// # Telepat Admin Class
+
+/**
+ * ## Admin Constructor
+ *
+ * This is generally invoked by the main [Telepat](http://docs.telepat.io/javascript-sdk/lib/telepat.js.html) object, when calling the `loginAdmin` function.
+ *
+ * @param {Object} api The API connection object. This is injected by Telepat.
+ * @param {Object} log The logging-handling object. This is injected by Telepat.
+ * @param {Object} error The error-handling object. This is injected by Telepat.
+ */
+var Admin = function (tapi, tlog, terror) {
+  var api = tapi;
+  var error = terror;
+  var log = tlog;
+  var self = this;
+
+/**
+ * ## Admin.getAppUsers
+ *
+ * This returns an array of all the current application user objects. 
+ *
+ *  @param {function} callback The callback function to be invoked when operation is done. The function receives 2 parameters, an error object and the user array.
+ */
+  this.getAppUsers = function(callback) {
+    api.call('admin/users',
+    {},
+    function (err, res) {
+      if (err) {
+        callback(error('Retrieving users failed with error: ' + err), null);
+      } else {
+        callback(null, res.body.content);
+      }
+    });
+  };
+};
+
+module.exports = Admin;
+},{}],2:[function(require,module,exports){
+'use strict';
+
 var request = require('superagent');
-var SHA256 = require("crypto-js/sha256");
+var SHA256 = require('crypto-js/sha256');
 
 var API = {
   apiEndpoint: null,
@@ -8,43 +50,48 @@ var API = {
   appId: null,
   UDID: null,
   authenticationToken: null
-}
+};
 
 API.call = function (endpoint, data, callback, method) {
-  if (!this.apiEndpoint || !this.apiKey || !this.appId)
+  if (!this.apiEndpoint || !this.apiKey || !this.appId) {
     return callback(null, null);
+  }
 
   var req;
 
-  if (method == 'get')
+  if (method === 'get') {
     req = request.get(this.apiEndpoint + endpoint);
-  else 
+  } else {
     req = request.post(this.apiEndpoint + endpoint);
+  }
 
   req.send(data)
     .set('X-BLGREQ-SIGN', SHA256(this.apiKey))
     .set('X-BLGREQ-APPID', this.appId)
     .set('X-BLGREQ-UDID', this.UDID || '');
   
-  if (this.authenticationToken)
+  if (this.authenticationToken) {
     req.set('Authorization', 'Bearer ' + this.authenticationToken);
+  }
 
   req.end(function (err, res) {
-      if (this.authenticationToken && res.status == 401) {
+      if (this.authenticationToken && res.status === 401) {
 
       }
       else {
         callback(err, res);
       }
     });
-}
+};
 
 API.get = function (endpoint, data, callback) {
   return this.call(endpoint, data, callback, 'get');
-}
+};
 
 module.exports = API;
-},{"crypto-js/sha256":10,"superagent":152}],2:[function(require,module,exports){
+},{"crypto-js/sha256":11,"superagent":153}],3:[function(require,module,exports){
+'use strict';
+
 // # Telepat Channel Class
 // Use Channels to create, update and remove Telepat objects. You can create new Channels using the `subscribe` function of the main [Telepat](http://docs.telepat.io/javascript-sdk/lib/telepat.js.html) object.
 
@@ -66,11 +113,11 @@ var jsondiffpatch = require('jsondiffpatch').create({
  * @param {Object} options The object describing the required subscription (context, channel, filters)
  * @param {integer} interval The time interval in miliseconds between two object-monitoring jobs. Defaults to 150.
  */
-var Channel = function (api, log, error, options, interval) {
-  var api = api;
-  var error = error;
-  var options = options;
-  var log = log;
+var Channel = function (tapi, tlog, terror, toptions, interval) {
+  var api = tapi;
+  var error = terror;
+  var options = toptions;
+  var log = tlog;
   var event = new EventObject(log);
   var self = this;
   var timer;
@@ -81,7 +128,7 @@ var Channel = function (api, log, error, options, interval) {
   var timerInterval = interval || 150;
 
   function trimObject(obj) {
-    trimmedObject = {};
+    var trimmedObject = {};
     for (var name in obj) {
       if (name.slice(0, 2) !== '$$') {
         trimmedObject[name] = obj[name];
@@ -121,11 +168,12 @@ var Channel = function (api, log, error, options, interval) {
       if (err) {
         event.emit('error', error('Subscribe failed with error: ' + err));
       } else {
-        for (var i=0; i<res.body.content.length; i++) {
+        var i;
+        for (i=0; i<res.body.content.length; i++) {
           self.objects[res.body.content[i].id] = res.body.content[i];
         }
         var objectKeys = Object.keys(self.objects);
-        for (var i=0; i<objectKeys.length; i++) {
+        for (i=0; i<objectKeys.length; i++) {
           self.objects[objectKeys[i]].$$event = new EventObject(log);
         }
         lastObjects = JSON.parse(JSON.stringify(self.objects));
@@ -135,8 +183,9 @@ var Channel = function (api, log, error, options, interval) {
         // - To create new objects, you can either add a new property on `Channel.objects` or use the `Channel.add` function. Any new properties added to `Channel.objects` will be immediately removed, and then added back (on the proper key, assigned by the server) - therefore, it is probably more convenient to use the `Channel.add` function for adding new objects.
         // - To edit or delete objects, simply access them using `Channel.objects` and make modifications as needed. Alternatively, you can also call the `Channel.remove` and `Channel.update` functions.
         timer = setInterval(function () {
-          if (self.processingPatch || updateRunning)
+          if (self.processingPatch || updateRunning) {
             return;
+          }
           var diff = jsondiffpatch.diff(lastObjects, self.objects);
           if (diff !== undefined) {
             log.debug('Found diff: ' + JSON.stringify(diff));
@@ -146,11 +195,11 @@ var Channel = function (api, log, error, options, interval) {
               var obj = diff[key];
 
               if (Array.isArray(obj)) {
-                if (obj.length == 1) {
+                if (obj.length === 1) {
                   self.add(self.objects[key]);
                   delete self.objects[key];
                   log.debug('Adding object to ' + options.channel.model + ' channel');
-                } else if (obj.length == 3) {
+                } else if (obj.length === 3) {
                   self.remove(key);
                   log.debug('Removing object from ' + options.channel.model + ' channel');
                 }
@@ -164,13 +213,13 @@ var Channel = function (api, log, error, options, interval) {
                   if (typeof delta === 'object') {
                     patch.push({'op': 'replace', 'path': options.channel.model + '/' + key + '/' + objKey, 'value': self.objects[key][objKey]});
                     log.debug('Modified ' + objKey + ' property on object ' + key + ', ' + options.channel.model + ' channel');
-                  } else if (delta.length == 1) {
+                  } else if (delta.length === 1) {
                     patch.push({'op': 'replace', 'path': options.channel.model + '/' + key + '/' + objKey, 'value': delta[0]});
                     log.debug('Added ' + objKey + ' property to object ' + key + ', ' + options.channel.model + ' channel');
-                  } else if (delta.length == 2) {
+                  } else if (delta.length === 2) {
                     patch.push({'op': 'replace', 'path': options.channel.model + '/' + key + '/' + objKey, 'value': delta[1]});
                     log.debug('Modified ' + objKey + ' property on object ' + key + ', ' + options.channel.model + ' channel');
-                  } else if (delta.length == 3) {
+                  } else if (delta.length === 3) {
                     log.info('Removing object properties is not supported in this version. Try setting to an empty value instead.');
                   }
                 }
@@ -184,7 +233,7 @@ var Channel = function (api, log, error, options, interval) {
         }, timerInterval);
       }
     });
-  }
+  };
 
 /**
  * ## Channel.unsubscribe
@@ -210,7 +259,7 @@ var Channel = function (api, log, error, options, interval) {
           event.emit('_unsubscribe');
         }
       });
-  }
+  };
 
 /**
  * ## Channel.add
@@ -233,7 +282,7 @@ var Channel = function (api, log, error, options, interval) {
         } else {
         }
       });
-  }
+  };
 
 /**
  * ## Channel.remove
@@ -258,7 +307,7 @@ var Channel = function (api, log, error, options, interval) {
         } else {
         }
       });
-  }
+  };
 
 /**
  * ## Channel.update
@@ -291,7 +340,7 @@ var Channel = function (api, log, error, options, interval) {
         }
         updateRunning = false;
       });
-  }
+  };
 
   // ## Getting notified of object modifications
   // Use the `Channel.on('update', ...)` function to subscribe to object updates. This will only notify you of changes received from the 'outside' - you'll only see events when the backend notifies the client that there are updates available, either made by you or by someone else.
@@ -307,7 +356,7 @@ var Channel = function (api, log, error, options, interval) {
     if (operation.hasOwnProperty('path')) {
       var pathComponents = operation.path.split('/');
       if (operation.hasOwnProperty('op')) {
-        if (operation.op == 'replace') {
+        if (operation.op === 'replace') {
           if (!this.objects.hasOwnProperty(pathComponents[1])) {
             event.emit('error', error('Object id doesn\'t exist ' + operation));
           } else if (operation.hasOwnProperty('value')) {
@@ -319,7 +368,7 @@ var Channel = function (api, log, error, options, interval) {
           } else {
             event.emit('error', error('Invalid operation ' + operation));
           }
-        } else if (operation.op == 'delete') {
+        } else if (operation.op === 'delete') {
           var oldValue = this.objects[pathComponents[1]];
           delete this.objects[pathComponents[1]];
           event.emit('update', 'delete', pathComponents[1], oldValue);
@@ -346,7 +395,7 @@ var Channel = function (api, log, error, options, interval) {
     }
     lastObjects = JSON.parse(JSON.stringify(self.objects));
     this.processingPatch = false;
-  }
+  };
 
 /**
  * ## Channel.on
@@ -358,34 +407,37 @@ var Channel = function (api, log, error, options, interval) {
  */
   this.on = function(name, callback) {
     return event.on(name, callback);
-  }
-}
+  };
+};
 
 module.exports = Channel;
-},{"./event":3,"jsondiffpatch":24}],3:[function(require,module,exports){
+},{"./event":4,"jsondiffpatch":25}],4:[function(require,module,exports){
+'use strict';
+
 var Event = function (logger) {
   this.log = logger;
   this.eventFunctions = {};
-}
+};
 
 Event.prototype.jet = function () {
   console.log(this);
-}
+};
 
 Event.prototype.on = function (name, callback) {
   this.eventFunctions[name] = callback;
-}
+};
 
 Event.prototype.emit = function (args) {
   this.log.debug('Emitting ' + arguments[0] + ' event');
   var params = Array.prototype.slice.call(arguments);
   params.shift();
-  if (typeof this.eventFunctions[arguments[0]] !== 'undefined')
+  if (typeof this.eventFunctions[arguments[0]] !== 'undefined') {
     this.eventFunctions[arguments[0]].apply(this, params);
-}
+  }
+};
 
 module.exports = Event;
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 var log = require('loglevel');
 
 var originalFactory = log.methodFactory;
@@ -398,7 +450,8 @@ log.methodFactory = function (methodName, logLevel) {
 log.setLevel('warn');
 
 module.exports = log;
-},{"loglevel":27}],5:[function(require,module,exports){
+},{"loglevel":28}],6:[function(require,module,exports){
+'use strict';
 // # Telepat Javascript Client
 // **Telepat** is an open-source backend stack, designed to deliver information and information updates in real-time to clients, while allowing for flexible deployment and simple scaling.
 
@@ -409,6 +462,7 @@ var log = require('./logger');
 var EventObject = require('./event');
 var Event = new EventObject(log);
 var Channel = require('./channel');
+var Admin = require('./admin');
 
 // ## Telepat Object
 // You use the Telepat object to connect to the backend, login, subscribe and unsubscribe to channels. The object has two properties you can access:
@@ -419,7 +473,8 @@ var Channel = require('./channel');
 var Telepat = {
   contexts: null,
   subscriptions: {},
-  user: null
+  user: null,
+  admin: null
 };
 
 var apiEndpoint, socketEndpoint;
@@ -438,7 +493,23 @@ function updateContexts() {
   API.get('context/all', {}, function(err, res) {
       Telepat.contexts = res.body.content;
       Event.emit('contexts-update');
-    })
+    });
+}
+
+function login(endpoint, options) {
+  API.call(endpoint, options, function (err, res) {
+    if (err) {
+      Event.emit('login_error', error('Login failed with error: ' + err));
+    } else {
+      Telepat.user = res.body.content.user;
+      if (Telepat.user.type === 'admin') {
+        Telepat.admin = new Admin(API, log, error);
+      }
+      API.authenticationToken = res.body.content.token;
+      Event.emit('login');
+    }
+  });
+  return Telepat;
 }
 
 /**
@@ -454,7 +525,6 @@ Telepat.connect = function (options) {
       API.UDID = res.body.content.identifier;
       log.info('Received new UDID: ' + API.UDID);
 
-      var revision = null;
       var newObject = {
         _id: ':deviceId',
         value: res.body.content.identifier
@@ -465,7 +535,7 @@ Telepat.connect = function (options) {
         db.put(newObject).catch(function(err) {
           log.warn('Could not persist UDID. Error: ' + err);
         });
-      }).catch(function(err) {
+      }).catch(function() {
         db.put(newObject).catch(function(err) {
           log.warn('Could not persist UDID. Error: ' + err);
         });
@@ -486,7 +556,7 @@ Telepat.connect = function (options) {
     var request = {
       'info':{
         'os': 'web',
-        'userAgent': ((typeof navigator !== "undefined")?navigator.userAgent:'node')
+        'userAgent': ((typeof navigator !== 'undefined')?navigator.userAgent:'node')
       },
       'volatile': {
         'type': 'sockets',
@@ -556,9 +626,9 @@ Telepat.connect = function (options) {
     log.info('Got session ID ' + ioSessionId);
     db.get(':deviceId').then(function(doc) {
       API.UDID = doc.value;
-      log.info('Retrieved saved UDID: ' + UDID);
+      log.info('Retrieved saved UDID: ' + API.UDID);
       registerDevice();
-    }).catch(function(err) {
+    }).catch(function() {
       registerDevice();
     });
   });
@@ -574,21 +644,22 @@ Telepat.connect = function (options) {
     }
 
     log.debug('Received update: ' + JSON.stringify(message));
-    for (var i=0; i<message.data.new.length; i++) {
-      var operation = message.data.new[i];
+    var i, operation;
+    for (i=0; i<message.data.new.length; i++) {
+      operation = message.data.new[i];
       processOperation(operation);
     }
-    for (var i=0; i<message.data.updated.length; i++) {
-      var operation = message.data.updated[i];
+    for (i=0; i<message.data.updated.length; i++) {
+      operation = message.data.updated[i];
       processOperation(operation);
     }
-    for (var i=0; i<message.data.deleted.length; i++) {
-      var operation = message.data.deleted[i];
+    for (i=0; i<message.data.deleted.length; i++) {
+      operation = message.data.deleted[i];
       processOperation(operation);
     }
   });
 
-  socket.on('context-update', function(data) {
+  socket.on('context-update', function() {
     updateContexts();
   });
 
@@ -609,7 +680,7 @@ Telepat.connect = function (options) {
 Telepat.setLogLevel = function (level) {
   log.setLevel(level);
   return this;
-}
+};
 
 /**
  * ## Telepat.on
@@ -621,7 +692,7 @@ Telepat.setLogLevel = function (level) {
  */
 Telepat.on = function(name, callback) {
   return Event.on(name, callback);
-}
+};
 
 /**
  * ## Telepat.loginWithFacebook
@@ -636,19 +707,8 @@ Telepat.on = function(name, callback) {
  * @param {string} facebookToken The user token obtained from Facebook after login
  */
 Telepat.loginWithFacebook = function (facebookToken) {
-  API.call('user/login', {
-    access_token: facebookToken
-  }, function (err, res) {
-    if (err) {
-      Event.emit('login_error', error('Login failed with error: ' + err));
-    } else {
-      Telepat.user = res.body.content.user;
-      API.authenticationToken = res.body.content.token;
-      Event.emit('login');
-    }
-  });
-  return this;
-}
+  return login('user/login', { access_token: facebookToken });
+};
 
 /**
  * ## Telepat.login
@@ -664,20 +724,25 @@ Telepat.loginWithFacebook = function (facebookToken) {
  * @param {string} password The user's password
  */
 Telepat.login = function (email, password) {
-  API.call('user/login_password', {
-    email: email,
-    password: password
-  }, function (err, res) {
-    if (err) {
-      Event.emit('login_error', error('Login failed with error: ' + err));
-    } else {
-      Telepat.user = res.body.content.user;
-      API.authenticationToken = res.body.content.token;
-      Event.emit('login');
-    }
-  });
-  return this;
-}
+  return login('user/login_password', { email: email, password: password });
+};
+
+/**
+ * ## Telepat.loginAdmin
+ *
+ * This function associates the current anonymous device to a Telepat administrator profile, using a password for authentication.
+ * 
+ * Two events can be asynchronously triggered by this function:
+ *
+ * - `login`, on success
+ * - `login_error`, on error
+ *
+ * @param {string} email The admin email address
+ * @param {string} password The admin password
+ */
+Telepat.loginAdmin = function (email, password) {
+  return login('admin/login', { email: email, password: password });
+};
 
 /**
  * ## Telepat.logout
@@ -694,11 +759,12 @@ Telepat.logout = function () {
       Event.emit('logout_error', error('Logout failed with error: ' + err));
     } else {
       API.authenticationToken = null;
+      Telepat.admin = null;
       Event.emit('logout');
     }
   });
   return this;
-}
+};
 
 /**
  * ## Telepat.subscribe
@@ -713,25 +779,24 @@ Telepat.logout = function () {
  * @return {Channel} The new [Channel](http://docs.telepat.io/javascript-sdk/lib/channel.js.html) object
  */
 Telepat.subscribe = function (options, onSubscribe) {
-
   var channel = new Channel(API, log, error, options, channelTimerInterval);
   var key = 'blg:'+options.channel.context+':'+options.channel.model;
   var self = this;
   this.subscriptions[key] = channel;
   channel.subscribe();
   if (onSubscribe !== undefined) {
-    channel.on("subscribe", onSubscribe);
+    channel.on('subscribe', onSubscribe);
   }
-  channel.on("_unsubscribe", function () {
+  channel.on('_unsubscribe', function () {
     delete self.subscriptions[key];
   });
   return channel;
-}
+};
 
 module.exports = Telepat;
-},{"./api":1,"./channel":2,"./event":3,"./logger":4,"pouchdb":58,"socket.io-client":102}],6:[function(require,module,exports){
+},{"./admin":1,"./api":2,"./channel":3,"./event":4,"./logger":5,"pouchdb":59,"socket.io-client":103}],7:[function(require,module,exports){
 
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -1034,7 +1099,7 @@ function isUndefined(arg) {
   return arg === void 0;
 }
 
-},{}],8:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -1126,7 +1191,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -1872,7 +1937,7 @@ process.umask = function() { return 0; };
 	return CryptoJS;
 
 }));
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -2072,7 +2137,7 @@ process.umask = function() { return 0; };
 	return CryptoJS.SHA256;
 
 }));
-},{"./core":9}],11:[function(require,module,exports){
+},{"./core":10}],12:[function(require,module,exports){
 
 var Pipe = require('../pipe').Pipe;
 
@@ -2123,7 +2188,7 @@ Context.prototype.push = function(child, name) {
 
 exports.Context = Context;
 
-},{"../pipe":25}],12:[function(require,module,exports){
+},{"../pipe":26}],13:[function(require,module,exports){
 var Context = require('./context').Context;
 
 var DiffContext = function DiffContext(left, right) {
@@ -2136,7 +2201,7 @@ DiffContext.prototype = new Context();
 
 exports.DiffContext = DiffContext;
 
-},{"./context":11}],13:[function(require,module,exports){
+},{"./context":12}],14:[function(require,module,exports){
 var Context = require('./context').Context;
 
 var PatchContext = function PatchContext(left, delta) {
@@ -2149,7 +2214,7 @@ PatchContext.prototype = new Context();
 
 exports.PatchContext = PatchContext;
 
-},{"./context":11}],14:[function(require,module,exports){
+},{"./context":12}],15:[function(require,module,exports){
 var Context = require('./context').Context;
 
 var ReverseContext = function ReverseContext(delta) {
@@ -2161,7 +2226,7 @@ ReverseContext.prototype = new Context();
 
 exports.ReverseContext = ReverseContext;
 
-},{"./context":11}],15:[function(require,module,exports){
+},{"./context":12}],16:[function(require,module,exports){
 // use as 2nd parameter for JSON.parse to revive Date instances
 module.exports = function dateReviver(key, value) {
   var parts;
@@ -2174,7 +2239,7 @@ module.exports = function dateReviver(key, value) {
   return value;
 };
 
-},{}],16:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 var Processor = require('./processor').Processor;
 var Pipe = require('./pipe').Pipe;
 var DiffContext = require('./contexts/diff').DiffContext;
@@ -2237,11 +2302,11 @@ DiffPatcher.prototype.unpatch = function(right, delta) {
 
 exports.DiffPatcher = DiffPatcher;
 
-},{"./contexts/diff":12,"./contexts/patch":13,"./contexts/reverse":14,"./filters/arrays":18,"./filters/dates":19,"./filters/nested":21,"./filters/texts":22,"./filters/trivial":23,"./pipe":25,"./processor":26}],17:[function(require,module,exports){
+},{"./contexts/diff":13,"./contexts/patch":14,"./contexts/reverse":15,"./filters/arrays":19,"./filters/dates":20,"./filters/nested":22,"./filters/texts":23,"./filters/trivial":24,"./pipe":26,"./processor":27}],18:[function(require,module,exports){
 
 exports.isBrowser = typeof window !== 'undefined';
 
-},{}],18:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 var DiffContext = require('../contexts/diff').DiffContext;
 var PatchContext = require('../contexts/patch').PatchContext;
 var ReverseContext = require('../contexts/reverse').ReverseContext;
@@ -2681,7 +2746,7 @@ exports.collectChildrenPatchFilter = collectChildrenPatchFilter;
 exports.reverseFilter = reverseFilter;
 exports.collectChildrenReverseFilter = collectChildrenReverseFilter;
 
-},{"../contexts/diff":12,"../contexts/patch":13,"../contexts/reverse":14,"./lcs":20}],19:[function(require,module,exports){
+},{"../contexts/diff":13,"../contexts/patch":14,"../contexts/reverse":15,"./lcs":21}],20:[function(require,module,exports){
 var diffFilter = function datesDiffFilter(context) {
   if (context.left instanceof Date) {
     if (context.right instanceof Date) {
@@ -2702,7 +2767,7 @@ diffFilter.filterName = 'dates';
 
 exports.diffFilter = diffFilter;
 
-},{}],20:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 /*
 
 LCS implementation that supports arrays or strings
@@ -2778,7 +2843,7 @@ var get = function(array1, array2, match, context) {
 
 exports.get = get;
 
-},{}],21:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 var DiffContext = require('../contexts/diff').DiffContext;
 var PatchContext = require('../contexts/patch').PatchContext;
 var ReverseContext = require('../contexts/reverse').ReverseContext;
@@ -2910,7 +2975,7 @@ exports.collectChildrenPatchFilter = collectChildrenPatchFilter;
 exports.reverseFilter = reverseFilter;
 exports.collectChildrenReverseFilter = collectChildrenReverseFilter;
 
-},{"../contexts/diff":12,"../contexts/patch":13,"../contexts/reverse":14}],22:[function(require,module,exports){
+},{"../contexts/diff":13,"../contexts/patch":14,"../contexts/reverse":15}],23:[function(require,module,exports){
 /* global diff_match_patch */
 var TEXT_DIFF = 2;
 var DEFAULT_MIN_LENGTH = 60;
@@ -3039,7 +3104,7 @@ exports.diffFilter = diffFilter;
 exports.patchFilter = patchFilter;
 exports.reverseFilter = reverseFilter;
 
-},{}],23:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 var isArray = (typeof Array.isArray === 'function') ?
   // use native function
   Array.isArray :
@@ -3142,7 +3207,7 @@ exports.diffFilter = diffFilter;
 exports.patchFilter = patchFilter;
 exports.reverseFilter = reverseFilter;
 
-},{}],24:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 
 var environment = require('./environment');
 
@@ -3201,7 +3266,7 @@ if (environment.isBrowser) {
 	exports.console = formatters.console;
 }
 
-},{"./date-reviver":15,"./diffpatcher":16,"./environment":17}],25:[function(require,module,exports){
+},{"./date-reviver":16,"./diffpatcher":17,"./environment":18}],26:[function(require,module,exports){
 var Pipe = function Pipe(name) {
   this.name = name;
   this.filters = [];
@@ -3315,7 +3380,7 @@ Pipe.prototype.shouldHaveResult = function(should) {
 
 exports.Pipe = Pipe;
 
-},{}],26:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 
 var Processor = function Processor(options){
 	this.selfOptions = options;
@@ -3377,7 +3442,7 @@ Processor.prototype.process = function(input, pipe) {
 
 exports.Processor = Processor;
 
-},{}],27:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 /*
 * loglevel - https://github.com/pimterry/loglevel
 *
@@ -3536,7 +3601,7 @@ exports.Processor = Processor;
     return self;
 }));
 
-},{}],28:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 "use strict";
 
 var utils = require('./utils');
@@ -4321,7 +4386,7 @@ AbstractPouchDB.prototype.destroy =
   });
 });
 
-},{"./changes":40,"./deps/errors":46,"./deps/upsert":54,"./merge":59,"./utils":64,"events":7}],29:[function(require,module,exports){
+},{"./changes":41,"./deps/errors":47,"./deps/upsert":55,"./merge":60,"./utils":65,"events":8}],30:[function(require,module,exports){
 (function (process){
 "use strict";
 
@@ -5376,7 +5441,7 @@ HttpPouch.valid = function () {
 module.exports = HttpPouch;
 
 }).call(this,require('_process'))
-},{"../../deps/buffer":45,"../../deps/errors":46,"../../utils":64,"_process":8,"debug":67}],30:[function(require,module,exports){
+},{"../../deps/buffer":46,"../../deps/errors":47,"../../utils":65,"_process":9,"debug":68}],31:[function(require,module,exports){
 'use strict';
 
 var merge = require('../../merge');
@@ -5561,7 +5626,7 @@ function idbAllDocs(opts, api, idb, callback) {
 }
 
 module.exports = idbAllDocs;
-},{"../../deps/errors":46,"../../merge":59,"./idb-constants":33,"./idb-utils":34}],31:[function(require,module,exports){
+},{"../../deps/errors":47,"../../merge":60,"./idb-constants":34,"./idb-utils":35}],32:[function(require,module,exports){
 'use strict';
 
 var utils = require('../../utils');
@@ -5625,7 +5690,7 @@ function checkBlobSupport(txn, idb) {
 }
 
 module.exports = checkBlobSupport;
-},{"../../utils":64,"./idb-constants":33}],32:[function(require,module,exports){
+},{"../../utils":65,"./idb-constants":34}],33:[function(require,module,exports){
 'use strict';
 
 var utils = require('../../utils');
@@ -5988,7 +6053,7 @@ function idbBulkDocs(req, opts, api, idb, Changes, callback) {
 }
 
 module.exports = idbBulkDocs;
-},{"../../deps/errors":46,"../../utils":64,"./idb-constants":33,"./idb-utils":34}],33:[function(require,module,exports){
+},{"../../deps/errors":47,"../../utils":65,"./idb-constants":34,"./idb-utils":35}],34:[function(require,module,exports){
 'use strict';
 
 // IndexedDB requires a versioned database structure, so we use the
@@ -6015,7 +6080,7 @@ exports.META_STORE = 'meta-store';
 exports.LOCAL_STORE = 'local-store';
 // Where we detect blob support
 exports.DETECT_BLOB_SUPPORT_STORE = 'detect-blob-support';
-},{}],34:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -6261,7 +6326,7 @@ exports.openTransactionSafely = function (idb, stores, mode) {
   }
 };
 }).call(this,require('_process'))
-},{"../../deps/errors":46,"../../utils":64,"./idb-constants":33,"_process":8}],35:[function(require,module,exports){
+},{"../../deps/errors":47,"../../utils":65,"./idb-constants":34,"_process":9}],36:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -7216,7 +7281,7 @@ IdbPouch.Changes = new utils.Changes();
 module.exports = IdbPouch;
 
 }).call(this,require('_process'))
-},{"../../deps/errors":46,"../../merge":59,"../../utils":64,"./idb-all-docs":30,"./idb-blob-support":31,"./idb-bulk-docs":32,"./idb-constants":33,"./idb-utils":34,"_process":8}],36:[function(require,module,exports){
+},{"../../deps/errors":47,"../../merge":60,"../../utils":65,"./idb-all-docs":31,"./idb-blob-support":32,"./idb-bulk-docs":33,"./idb-constants":34,"./idb-utils":35,"_process":9}],37:[function(require,module,exports){
 'use strict';
 
 var utils = require('../../utils');
@@ -7541,7 +7606,7 @@ function websqlBulkDocs(req, opts, api, db, Changes, callback) {
 
 module.exports = websqlBulkDocs;
 
-},{"../../deps/errors":46,"../../utils":64,"./websql-constants":37,"./websql-utils":38}],37:[function(require,module,exports){
+},{"../../deps/errors":47,"../../utils":65,"./websql-constants":38,"./websql-utils":39}],38:[function(require,module,exports){
 'use strict';
 
 function quote(str) {
@@ -7565,7 +7630,7 @@ exports.META_STORE = quote('metadata-store');
 exports.ATTACH_AND_SEQ_STORE = quote('attach-seq-store');
 
 
-},{}],38:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
 'use strict';
 
 var utils = require('../../utils');
@@ -7794,7 +7859,7 @@ module.exports = {
   openDB: openDB,
   valid: valid
 };
-},{"../../deps/errors":46,"../../utils":64,"./websql-constants":37}],39:[function(require,module,exports){
+},{"../../deps/errors":47,"../../utils":65,"./websql-constants":38}],40:[function(require,module,exports){
 'use strict';
 
 var utils = require('../../utils');
@@ -8803,7 +8868,7 @@ WebSqlPouch.Changes = new utils.Changes();
 
 module.exports = WebSqlPouch;
 
-},{"../../deps/errors":46,"../../deps/parse-hex":50,"../../merge":59,"../../utils":64,"./websql-bulk-docs":36,"./websql-constants":37,"./websql-utils":38}],40:[function(require,module,exports){
+},{"../../deps/errors":47,"../../deps/parse-hex":51,"../../merge":60,"../../utils":65,"./websql-bulk-docs":37,"./websql-constants":38,"./websql-utils":39}],41:[function(require,module,exports){
 'use strict';
 var utils = require('./utils');
 var merge = require('./merge');
@@ -9059,7 +9124,7 @@ Changes.prototype.filterChanges = function (opts) {
     });
   }
 };
-},{"./deps/errors":46,"./evalFilter":56,"./evalView":57,"./merge":59,"./utils":64,"events":7}],41:[function(require,module,exports){
+},{"./deps/errors":47,"./evalFilter":57,"./evalView":58,"./merge":60,"./utils":65,"events":8}],42:[function(require,module,exports){
 'use strict';
 
 var Promise = require('./deps/promise');
@@ -9162,7 +9227,7 @@ Checkpointer.prototype.getCheckpoint = function () {
 
 module.exports = Checkpointer;
 
-},{"./deps/explain404":47,"./deps/promise":52,"pouchdb-collate":89}],42:[function(require,module,exports){
+},{"./deps/explain404":48,"./deps/promise":53,"pouchdb-collate":90}],43:[function(require,module,exports){
 (function (process,global){
 /*globals cordova */
 "use strict";
@@ -9326,7 +9391,7 @@ PouchDB.debug = require('debug');
 module.exports = PouchDB;
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./adapter":28,"./taskqueue":63,"./utils":64,"_process":8,"debug":67}],43:[function(require,module,exports){
+},{"./adapter":29,"./taskqueue":64,"./utils":65,"_process":9,"debug":68}],44:[function(require,module,exports){
 (function (process){
 "use strict";
 
@@ -9467,7 +9532,7 @@ function ajax(options, adapterCallback) {
 module.exports = ajax;
 
 }).call(this,require('_process'))
-},{"../utils":64,"./buffer":45,"./errors":46,"_process":8,"request":53}],44:[function(require,module,exports){
+},{"../utils":65,"./buffer":46,"./errors":47,"_process":9,"request":54}],45:[function(require,module,exports){
 (function (global){
 "use strict";
 
@@ -9499,10 +9564,10 @@ module.exports = createBlob;
 
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],45:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 // hey guess what, we don't need this in the browser
 module.exports = {};
-},{}],46:[function(require,module,exports){
+},{}],47:[function(require,module,exports){
 "use strict";
 
 var inherits = require('inherits');
@@ -9764,7 +9829,7 @@ exports.generateErrorFromResponse = function (res) {
   return error;
 };
 
-},{"inherits":70}],47:[function(require,module,exports){
+},{"inherits":71}],48:[function(require,module,exports){
 (function (process,global){
 'use strict';
 
@@ -9778,7 +9843,7 @@ function explain404(str) {
 
 module.exports = explain404;
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"_process":8}],48:[function(require,module,exports){
+},{"_process":9}],49:[function(require,module,exports){
 (function (process,global){
 'use strict';
 
@@ -9861,7 +9926,7 @@ module.exports = function (data, callback) {
 };
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"_process":8,"crypto":6,"spark-md5":100}],49:[function(require,module,exports){
+},{"_process":9,"crypto":7,"spark-md5":101}],50:[function(require,module,exports){
 'use strict';
 
 var errors = require('./errors');
@@ -10029,7 +10094,7 @@ exports.parseDoc = function (doc, newEdits) {
   }
   return result;
 };
-},{"./errors":46,"./uuid":55}],50:[function(require,module,exports){
+},{"./errors":47,"./uuid":56}],51:[function(require,module,exports){
 'use strict';
 
 //
@@ -10097,7 +10162,7 @@ function parseHexString(str, encoding) {
 }
 
 module.exports = parseHexString;
-},{}],51:[function(require,module,exports){
+},{}],52:[function(require,module,exports){
 'use strict';
 
 // originally parseUri 1.2.2, now patched by us
@@ -10143,7 +10208,7 @@ function parseUri(str) {
 
 
 module.exports = parseUri;
-},{}],52:[function(require,module,exports){
+},{}],53:[function(require,module,exports){
 'use strict';
 
 if (typeof Promise === 'function') {
@@ -10151,7 +10216,7 @@ if (typeof Promise === 'function') {
 } else {
   module.exports = require('bluebird');
 }
-},{"bluebird":74}],53:[function(require,module,exports){
+},{"bluebird":75}],54:[function(require,module,exports){
 /* global fetch */
 /* global Headers */
 'use strict';
@@ -10375,7 +10440,7 @@ module.exports = function(options, callback) {
   }
 };
 
-},{"../utils":64,"./blob.js":44}],54:[function(require,module,exports){
+},{"../utils":65,"./blob.js":45}],55:[function(require,module,exports){
 'use strict';
 
 var upsert = require('pouchdb-upsert').upsert;
@@ -10384,7 +10449,7 @@ module.exports = function (db, doc, diffFun, cb) {
   return upsert.call(db, doc, diffFun, cb);
 };
 
-},{"pouchdb-upsert":99}],55:[function(require,module,exports){
+},{"pouchdb-upsert":100}],56:[function(require,module,exports){
 "use strict";
 
 // BEGIN Math.uuid.js
@@ -10469,7 +10534,7 @@ function uuid(len, radix) {
 module.exports = uuid;
 
 
-},{}],56:[function(require,module,exports){
+},{}],57:[function(require,module,exports){
 'use strict';
 
 module.exports = evalFilter;
@@ -10481,7 +10546,7 @@ function evalFilter(input) {
     ' })()'
   ].join(''));
 }
-},{}],57:[function(require,module,exports){
+},{}],58:[function(require,module,exports){
 'use strict';
 
 module.exports = evalView;
@@ -10503,7 +10568,7 @@ function evalView(input) {
     '})()'
   ].join('\n'));
 }
-},{}],58:[function(require,module,exports){
+},{}],59:[function(require,module,exports){
 (function (process){
 "use strict";
 
@@ -10531,7 +10596,7 @@ if (!process.browser) {
 }
 
 }).call(this,require('_process'))
-},{"./adapters/http/http":29,"./adapters/idb/idb":35,"./adapters/leveldb/leveldb":6,"./adapters/websql/websql":39,"./deps/ajax":43,"./deps/errors":46,"./replicate":60,"./setup":61,"./sync":62,"./utils":64,"./version":65,"_process":8,"pouchdb-mapreduce":95}],59:[function(require,module,exports){
+},{"./adapters/http/http":30,"./adapters/idb/idb":36,"./adapters/leveldb/leveldb":7,"./adapters/websql/websql":40,"./deps/ajax":44,"./deps/errors":47,"./replicate":61,"./setup":62,"./sync":63,"./utils":65,"./version":66,"_process":9,"pouchdb-mapreduce":96}],60:[function(require,module,exports){
 'use strict';
 var extend = require('pouchdb-extend');
 
@@ -10833,7 +10898,7 @@ PouchMerge.rootToLeaf = function (tree) {
 
 module.exports = PouchMerge;
 
-},{"pouchdb-extend":92}],60:[function(require,module,exports){
+},{"pouchdb-extend":93}],61:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -11464,7 +11529,7 @@ function replicateWrapper(src, target, opts, callback) {
   return replicateRet;
 }
 
-},{"./checkpointer":41,"./utils":64,"events":7}],61:[function(require,module,exports){
+},{"./checkpointer":42,"./utils":65,"events":8}],62:[function(require,module,exports){
 "use strict";
 
 var PouchDB = require("./constructor");
@@ -11626,7 +11691,7 @@ PouchDB.defaults = function (defaultOpts) {
 
 module.exports = PouchDB;
 
-},{"./constructor":42,"./utils":64,"events":7}],62:[function(require,module,exports){
+},{"./constructor":43,"./utils":65,"events":8}],63:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -11812,7 +11877,7 @@ Sync.prototype.cancel = function () {
   }
 };
 
-},{"./replicate":60,"./utils":64,"events":7}],63:[function(require,module,exports){
+},{"./replicate":61,"./utils":65,"events":8}],64:[function(require,module,exports){
 'use strict';
 
 module.exports = TaskQueue;
@@ -11882,7 +11947,7 @@ TaskQueue.prototype.addTask = function (name, parameters) {
   }
 };
 
-},{}],64:[function(require,module,exports){
+},{}],65:[function(require,module,exports){
 (function (process){
 /*jshint strict: false */
 /*global chrome */
@@ -12699,10 +12764,10 @@ exports.safeJsonStringify = function safeJsonStringify(json) {
 };
 
 }).call(this,require('_process'))
-},{"./deps/ajax":43,"./deps/blob":44,"./deps/buffer":45,"./deps/errors":46,"./deps/explain404":47,"./deps/md5":48,"./deps/parse-doc":49,"./deps/parse-uri":51,"./deps/promise":52,"./deps/uuid":55,"./merge":59,"_process":8,"argsarray":66,"debug":67,"events":7,"inherits":70,"pouchdb-collections":91,"pouchdb-extend":92,"vuvuzela":101}],65:[function(require,module,exports){
+},{"./deps/ajax":44,"./deps/blob":45,"./deps/buffer":46,"./deps/errors":47,"./deps/explain404":48,"./deps/md5":49,"./deps/parse-doc":50,"./deps/parse-uri":52,"./deps/promise":53,"./deps/uuid":56,"./merge":60,"_process":9,"argsarray":67,"debug":68,"events":8,"inherits":71,"pouchdb-collections":92,"pouchdb-extend":93,"vuvuzela":102}],66:[function(require,module,exports){
 module.exports = "3.5.0";
 
-},{}],66:[function(require,module,exports){
+},{}],67:[function(require,module,exports){
 'use strict';
 
 module.exports = argsArray;
@@ -12722,7 +12787,7 @@ function argsArray(fun) {
     }
   };
 }
-},{}],67:[function(require,module,exports){
+},{}],68:[function(require,module,exports){
 
 /**
  * This is the web browser implementation of `debug()`.
@@ -12892,7 +12957,7 @@ function localstorage(){
   } catch (e) {}
 }
 
-},{"./debug":68}],68:[function(require,module,exports){
+},{"./debug":69}],69:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -13091,7 +13156,7 @@ function coerce(val) {
   return val;
 }
 
-},{"ms":69}],69:[function(require,module,exports){
+},{"ms":70}],70:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -13218,7 +13283,7 @@ function plural(ms, n, name) {
   return Math.ceil(ms / n) + ' ' + name + 's';
 }
 
-},{}],70:[function(require,module,exports){
+},{}],71:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -13243,13 +13308,13 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],71:[function(require,module,exports){
+},{}],72:[function(require,module,exports){
 'use strict';
 
 module.exports = INTERNAL;
 
 function INTERNAL() {}
-},{}],72:[function(require,module,exports){
+},{}],73:[function(require,module,exports){
 'use strict';
 var Promise = require('./promise');
 var reject = require('./reject');
@@ -13293,7 +13358,7 @@ function all(iterable) {
     }
   }
 }
-},{"./INTERNAL":71,"./handlers":73,"./promise":75,"./reject":78,"./resolve":79}],73:[function(require,module,exports){
+},{"./INTERNAL":72,"./handlers":74,"./promise":76,"./reject":79,"./resolve":80}],74:[function(require,module,exports){
 'use strict';
 var tryCatch = require('./tryCatch');
 var resolveThenable = require('./resolveThenable');
@@ -13339,14 +13404,14 @@ function getThen(obj) {
     };
   }
 }
-},{"./resolveThenable":80,"./states":81,"./tryCatch":82}],74:[function(require,module,exports){
+},{"./resolveThenable":81,"./states":82,"./tryCatch":83}],75:[function(require,module,exports){
 module.exports = exports = require('./promise');
 
 exports.resolve = require('./resolve');
 exports.reject = require('./reject');
 exports.all = require('./all');
 exports.race = require('./race');
-},{"./all":72,"./promise":75,"./race":77,"./reject":78,"./resolve":79}],75:[function(require,module,exports){
+},{"./all":73,"./promise":76,"./race":78,"./reject":79,"./resolve":80}],76:[function(require,module,exports){
 'use strict';
 
 var unwrap = require('./unwrap');
@@ -13392,7 +13457,7 @@ Promise.prototype.then = function (onFulfilled, onRejected) {
   return promise;
 };
 
-},{"./INTERNAL":71,"./queueItem":76,"./resolveThenable":80,"./states":81,"./unwrap":83}],76:[function(require,module,exports){
+},{"./INTERNAL":72,"./queueItem":77,"./resolveThenable":81,"./states":82,"./unwrap":84}],77:[function(require,module,exports){
 'use strict';
 var handlers = require('./handlers');
 var unwrap = require('./unwrap');
@@ -13421,7 +13486,7 @@ QueueItem.prototype.callRejected = function (value) {
 QueueItem.prototype.otherCallRejected = function (value) {
   unwrap(this.promise, this.onRejected, value);
 };
-},{"./handlers":73,"./unwrap":83}],77:[function(require,module,exports){
+},{"./handlers":74,"./unwrap":84}],78:[function(require,module,exports){
 'use strict';
 var Promise = require('./promise');
 var reject = require('./reject');
@@ -13462,7 +13527,7 @@ function race(iterable) {
     });
   }
 }
-},{"./INTERNAL":71,"./handlers":73,"./promise":75,"./reject":78,"./resolve":79}],78:[function(require,module,exports){
+},{"./INTERNAL":72,"./handlers":74,"./promise":76,"./reject":79,"./resolve":80}],79:[function(require,module,exports){
 'use strict';
 
 var Promise = require('./promise');
@@ -13474,7 +13539,7 @@ function reject(reason) {
 	var promise = new Promise(INTERNAL);
 	return handlers.reject(promise, reason);
 }
-},{"./INTERNAL":71,"./handlers":73,"./promise":75}],79:[function(require,module,exports){
+},{"./INTERNAL":72,"./handlers":74,"./promise":76}],80:[function(require,module,exports){
 'use strict';
 
 var Promise = require('./promise');
@@ -13509,7 +13574,7 @@ function resolve(value) {
       return EMPTYSTRING;
   }
 }
-},{"./INTERNAL":71,"./handlers":73,"./promise":75}],80:[function(require,module,exports){
+},{"./INTERNAL":72,"./handlers":74,"./promise":76}],81:[function(require,module,exports){
 'use strict';
 var handlers = require('./handlers');
 var tryCatch = require('./tryCatch');
@@ -13542,13 +13607,13 @@ function safelyResolveThenable(self, thenable) {
   }
 }
 exports.safely = safelyResolveThenable;
-},{"./handlers":73,"./tryCatch":82}],81:[function(require,module,exports){
+},{"./handlers":74,"./tryCatch":83}],82:[function(require,module,exports){
 // Lazy man's symbols for states
 
 exports.REJECTED = ['REJECTED'];
 exports.FULFILLED = ['FULFILLED'];
 exports.PENDING = ['PENDING'];
-},{}],82:[function(require,module,exports){
+},{}],83:[function(require,module,exports){
 'use strict';
 
 module.exports = tryCatch;
@@ -13564,7 +13629,7 @@ function tryCatch(func, value) {
   }
   return out;
 }
-},{}],83:[function(require,module,exports){
+},{}],84:[function(require,module,exports){
 'use strict';
 
 var immediate = require('immediate');
@@ -13586,7 +13651,7 @@ function unwrap(promise, func, value) {
     }
   });
 }
-},{"./handlers":73,"immediate":84}],84:[function(require,module,exports){
+},{"./handlers":74,"immediate":85}],85:[function(require,module,exports){
 'use strict';
 var types = [
   require('./nextTick'),
@@ -13644,7 +13709,7 @@ function immediate(task) {
     scheduleDrain();
   }
 }
-},{"./messageChannel":85,"./mutation.js":86,"./nextTick":6,"./stateChange":87,"./timeout":88}],85:[function(require,module,exports){
+},{"./messageChannel":86,"./mutation.js":87,"./nextTick":7,"./stateChange":88,"./timeout":89}],86:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -13665,7 +13730,7 @@ exports.install = function (func) {
   };
 };
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],86:[function(require,module,exports){
+},{}],87:[function(require,module,exports){
 (function (global){
 'use strict';
 //based off rsvp https://github.com/tildeio/rsvp.js
@@ -13690,7 +13755,7 @@ exports.install = function (handle) {
   };
 };
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],87:[function(require,module,exports){
+},{}],88:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -13717,7 +13782,7 @@ exports.install = function (handle) {
   };
 };
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],88:[function(require,module,exports){
+},{}],89:[function(require,module,exports){
 'use strict';
 exports.test = function () {
   return true;
@@ -13728,7 +13793,7 @@ exports.install = function (t) {
     setTimeout(t, 0);
   };
 };
-},{}],89:[function(require,module,exports){
+},{}],90:[function(require,module,exports){
 'use strict';
 
 var MIN_MAGNITUDE = -324; // verified by -Number.MIN_VALUE
@@ -14083,7 +14148,7 @@ function numToIndexableString(num) {
   return result;
 }
 
-},{"./utils":90}],90:[function(require,module,exports){
+},{"./utils":91}],91:[function(require,module,exports){
 'use strict';
 
 function pad(str, padWith, upToLength) {
@@ -14154,7 +14219,7 @@ exports.intToDecimalForm = function (int) {
 
   return result;
 };
-},{}],91:[function(require,module,exports){
+},{}],92:[function(require,module,exports){
 'use strict';
 exports.Map = LazyMap; // TODO: use ES6 map
 exports.Set = LazySet; // TODO: use ES6 set
@@ -14226,7 +14291,7 @@ LazySet.prototype.delete = function (key) {
   return this.store.delete(key);
 };
 
-},{}],92:[function(require,module,exports){
+},{}],93:[function(require,module,exports){
 "use strict";
 
 // Extends method
@@ -14407,7 +14472,7 @@ module.exports = extend;
 
 
 
-},{}],93:[function(require,module,exports){
+},{}],94:[function(require,module,exports){
 'use strict';
 
 var upsert = require('./upsert');
@@ -14486,7 +14551,7 @@ module.exports = function (opts) {
   });
 };
 
-},{"./upsert":97,"./utils":98}],94:[function(require,module,exports){
+},{"./upsert":98,"./utils":99}],95:[function(require,module,exports){
 'use strict';
 
 module.exports = function (func, emit, sum, log, isArray, toJSON) {
@@ -14494,7 +14559,7 @@ module.exports = function (func, emit, sum, log, isArray, toJSON) {
   return eval("'use strict'; (" + func.replace(/;\s*$/, "") + ");");
 };
 
-},{}],95:[function(require,module,exports){
+},{}],96:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -15368,7 +15433,7 @@ function BuiltInError(message) {
 
 utils.inherits(BuiltInError, Error);
 }).call(this,require('_process'))
-},{"./create-view":93,"./evalfunc":94,"./taskqueue":96,"./utils":98,"_process":8,"pouchdb-collate":89}],96:[function(require,module,exports){
+},{"./create-view":94,"./evalfunc":95,"./taskqueue":97,"./utils":99,"_process":9,"pouchdb-collate":90}],97:[function(require,module,exports){
 'use strict';
 /*
  * Simple task queue to sequentialize actions. Assumes callbacks will eventually fire (once).
@@ -15393,7 +15458,7 @@ TaskQueue.prototype.finish = function () {
 
 module.exports = TaskQueue;
 
-},{"./utils":98}],97:[function(require,module,exports){
+},{"./utils":99}],98:[function(require,module,exports){
 'use strict';
 
 var upsert = require('pouchdb-upsert').upsert;
@@ -15401,7 +15466,7 @@ var upsert = require('pouchdb-upsert').upsert;
 module.exports = function (db, doc, diffFun) {
   return upsert.apply(db, [doc, diffFun]);
 };
-},{"pouchdb-upsert":99}],98:[function(require,module,exports){
+},{"pouchdb-upsert":100}],99:[function(require,module,exports){
 (function (process,global){
 'use strict';
 /* istanbul ignore if */
@@ -15510,7 +15575,7 @@ exports.MD5 = function (string) {
   }
 };
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"_process":8,"argsarray":66,"crypto":6,"inherits":70,"lie":74,"pouchdb-extend":92,"spark-md5":100}],99:[function(require,module,exports){
+},{"_process":9,"argsarray":67,"crypto":7,"inherits":71,"lie":75,"pouchdb-extend":93,"spark-md5":101}],100:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -15617,7 +15682,7 @@ if (typeof window !== 'undefined' && window.PouchDB) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"lie":74}],100:[function(require,module,exports){
+},{"lie":75}],101:[function(require,module,exports){
 /*jshint bitwise:false*/
 /*global unescape*/
 
@@ -16218,7 +16283,7 @@ if (typeof window !== 'undefined' && window.PouchDB) {
     return SparkMD5;
 }));
 
-},{}],101:[function(require,module,exports){
+},{}],102:[function(require,module,exports){
 'use strict';
 
 /**
@@ -16393,11 +16458,11 @@ exports.parse = function (str) {
   }
 };
 
-},{}],102:[function(require,module,exports){
+},{}],103:[function(require,module,exports){
 
 module.exports = require('./lib/');
 
-},{"./lib/":103}],103:[function(require,module,exports){
+},{"./lib/":104}],104:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -16486,7 +16551,7 @@ exports.connect = lookup;
 exports.Manager = require('./manager');
 exports.Socket = require('./socket');
 
-},{"./manager":104,"./socket":106,"./url":107,"debug":111,"socket.io-parser":147}],104:[function(require,module,exports){
+},{"./manager":105,"./socket":107,"./url":108,"debug":112,"socket.io-parser":148}],105:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -16991,7 +17056,7 @@ Manager.prototype.onreconnect = function(){
   this.emitAll('reconnect', attempt);
 };
 
-},{"./on":105,"./socket":106,"./url":107,"backo2":108,"component-bind":109,"component-emitter":110,"debug":111,"engine.io-client":112,"indexof":143,"object-component":144,"socket.io-parser":147}],105:[function(require,module,exports){
+},{"./on":106,"./socket":107,"./url":108,"backo2":109,"component-bind":110,"component-emitter":111,"debug":112,"engine.io-client":113,"indexof":144,"object-component":145,"socket.io-parser":148}],106:[function(require,module,exports){
 
 /**
  * Module exports.
@@ -17017,7 +17082,7 @@ function on(obj, ev, fn) {
   };
 }
 
-},{}],106:[function(require,module,exports){
+},{}],107:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -17404,7 +17469,7 @@ Socket.prototype.disconnect = function(){
   return this;
 };
 
-},{"./on":105,"component-bind":109,"component-emitter":110,"debug":111,"has-binary":141,"socket.io-parser":147,"to-array":151}],107:[function(require,module,exports){
+},{"./on":106,"component-bind":110,"component-emitter":111,"debug":112,"has-binary":142,"socket.io-parser":148,"to-array":152}],108:[function(require,module,exports){
 (function (global){
 
 /**
@@ -17481,7 +17546,7 @@ function url(uri, loc){
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"debug":111,"parseuri":145}],108:[function(require,module,exports){
+},{"debug":112,"parseuri":146}],109:[function(require,module,exports){
 
 /**
  * Expose `Backoff`.
@@ -17568,7 +17633,7 @@ Backoff.prototype.setJitter = function(jitter){
 };
 
 
-},{}],109:[function(require,module,exports){
+},{}],110:[function(require,module,exports){
 /**
  * Slice reference.
  */
@@ -17593,7 +17658,7 @@ module.exports = function(obj, fn){
   }
 };
 
-},{}],110:[function(require,module,exports){
+},{}],111:[function(require,module,exports){
 
 /**
  * Expose `Emitter`.
@@ -17759,7 +17824,7 @@ Emitter.prototype.hasListeners = function(event){
   return !! this.listeners(event).length;
 };
 
-},{}],111:[function(require,module,exports){
+},{}],112:[function(require,module,exports){
 
 /**
  * Expose `debug()` as the module.
@@ -17898,11 +17963,11 @@ try {
   if (window.localStorage) debug.enable(localStorage.debug);
 } catch(e){}
 
-},{}],112:[function(require,module,exports){
+},{}],113:[function(require,module,exports){
 
 module.exports =  require('./lib/');
 
-},{"./lib/":113}],113:[function(require,module,exports){
+},{"./lib/":114}],114:[function(require,module,exports){
 
 module.exports = require('./socket');
 
@@ -17914,7 +17979,7 @@ module.exports = require('./socket');
  */
 module.exports.parser = require('engine.io-parser');
 
-},{"./socket":114,"engine.io-parser":126}],114:[function(require,module,exports){
+},{"./socket":115,"engine.io-parser":127}],115:[function(require,module,exports){
 (function (global){
 /**
  * Module dependencies.
@@ -18623,7 +18688,7 @@ Socket.prototype.filterUpgrades = function (upgrades) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./transport":115,"./transports":116,"component-emitter":110,"debug":123,"engine.io-parser":126,"indexof":143,"parsejson":137,"parseqs":138,"parseuri":139}],115:[function(require,module,exports){
+},{"./transport":116,"./transports":117,"component-emitter":111,"debug":124,"engine.io-parser":127,"indexof":144,"parsejson":138,"parseqs":139,"parseuri":140}],116:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -18784,7 +18849,7 @@ Transport.prototype.onClose = function () {
   this.emit('close');
 };
 
-},{"component-emitter":110,"engine.io-parser":126}],116:[function(require,module,exports){
+},{"component-emitter":111,"engine.io-parser":127}],117:[function(require,module,exports){
 (function (global){
 /**
  * Module dependencies
@@ -18841,7 +18906,7 @@ function polling(opts){
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./polling-jsonp":117,"./polling-xhr":118,"./websocket":120,"xmlhttprequest":121}],117:[function(require,module,exports){
+},{"./polling-jsonp":118,"./polling-xhr":119,"./websocket":121,"xmlhttprequest":122}],118:[function(require,module,exports){
 (function (global){
 
 /**
@@ -19078,7 +19143,7 @@ JSONPPolling.prototype.doWrite = function (data, fn) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./polling":119,"component-inherit":122}],118:[function(require,module,exports){
+},{"./polling":120,"component-inherit":123}],119:[function(require,module,exports){
 (function (global){
 /**
  * Module requirements.
@@ -19466,7 +19531,7 @@ function unloadHandler() {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./polling":119,"component-emitter":110,"component-inherit":122,"debug":123,"xmlhttprequest":121}],119:[function(require,module,exports){
+},{"./polling":120,"component-emitter":111,"component-inherit":123,"debug":124,"xmlhttprequest":122}],120:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -19713,7 +19778,7 @@ Polling.prototype.uri = function(){
   return schema + '://' + this.hostname + port + this.path + query;
 };
 
-},{"../transport":115,"component-inherit":122,"debug":123,"engine.io-parser":126,"parseqs":138,"xmlhttprequest":121}],120:[function(require,module,exports){
+},{"../transport":116,"component-inherit":123,"debug":124,"engine.io-parser":127,"parseqs":139,"xmlhttprequest":122}],121:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -19953,7 +20018,7 @@ WS.prototype.check = function(){
   return !!WebSocket && !('__initialize' in WebSocket && this.name === WS.prototype.name);
 };
 
-},{"../transport":115,"component-inherit":122,"debug":123,"engine.io-parser":126,"parseqs":138,"ws":140}],121:[function(require,module,exports){
+},{"../transport":116,"component-inherit":123,"debug":124,"engine.io-parser":127,"parseqs":139,"ws":141}],122:[function(require,module,exports){
 // browser shim for xmlhttprequest module
 var hasCORS = require('has-cors');
 
@@ -19991,7 +20056,7 @@ module.exports = function(opts) {
   }
 }
 
-},{"has-cors":135}],122:[function(require,module,exports){
+},{"has-cors":136}],123:[function(require,module,exports){
 
 module.exports = function(a, b){
   var fn = function(){};
@@ -19999,7 +20064,7 @@ module.exports = function(a, b){
   a.prototype = new fn;
   a.prototype.constructor = a;
 };
-},{}],123:[function(require,module,exports){
+},{}],124:[function(require,module,exports){
 
 /**
  * This is the web browser implementation of `debug()`.
@@ -20148,9 +20213,9 @@ function load() {
 
 exports.enable(load());
 
-},{"./debug":124}],124:[function(require,module,exports){
-arguments[4][68][0].apply(exports,arguments)
-},{"dup":68,"ms":125}],125:[function(require,module,exports){
+},{"./debug":125}],125:[function(require,module,exports){
+arguments[4][69][0].apply(exports,arguments)
+},{"dup":69,"ms":126}],126:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -20263,7 +20328,7 @@ function plural(ms, n, name) {
   return Math.ceil(ms / n) + ' ' + name + 's';
 }
 
-},{}],126:[function(require,module,exports){
+},{}],127:[function(require,module,exports){
 (function (global){
 /**
  * Module dependencies.
@@ -20861,7 +20926,7 @@ exports.decodePayloadAsBinary = function (data, binaryType, callback) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./keys":127,"after":128,"arraybuffer.slice":129,"base64-arraybuffer":130,"blob":131,"has-binary":132,"utf8":134}],127:[function(require,module,exports){
+},{"./keys":128,"after":129,"arraybuffer.slice":130,"base64-arraybuffer":131,"blob":132,"has-binary":133,"utf8":135}],128:[function(require,module,exports){
 
 /**
  * Gets the keys for an object.
@@ -20882,7 +20947,7 @@ module.exports = Object.keys || function keys (obj){
   return arr;
 };
 
-},{}],128:[function(require,module,exports){
+},{}],129:[function(require,module,exports){
 module.exports = after
 
 function after(count, callback, err_cb) {
@@ -20912,7 +20977,7 @@ function after(count, callback, err_cb) {
 
 function noop() {}
 
-},{}],129:[function(require,module,exports){
+},{}],130:[function(require,module,exports){
 /**
  * An abstraction for slicing an arraybuffer even when
  * ArrayBuffer.prototype.slice is not supported
@@ -20943,7 +21008,7 @@ module.exports = function(arraybuffer, start, end) {
   return result.buffer;
 };
 
-},{}],130:[function(require,module,exports){
+},{}],131:[function(require,module,exports){
 /*
  * base64-arraybuffer
  * https://github.com/niklasvh/base64-arraybuffer
@@ -21004,7 +21069,7 @@ module.exports = function(arraybuffer, start, end) {
   };
 })("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/");
 
-},{}],131:[function(require,module,exports){
+},{}],132:[function(require,module,exports){
 (function (global){
 /**
  * Create a blob builder even when vendor prefixes exist
@@ -21057,7 +21122,7 @@ module.exports = (function() {
 })();
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],132:[function(require,module,exports){
+},{}],133:[function(require,module,exports){
 (function (global){
 
 /*
@@ -21119,12 +21184,12 @@ function hasBinary(data) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"isarray":133}],133:[function(require,module,exports){
+},{"isarray":134}],134:[function(require,module,exports){
 module.exports = Array.isArray || function (arr) {
   return Object.prototype.toString.call(arr) == '[object Array]';
 };
 
-},{}],134:[function(require,module,exports){
+},{}],135:[function(require,module,exports){
 (function (global){
 /*! http://mths.be/utf8js v2.0.0 by @mathias */
 ;(function(root) {
@@ -21367,7 +21432,7 @@ module.exports = Array.isArray || function (arr) {
 }(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],135:[function(require,module,exports){
+},{}],136:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -21392,7 +21457,7 @@ try {
   module.exports = false;
 }
 
-},{"global":136}],136:[function(require,module,exports){
+},{"global":137}],137:[function(require,module,exports){
 
 /**
  * Returns `this`. Execute this without a "context" (i.e. without it being
@@ -21402,7 +21467,7 @@ try {
 
 module.exports = (function () { return this; })();
 
-},{}],137:[function(require,module,exports){
+},{}],138:[function(require,module,exports){
 (function (global){
 /**
  * JSON parse.
@@ -21437,7 +21502,7 @@ module.exports = function parsejson(data) {
   }
 };
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],138:[function(require,module,exports){
+},{}],139:[function(require,module,exports){
 /**
  * Compiles a querystring
  * Returns string representation of the object
@@ -21476,7 +21541,7 @@ exports.decode = function(qs){
   return qry;
 };
 
-},{}],139:[function(require,module,exports){
+},{}],140:[function(require,module,exports){
 /**
  * Parses an URI
  *
@@ -21517,7 +21582,7 @@ module.exports = function parseuri(str) {
     return uri;
 };
 
-},{}],140:[function(require,module,exports){
+},{}],141:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -21562,7 +21627,7 @@ function ws(uri, protocols, opts) {
 
 if (WebSocket) ws.prototype = WebSocket.prototype;
 
-},{}],141:[function(require,module,exports){
+},{}],142:[function(require,module,exports){
 (function (global){
 
 /*
@@ -21624,9 +21689,9 @@ function hasBinary(data) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"isarray":142}],142:[function(require,module,exports){
-arguments[4][133][0].apply(exports,arguments)
-},{"dup":133}],143:[function(require,module,exports){
+},{"isarray":143}],143:[function(require,module,exports){
+arguments[4][134][0].apply(exports,arguments)
+},{"dup":134}],144:[function(require,module,exports){
 
 var indexOf = [].indexOf;
 
@@ -21637,7 +21702,7 @@ module.exports = function(arr, obj){
   }
   return -1;
 };
-},{}],144:[function(require,module,exports){
+},{}],145:[function(require,module,exports){
 
 /**
  * HOP ref.
@@ -21722,7 +21787,7 @@ exports.length = function(obj){
 exports.isEmpty = function(obj){
   return 0 == exports.length(obj);
 };
-},{}],145:[function(require,module,exports){
+},{}],146:[function(require,module,exports){
 /**
  * Parses an URI
  *
@@ -21749,7 +21814,7 @@ module.exports = function parseuri(str) {
   return uri;
 };
 
-},{}],146:[function(require,module,exports){
+},{}],147:[function(require,module,exports){
 (function (global){
 /*global Blob,File*/
 
@@ -21894,7 +21959,7 @@ exports.removeBlobs = function(data, callback) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./is-buffer":148,"isarray":149}],147:[function(require,module,exports){
+},{"./is-buffer":149,"isarray":150}],148:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -22296,7 +22361,7 @@ function error(data){
   };
 }
 
-},{"./binary":146,"./is-buffer":148,"component-emitter":110,"debug":111,"isarray":149,"json3":150}],148:[function(require,module,exports){
+},{"./binary":147,"./is-buffer":149,"component-emitter":111,"debug":112,"isarray":150,"json3":151}],149:[function(require,module,exports){
 (function (global){
 
 module.exports = isBuf;
@@ -22313,9 +22378,9 @@ function isBuf(obj) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],149:[function(require,module,exports){
-arguments[4][133][0].apply(exports,arguments)
-},{"dup":133}],150:[function(require,module,exports){
+},{}],150:[function(require,module,exports){
+arguments[4][134][0].apply(exports,arguments)
+},{"dup":134}],151:[function(require,module,exports){
 /*! JSON v3.2.6 | http://bestiejs.github.io/json3 | Copyright 2012-2013, Kit Cambridge | http://kit.mit-license.org */
 ;(function (window) {
   // Convenience aliases.
@@ -23178,7 +23243,7 @@ arguments[4][133][0].apply(exports,arguments)
   }
 }(this));
 
-},{}],151:[function(require,module,exports){
+},{}],152:[function(require,module,exports){
 module.exports = toArray
 
 function toArray(list, index) {
@@ -23193,7 +23258,7 @@ function toArray(list, index) {
     return array
 }
 
-},{}],152:[function(require,module,exports){
+},{}],153:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -24318,9 +24383,9 @@ request.put = function(url, data, fn){
 
 module.exports = request;
 
-},{"emitter":153,"reduce":154}],153:[function(require,module,exports){
-arguments[4][110][0].apply(exports,arguments)
-},{"dup":110}],154:[function(require,module,exports){
+},{"emitter":154,"reduce":155}],154:[function(require,module,exports){
+arguments[4][111][0].apply(exports,arguments)
+},{"dup":111}],155:[function(require,module,exports){
 
 /**
  * Reduce `arr` with `fn`.
@@ -24345,5 +24410,5 @@ module.exports = function(arr, fn, initial){
   
   return curr;
 };
-},{}]},{},[5])(5)
+},{}]},{},[6])(6)
 });
