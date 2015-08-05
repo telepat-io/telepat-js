@@ -58,6 +58,7 @@ API.call = function (endpoint, data, callback, method) {
   }
 
   var req;
+  var self = this;
 
   if (method === 'get') {
     req = request.get(this.apiEndpoint + endpoint);
@@ -75,7 +76,7 @@ API.call = function (endpoint, data, callback, method) {
   }
 
   req.end(function (err, res) {
-      if (this.authenticationToken && res.status === 401) {
+      if (self.authenticationToken && res.status === 401) {
 
       }
       else {
@@ -424,7 +425,11 @@ Event.prototype.jet = function () {
 };
 
 Event.prototype.on = function (name, callback) {
-  this.eventFunctions[name] = callback;
+  if (Array.isArray(this.eventFunctions[name])) {
+    this.eventFunctions[name].push(callback);
+  } else {
+    this.eventFunctions[name] = [callback];
+  }
 };
 
 Event.prototype.emit = function (args) {
@@ -432,7 +437,10 @@ Event.prototype.emit = function (args) {
   var params = Array.prototype.slice.call(arguments);
   params.shift();
   if (typeof this.eventFunctions[arguments[0]] !== 'undefined') {
-    this.eventFunctions[arguments[0]].apply(this, params);
+    var callbackArray = this.eventFunctions[arguments[0]];
+    for (var i=0; i<callbackArray.length; i++) {
+      callbackArray[i].apply(this, params);
+    }
   }
 };
 
