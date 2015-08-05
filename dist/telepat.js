@@ -42,8 +42,9 @@ var Admin = function (tapi, tlog, terror) {
  * Call this to delete a user profile
  *
  *  @param {string} email The email address of the user profile to delete
+ *  @param {function} callback The callback function to be invoked when operation is done. The function receives 2 parameters, an error object and the user array.
  */
-  this.deleteUser = function(email) {
+  this.deleteUser = function(email, callback) {
     api.call('admin/users/delete',
     { email: email },
     function (err, res) {
