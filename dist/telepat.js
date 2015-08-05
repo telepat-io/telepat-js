@@ -801,6 +801,10 @@ Telepat.subscribe = function (options, onSubscribe) {
   return channel;
 };
 
+Telepat.registerUser = function (user, callback) {
+  API.call('user/register', { user: user }, callback);
+}
+
 module.exports = Telepat;
 },{"./admin":1,"./api":2,"./channel":3,"./event":4,"./logger":5,"pouchdb":59,"socket.io-client":103}],7:[function(require,module,exports){
 
