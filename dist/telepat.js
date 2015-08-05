@@ -510,7 +510,7 @@ function login(endpoint, options) {
       Event.emit('login_error', error('Login failed with error: ' + err));
     } else {
       Telepat.user = res.body.content.user;
-      if (Telepat.user.type === 'admin') {
+      if (Telepat.user.isAdmin) {
         Telepat.admin = new Admin(API, log, error);
       }
       API.authenticationToken = res.body.content.token;
