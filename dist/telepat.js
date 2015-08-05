@@ -802,7 +802,7 @@ Telepat.subscribe = function (options, onSubscribe) {
 };
 
 Telepat.registerUser = function (user, callback) {
-  API.call('user/register', { user: user }, callback);
+  API.call('user/register', user, callback);
 }
 
 module.exports = Telepat;
