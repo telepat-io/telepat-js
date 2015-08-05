@@ -35,6 +35,25 @@ var Admin = function (tapi, tlog, terror) {
       }
     });
   };
+
+/**
+ * ## Admin.deleteUser
+ *
+ * Call this to delete a user profile
+ *
+ *  @param {string} email The email address of the user profile to delete
+ */
+  this.deleteUser = function(email) {
+    api.call('admin/users/delete',
+    { email: email },
+    function (err, res) {
+      if (err) {
+        callback(error('Deleting user failed with error: ' + err), null);
+      } else {
+        callback(null, res.body.content);
+      }
+    });
+  };
 };
 
 module.exports = Admin;
