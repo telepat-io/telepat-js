@@ -39,7 +39,7 @@ var Admin = function (tapi, tlog, terror) {
 /**
  * ## Admin.deleteUser
  *
- * Call this to delete a user profile
+ * Call this to delete a user profile.
  *
  *  @param {string} email The email address of the user profile to delete
  *  @param {function} callback The callback function to be invoked when operation is done. The function receives 2 parameters, an error object and the user array.
@@ -50,6 +50,26 @@ var Admin = function (tapi, tlog, terror) {
     function (err, res) {
       if (err) {
         callback(error('Deleting user failed with error: ' + err), null);
+      } else {
+        callback(null, res.body.content);
+      }
+    });
+  };
+
+/**
+ * ## Admin.updateUser
+ *
+ * Call this to update a user profile.
+ *
+ *  @param {Object} user The object representing the user profile to update. Should at least have the `email` property set.
+ *  @param {function} callback The callback function to be invoked when operation is done. The function receives 2 parameters, an error object and the user array.
+ */
+  this.updateUser = function(user, callback) {
+    api.call('admin/users/update',
+    user,
+    function (err, res) {
+      if (err) {
+        callback(error('Updating user failed with error: ' + err), null);
       } else {
         callback(null, res.body.content);
       }
