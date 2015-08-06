@@ -66,7 +66,7 @@ var Admin = function (tapi, tlog, terror) {
  */
   this.updateUser = function(user, callback) {
     api.call('admin/user/update',
-    user,
+    { user: user },
     function (err, res) {
       if (err) {
         callback(error('Updating user failed with error: ' + err), null);
