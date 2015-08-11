@@ -130,18 +130,13 @@ API.get = function (endpoint, data, callback) {
 };
 
 module.exports = API;
-},{"crypto-js/sha256":12,"superagent":154}],3:[function(require,module,exports){
+},{"crypto-js/sha256":13,"superagent":155}],3:[function(require,module,exports){
 'use strict';
 
 // # Telepat Channel Class
 // Use Channels to create, update and remove Telepat objects. You can create new Channels using the `subscribe` function of the main [Telepat](http://docs.telepat.io/javascript-sdk/lib/telepat.js.html) object.
 
 var EventObject = require('./event');
-var jsondiffpatch = require('jsondiffpatch').create({
-  objectHash: function(obj) {
-    return obj._id || obj.id;
-  }
-});
 
 /**
  * ## Channel Constructor
@@ -154,38 +149,14 @@ var jsondiffpatch = require('jsondiffpatch').create({
  * @param {Object} options The object describing the required subscription (context, channel, filters)
  * @param {integer} interval The time interval in miliseconds between two object-monitoring jobs. Defaults to 150.
  */
-var Channel = function (tapi, tlog, terror, toptions, interval) {
+var Channel = function (tapi, tlog, terror, tmonitor, toptions) {
   var api = tapi;
   var error = terror;
+  var monitor = tmonitor;
   var options = toptions;
   var log = tlog;
   var event = new EventObject(log);
   var self = this;
-  var timer;
-  var lastObjects;
-  var processingPatch = false;
-  jsondiffpatch.processor.pipes.diff.before('objects', objectPropertyTrimFilter);
-  var updateRunning = false;
-  var timerInterval = interval || 150;
-
-  function trimObject(obj) {
-    var trimmedObject = {};
-    for (var name in obj) {
-      if (name.slice(0, 2) !== '$$') {
-        trimmedObject[name] = obj[name];
-      }
-    }
-    return trimmedObject;
-  }
-
-  function objectPropertyTrimFilter(context) {
-    if (!context.leftIsArray && context.leftType === 'object') {
-      context.left = trimObject(context.left);
-    }
-    if (!context.rightIsArray && context.rightType === 'object') {
-      context.right = trimObject(context.right);
-    }
-  }
 
   // ## Channel.objects
   // You can access a hash of all the objects on the current channel using this property. Each object is stored on a key named after the object id.
@@ -217,61 +188,8 @@ var Channel = function (tapi, tlog, terror, toptions, interval) {
         for (i=0; i<objectKeys.length; i++) {
           self.objects[objectKeys[i]].$$event = new EventObject(log);
         }
-        lastObjects = JSON.parse(JSON.stringify(self.objects));
+        monitor.add(options, self.objects, event, self.add, self.remove, self.update);
         event.emit('subscribe');
-
-        // ## Modifying objects
-        // - To create new objects, you can either add a new property on `Channel.objects` or use the `Channel.add` function. Any new properties added to `Channel.objects` will be immediately removed, and then added back (on the proper key, assigned by the server) - therefore, it is probably more convenient to use the `Channel.add` function for adding new objects.
-        // - To edit or delete objects, simply access them using `Channel.objects` and make modifications as needed. Alternatively, you can also call the `Channel.remove` and `Channel.update` functions.
-        timer = setInterval(function () {
-          if (self.processingPatch || updateRunning) {
-            return;
-          }
-          var diff = jsondiffpatch.diff(lastObjects, self.objects);
-          if (diff !== undefined) {
-            log.debug('Found diff: ' + JSON.stringify(diff));
-            var diffKeys = Object.keys(diff);
-            for (var i=0; i<diffKeys.length; i++) {
-              var key = diffKeys[i];
-              var obj = diff[key];
-
-              if (Array.isArray(obj)) {
-                if (obj.length === 1) {
-                  self.add(self.objects[key]);
-                  delete self.objects[key];
-                  log.debug('Adding object to ' + options.channel.model + ' channel');
-                } else if (obj.length === 3) {
-                  self.remove(key);
-                  log.debug('Removing object from ' + options.channel.model + ' channel');
-                }
-              } else {
-                var objKeys = Object.keys(obj);
-                var patch = [];
-
-                for (var j=0; j<objKeys.length; j++) {
-                  var objKey = objKeys[j];
-                  var delta = obj[objKey];
-                  if (typeof delta === 'object') {
-                    patch.push({'op': 'replace', 'path': options.channel.model + '/' + key + '/' + objKey, 'value': self.objects[key][objKey]});
-                    log.debug('Modified ' + objKey + ' property on object ' + key + ', ' + options.channel.model + ' channel');
-                  } else if (delta.length === 1) {
-                    patch.push({'op': 'replace', 'path': options.channel.model + '/' + key + '/' + objKey, 'value': delta[0]});
-                    log.debug('Added ' + objKey + ' property to object ' + key + ', ' + options.channel.model + ' channel');
-                  } else if (delta.length === 2) {
-                    patch.push({'op': 'replace', 'path': options.channel.model + '/' + key + '/' + objKey, 'value': delta[1]});
-                    log.debug('Modified ' + objKey + ' property on object ' + key + ', ' + options.channel.model + ' channel');
-                  } else if (delta.length === 3) {
-                    log.info('Removing object properties is not supported in this version. Try setting to an empty value instead.');
-                  }
-                }
-
-                self.update(key, patch);
-                log.debug('Sending patch to object ' + key + ' on ' + options.channel.model + ' channel: ' + JSON.stringify(patch));
-              }
-            }
-            lastObjects = JSON.parse(JSON.stringify(self.objects));
-          }
-        }, timerInterval);
       }
     });
   };
@@ -290,12 +208,11 @@ var Channel = function (tapi, tlog, terror, toptions, interval) {
   this.unsubscribe = function() {
     api.call('object/unsubscribe',
       options,
-      function (err, res) {
+      function (err) {
         if (err) {
           event.emit('error', error('Unsubscribe failed with error: ' + err));
         } else {
           self.objects = {};
-          clearInterval(timer);
           event.emit('unsubscribe');
           event.emit('_unsubscribe');
         }
@@ -317,7 +234,7 @@ var Channel = function (tapi, tlog, terror, toptions, interval) {
         context: options.channel.context,
         content: object
       },
-      function (err, res) {
+      function (err) {
         if (err) {
           event.emit('error', error('Adding object failed with error: ' + err));
         } else {
@@ -342,7 +259,7 @@ var Channel = function (tapi, tlog, terror, toptions, interval) {
         context: options.channel.context,
         id: id
       },
-      function (err, res) {
+      function (err) {
         if (err) {
           event.emit('error', error('Removing object failed with error: ' + err));
         } else {
@@ -366,7 +283,6 @@ var Channel = function (tapi, tlog, terror, toptions, interval) {
  *
  */
   this.update = function(id, patch) {
-    updateRunning = true;
     api.call('object/update',
       {
         model: options.channel.model,
@@ -374,68 +290,12 @@ var Channel = function (tapi, tlog, terror, toptions, interval) {
         id: id,
         patch: patch
       },
-      function (err, res) {
+      function (err) {
         if (err) {
           event.emit('error', error('Updating object failed with error: ' + err));
         } else {
         }
-        updateRunning = false;
       });
-  };
-
-  // ## Getting notified of object modifications
-  // Use the `Channel.on('update', ...)` function to subscribe to object updates. This will only notify you of changes received from the 'outside' - you'll only see events when the backend notifies the client that there are updates available, either made by you or by someone else.
-  // 
-  //     Channel.on('update', function(operation, parentId, parentObject, delta) {
-  //       // operation can be one of 'replace', 'delete' or 'add'.
-  //       // parentId is the id of the Telepat object being modified.
-  //       // parentObject is the Telepat object being modified.
-  //       // delta is available just for the 'replace' operation, and is an object that contains two properties: 'path' (the name of the modified property on the object) and 'oldValue'.
-  //     });
-  this.processPatch = function (operation) {
-    this.processingPatch = true;
-    if (operation.hasOwnProperty('path')) {
-      var pathComponents = operation.path.split('/');
-      if (operation.hasOwnProperty('op')) {
-        if (operation.op === 'replace') {
-          if (!this.objects.hasOwnProperty(pathComponents[1])) {
-            event.emit('error', error('Object id doesn\'t exist ' + operation));
-          } else if (operation.hasOwnProperty('value')) {
-            var parent = this.objects[pathComponents[1]];
-            var oldValue = parent[pathComponents[2]];
-            parent[pathComponents[2]] = operation.value;
-            event.emit('update', 'replace', pathComponents[1], parent, { path: pathComponents[2], oldValue: oldValue });
-            log.debug('Replaced property ' + pathComponents[2] + ' of object id ' + pathComponents[1] + ' with  value ' + operation.value);
-          } else {
-            event.emit('error', error('Invalid operation ' + operation));
-          }
-        } else if (operation.op === 'delete') {
-          var oldValue = this.objects[pathComponents[1]];
-          delete this.objects[pathComponents[1]];
-          event.emit('update', 'delete', pathComponents[1], oldValue);
-          log.debug('Removed object id ' + pathComponents[1]);
-        } else {
-          event.emit('error', error('Unsupported operation ' + operation));
-        }
-      } else {
-        event.emit('error', error('Invalid operation ' + operation));
-      }
-    } else {
-      if (operation.hasOwnProperty('value') && operation.value.hasOwnProperty('id')) {
-        if (!this.objects.hasOwnProperty(operation.value.id)) {
-          operation.value.$$event = new EventObject(log);
-          this.objects[operation.value.id] = operation.value;
-          event.emit('update', 'add', operation.value.id, operation.value);
-          log.debug('Added object with id ' + operation.value.id);
-        } else {
-          event.emit('error', error('Object id already exists ' + operation));
-        }
-      } else {
-        event.emit('error', error('Invalid add operation ' + operation));
-      }
-    }
-    lastObjects = JSON.parse(JSON.stringify(self.objects));
-    this.processingPatch = false;
   };
 
 /**
@@ -452,7 +312,7 @@ var Channel = function (tapi, tlog, terror, toptions, interval) {
 };
 
 module.exports = Channel;
-},{"./event":4,"jsondiffpatch":26}],4:[function(require,module,exports){
+},{"./event":4}],4:[function(require,module,exports){
 'use strict';
 
 var Event = function (logger) {
@@ -498,7 +358,207 @@ log.methodFactory = function (methodName, logLevel) {
 log.setLevel('warn');
 
 module.exports = log;
-},{"loglevel":29}],6:[function(require,module,exports){
+},{"loglevel":30}],6:[function(require,module,exports){
+'use strict';
+
+// # Telepat Monitor Class
+
+var EventObject = require('./event');
+var jsondiffpatch = require('jsondiffpatch').create({
+  objectHash: function(obj) {
+    return obj._id || obj.id;
+  }
+});
+
+var Monitor = function (tlog, terror, interval) {
+  var updateRunning = false;
+  var error = terror;
+  var log = tlog;
+  var processingPatch = false;
+  var timer = null;
+  var lastObjects;
+  var self = this;
+  var events = {};
+
+  function trimObject(obj) {
+    var trimmedObject = {};
+    for (var name in obj) {
+      if (name.slice(0, 2) !== '$$' && typeof obj[name] !== 'function') {
+        trimmedObject[name] = obj[name];
+      }
+    }
+    return trimmedObject;
+  }
+
+  function objectPropertyTrimFilter(context) {
+    if (!context.leftIsArray && context.leftType === 'object') {
+      context.left = trimObject(context.left);
+    }
+    if (!context.rightIsArray && context.rightType === 'object') {
+      context.right = trimObject(context.right);
+    }
+  }
+
+  jsondiffpatch.processor.pipes.diff.before('objects', objectPropertyTrimFilter);
+
+  this.objects = {};
+  this.options = {};
+  this.timerInterval = interval || 150;
+
+  this.subscriptionKeyForOptions = function(options) {
+    var key = 'blg:'+options.channel.context;
+    if (options.channel.user) {
+      key += ':users:'+options.channel.user;
+    }
+    key += ':'+options.channel.model;
+    return key;
+  };
+
+  this.add = function (subscriptionOptions, objects, event, addCallback, removeCallback, updateCallback) {
+    var subscriptionKey = self.subscriptionKeyForOptions(subscriptionOptions);
+    self.objects[subscriptionKey] = objects;
+    self.options[subscriptionKey] = subscriptionOptions;
+    events[subscriptionKey] = event;
+    lastObjects = JSON.parse(JSON.stringify(self.objects));
+
+    if (timer === null) {
+      timer = setInterval(function () {
+        if (processingPatch || updateRunning) {
+          return;
+        }
+        var totalDiff = jsondiffpatch.diff(lastObjects, self.objects);
+        if (totalDiff !== undefined) {
+          log.debug('Found diff: ' + JSON.stringify(totalDiff));
+          for (var subKey in totalDiff) {
+            var root = self.objects[subKey];
+            var diff = totalDiff[subKey];
+            var options = self.options[subKey];
+            var diffKeys = Object.keys(diff);
+            for (var i=0; i<diffKeys.length; i++) {
+              var key = diffKeys[i];
+              var obj = diff[key];
+
+              if (Array.isArray(obj)) {
+                if (obj.length === 1) {
+                  addCallback(root[key]);
+                  delete root[key];
+                  log.debug('Adding object to ' + subKey + ' channel');
+                } else if (obj.length === 3) {
+                  removeCallback(key);
+                  log.debug('Removing object from ' + subKey + ' channel');
+                }
+              } else {
+                var objKeys = Object.keys(obj);
+                var patch = [];
+
+                for (var j=0; j<objKeys.length; j++) {
+                  var objKey = objKeys[j];
+                  var delta = obj[objKey];
+                  if (typeof delta === 'object') {
+                    patch.push({'op': 'replace', 'path': options.channel.model + '/' + key + '/' + objKey, 'value': root[key][objKey]});
+                    log.debug('Modified ' + objKey + ' property on object ' + key + ', ' + options.channel.model + ' channel');
+                  } else if (delta.length === 1) {
+                    patch.push({'op': 'replace', 'path': options.channel.model + '/' + key + '/' + objKey, 'value': delta[0]});
+                    log.debug('Added ' + objKey + ' property to object ' + key + ', ' + options.channel.model + ' channel');
+                  } else if (delta.length === 2) {
+                    patch.push({'op': 'replace', 'path': options.channel.model + '/' + key + '/' + objKey, 'value': delta[1]});
+                    log.debug('Modified ' + objKey + ' property on object ' + key + ', ' + options.channel.model + ' channel');
+                  } else if (delta.length === 3) {
+                    log.info('Removing object properties is not supported in this version. Try setting to an empty value instead.');
+                  }
+                }
+
+                updateCallback(key, patch);
+                log.debug('Sending patch to object ' + key + ' on ' + options.channel.model + ' channel: ' + JSON.stringify(patch));
+              }
+            }
+          }
+          lastObjects = JSON.parse(JSON.stringify(self.objects));
+        }
+      }, self.timerInterval);
+    }
+  };
+
+  // ## Getting notified of object modifications
+  // Use the `Channel.on('update', ...)` function to subscribe to object updates. This will only notify you of changes received from the 'outside' - you'll only see events when the backend notifies the client that there are updates available, either made by you or by someone else.
+  // 
+  //     Channel.on('update', function(operation, parentId, parentObject, delta) {
+  //       // operation can be one of 'replace', 'delete' or 'add'.
+  //       // parentId is the id of the Telepat object being modified.
+  //       // parentObject is the Telepat object being modified.
+  //       // delta is available just for the 'replace' operation, and is an object that contains two properties: 'path' (the name of the modified property on the object) and 'oldValue'.
+  //     });
+  this.processMessage = function (message) {
+    function process(operation) {
+      var oldValue;
+      if (self.objects.hasOwnProperty(operation.subscription)) { 
+        var root = self.objects[operation.subscription];
+        var event = events[operation.subscription];
+        if (operation.hasOwnProperty('path')) {
+          var pathComponents = operation.path.split('/');
+          if (operation.hasOwnProperty('op')) {
+            if (operation.op === 'replace') {
+              if (!root.hasOwnProperty(pathComponents[1])) {
+                event.emit('error', error('Object id doesn\'t exist ' + operation));
+              } else if (operation.hasOwnProperty('value')) {
+                var parent = root[pathComponents[1]];
+                oldValue = parent[pathComponents[2]];
+                parent[pathComponents[2]] = operation.value;
+                event.emit('update', 'replace', pathComponents[1], parent, { path: pathComponents[2], oldValue: oldValue });
+                log.debug('Replaced property ' + pathComponents[2] + ' of object id ' + pathComponents[1] + ' with  value ' + operation.value);
+              } else {
+                event.emit('error', error('Invalid operation ' + operation));
+              }
+            } else if (operation.op === 'delete') {
+              oldValue = root[pathComponents[1]];
+              delete root[pathComponents[1]];
+              event.emit('update', 'delete', pathComponents[1], oldValue);
+              log.debug('Removed object id ' + pathComponents[1]);
+            } else {
+              event.emit('error', error('Unsupported operation ' + operation));
+            }
+          } else {
+            event.emit('error', error('Invalid operation ' + operation));
+          }
+        } else {
+          if (operation.hasOwnProperty('value') && operation.value.hasOwnProperty('id')) {
+            if (!root.hasOwnProperty(operation.value.id)) {
+              operation.value.$$event = new EventObject(log);
+              root[operation.value.id] = operation.value;
+              event.emit('update', 'add', operation.value.id, operation.value);
+              log.debug('Added object with id ' + operation.value.id);
+            } else {
+              event.emit('error', error('Object id already exists ' + operation));
+            }
+          } else {
+            event.emit('error', error('Invalid add operation ' + operation));
+          }
+        }
+        lastObjects = JSON.parse(JSON.stringify(self.objects));
+        processingPatch = false;
+      }
+    }
+
+    processingPatch = true;
+    log.debug('Received update: ' + JSON.stringify(message));
+    var i, operation;
+    for (i=0; i<message.data.new.length; i++) {
+      operation = message.data.new[i];
+      process(operation);
+    }
+    for (i=0; i<message.data.updated.length; i++) {
+      operation = message.data.updated[i];
+      process(operation);
+    }
+    for (i=0; i<message.data.deleted.length; i++) {
+      operation = message.data.deleted[i];
+      process(operation);
+    }
+  };
+};
+
+module.exports = Monitor;
+},{"./event":4,"jsondiffpatch":27}],7:[function(require,module,exports){
 'use strict';
 // # Telepat Javascript Client
 // **Telepat** is an open-source backend stack, designed to deliver information and information updates in real-time to clients, while allowing for flexible deployment and simple scaling.
@@ -509,6 +569,7 @@ var log = require('./logger');
 var EventObject = require('./event');
 var Channel = require('./channel');
 var User = require('./user');
+var Monitor = require('./monitor');
 
 // ## Telepat Class
 // You use the Telepat class to connect to the backend, login, subscribe and unsubscribe to channels. The object has properties you can access:
@@ -523,7 +584,6 @@ var Telepat = function () {
   var socketEndpoint = null;
   var socket = null;
   var ioSessionId = null;
-  var channelTimerInterval = null;
   var self = this;
 
   function error(string) {
@@ -538,10 +598,12 @@ var Telepat = function () {
       });
   }
 
+  var monitor = new Monitor(log, error);
+
   this.contexts = null;
   this.subscriptions = {};
   this.admin = null;
-  this.user = new User(API, log, error, Event, function (newAdmin) { self.admin = newAdmin; });
+  this.user = new User(API, log, error, Event, monitor, function (newAdmin) { self.admin = newAdmin; });
 
   /**
    * ## Telepat.connect
@@ -551,8 +613,6 @@ var Telepat = function () {
    * @param {object} options Object containing all configuration options for connection
    */
   this.connect = function (options) {
-    var self = this;
-
     function completeRegistration(res) {
       if (res.body.content.identifier !== undefined) {
         API.UDID = res.body.content.identifier;
@@ -643,7 +703,7 @@ var Telepat = function () {
       }
       // - `timerInterval`: the time interval in miliseconds between two object-monitoring jobs on channels - defaults to 150
       if (typeof options.timerInterval !== 'undefined') {
-        channelTimerInterval = options.timerInterval;
+        monitor.timerInterval = options.timerInterval;
       }
     } else {
       return error('Options object not provided to the connect function');
@@ -667,29 +727,7 @@ var Telepat = function () {
     });
 
     socket.on('message', function(message) {
-      function processOperation(operation) {
-        if (self.subscriptions.hasOwnProperty(operation.subscription)) {
-          var channel = self.subscriptions[operation.subscription];
-          channel.processPatch(operation);
-        } else {
-          Event.emit('error', error('Received update on non-existent subscription'));
-        }
-      }
-
-      log.debug('Received update: ' + JSON.stringify(message));
-      var i, operation;
-      for (i=0; i<message.data.new.length; i++) {
-        operation = message.data.new[i];
-        processOperation(operation);
-      }
-      for (i=0; i<message.data.updated.length; i++) {
-        operation = message.data.updated[i];
-        processOperation(operation);
-      }
-      for (i=0; i<message.data.deleted.length; i++) {
-        operation = message.data.deleted[i];
-        processOperation(operation);
-      }
+      monitor.processMessage(message);
     });
 
     socket.on('context-update', function() {
@@ -740,13 +778,9 @@ var Telepat = function () {
    * @return {Channel} The new [Channel](http://docs.telepat.io/javascript-sdk/lib/channel.js.html) object
    */
   this.subscribe = function (options, onSubscribe) {
-    var channel = new Channel(API, log, error, options, channelTimerInterval);
-    var key = 'blg:'+options.channel.context;
-    if (options.channel.user) {
-      key += ':users:'+options.channel.user;
-    }
-    key += ':'+options.channel.model;
+    var channel = new Channel(API, log, error, monitor, options);
     var self = this;
+    var key = monitor.subscriptionKeyForOptions(options);
     this.subscriptions[key] = channel;
     channel.subscribe();
     if (onSubscribe !== undefined) {
@@ -761,11 +795,12 @@ var Telepat = function () {
 };
 
 module.exports = Telepat;
-},{"./api":2,"./channel":3,"./event":4,"./logger":5,"./user":7,"pouchdb":60,"socket.io-client":104}],7:[function(require,module,exports){
+},{"./api":2,"./channel":3,"./event":4,"./logger":5,"./monitor":6,"./user":8,"pouchdb":61,"socket.io-client":105}],8:[function(require,module,exports){
 'use strict';
 // # Telepat User Class
 
 var Admin = require('./admin');
+var Channel = require('./channel');
 
 /**
  * ## Admin Constructor
@@ -776,12 +811,14 @@ var Admin = require('./admin');
  * @param {Object} log The logging-handling object. This is injected by Telepat.
  * @param {Object} error The error-handling object. This is injected by Telepat.
  */
-var User = function (tapi, tlog, terror, tevent, tsetAdmin) {
+var User = function (tapi, tlog, terror, tevent, tmonitor, tsetAdmin) {
   var api = tapi;
   var error = terror;
   var log = tlog;
   var setAdmin = tsetAdmin;
   var event = tevent;
+  var monitor = tmonitor;
+  var userChannel = null;
   var self = this;
 
   function _login(endpoint, options) {
@@ -795,11 +832,31 @@ var User = function (tapi, tlog, terror, tevent, tsetAdmin) {
         if (self.isAdmin) {
           setAdmin(new Admin(api, log, error));
         }
+        //userChannel = new Channel(api, log, error, monitor, { channel: { model: 'users', id: self.id } });
+        //userChannel.subscribe();
         api.authenticationToken = res.body.content.token;
         event.emit('login');
       }
     });
   }
+
+  this.update = function(callback) {
+    var result = {};
+    for (var key in self) {
+      if (self.hasOwnProperty(key)) {
+        result[key] = self[key];
+      }
+    };
+    api.call('user/update_immediate',
+    { user: result },
+    function (err, res) {
+      if (err) {
+        callback(error('Updating user failed with error: ' + err), null);
+      } else {
+        callback(null, res.body.content);
+      }
+    });
+  };
 
   /**
    * ## User.register
@@ -811,7 +868,7 @@ var User = function (tapi, tlog, terror, tevent, tsetAdmin) {
    */
   this.register = function (user, callback) {
     api.call('user/register', user, callback);
-  }
+  };
 
   /**
    * ## User.loginWithFacebook
@@ -826,7 +883,7 @@ var User = function (tapi, tlog, terror, tevent, tsetAdmin) {
    * @param {string} facebookToken The user token obtained from Facebook after login
    */
   this.loginWithFacebook = function (facebookToken) {
-    return _login('user/login', { access_token: facebookToken });
+    return _login('user/login', { 'access_token': facebookToken });
   };
 
   /**
@@ -886,9 +943,9 @@ var User = function (tapi, tlog, terror, tevent, tsetAdmin) {
 };
 
 module.exports = User;
-},{"./admin":1}],8:[function(require,module,exports){
+},{"./admin":1,"./channel":3}],9:[function(require,module,exports){
 
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -1191,7 +1248,7 @@ function isUndefined(arg) {
   return arg === void 0;
 }
 
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -1283,7 +1340,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],11:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -2029,7 +2086,7 @@ process.umask = function() { return 0; };
 	return CryptoJS;
 
 }));
-},{}],12:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -2229,7 +2286,7 @@ process.umask = function() { return 0; };
 	return CryptoJS.SHA256;
 
 }));
-},{"./core":11}],13:[function(require,module,exports){
+},{"./core":12}],14:[function(require,module,exports){
 
 var Pipe = require('../pipe').Pipe;
 
@@ -2280,7 +2337,7 @@ Context.prototype.push = function(child, name) {
 
 exports.Context = Context;
 
-},{"../pipe":27}],14:[function(require,module,exports){
+},{"../pipe":28}],15:[function(require,module,exports){
 var Context = require('./context').Context;
 
 var DiffContext = function DiffContext(left, right) {
@@ -2293,7 +2350,7 @@ DiffContext.prototype = new Context();
 
 exports.DiffContext = DiffContext;
 
-},{"./context":13}],15:[function(require,module,exports){
+},{"./context":14}],16:[function(require,module,exports){
 var Context = require('./context').Context;
 
 var PatchContext = function PatchContext(left, delta) {
@@ -2306,7 +2363,7 @@ PatchContext.prototype = new Context();
 
 exports.PatchContext = PatchContext;
 
-},{"./context":13}],16:[function(require,module,exports){
+},{"./context":14}],17:[function(require,module,exports){
 var Context = require('./context').Context;
 
 var ReverseContext = function ReverseContext(delta) {
@@ -2318,7 +2375,7 @@ ReverseContext.prototype = new Context();
 
 exports.ReverseContext = ReverseContext;
 
-},{"./context":13}],17:[function(require,module,exports){
+},{"./context":14}],18:[function(require,module,exports){
 // use as 2nd parameter for JSON.parse to revive Date instances
 module.exports = function dateReviver(key, value) {
   var parts;
@@ -2331,7 +2388,7 @@ module.exports = function dateReviver(key, value) {
   return value;
 };
 
-},{}],18:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 var Processor = require('./processor').Processor;
 var Pipe = require('./pipe').Pipe;
 var DiffContext = require('./contexts/diff').DiffContext;
@@ -2394,11 +2451,11 @@ DiffPatcher.prototype.unpatch = function(right, delta) {
 
 exports.DiffPatcher = DiffPatcher;
 
-},{"./contexts/diff":14,"./contexts/patch":15,"./contexts/reverse":16,"./filters/arrays":20,"./filters/dates":21,"./filters/nested":23,"./filters/texts":24,"./filters/trivial":25,"./pipe":27,"./processor":28}],19:[function(require,module,exports){
+},{"./contexts/diff":15,"./contexts/patch":16,"./contexts/reverse":17,"./filters/arrays":21,"./filters/dates":22,"./filters/nested":24,"./filters/texts":25,"./filters/trivial":26,"./pipe":28,"./processor":29}],20:[function(require,module,exports){
 
 exports.isBrowser = typeof window !== 'undefined';
 
-},{}],20:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 var DiffContext = require('../contexts/diff').DiffContext;
 var PatchContext = require('../contexts/patch').PatchContext;
 var ReverseContext = require('../contexts/reverse').ReverseContext;
@@ -2838,7 +2895,7 @@ exports.collectChildrenPatchFilter = collectChildrenPatchFilter;
 exports.reverseFilter = reverseFilter;
 exports.collectChildrenReverseFilter = collectChildrenReverseFilter;
 
-},{"../contexts/diff":14,"../contexts/patch":15,"../contexts/reverse":16,"./lcs":22}],21:[function(require,module,exports){
+},{"../contexts/diff":15,"../contexts/patch":16,"../contexts/reverse":17,"./lcs":23}],22:[function(require,module,exports){
 var diffFilter = function datesDiffFilter(context) {
   if (context.left instanceof Date) {
     if (context.right instanceof Date) {
@@ -2859,7 +2916,7 @@ diffFilter.filterName = 'dates';
 
 exports.diffFilter = diffFilter;
 
-},{}],22:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 /*
 
 LCS implementation that supports arrays or strings
@@ -2935,7 +2992,7 @@ var get = function(array1, array2, match, context) {
 
 exports.get = get;
 
-},{}],23:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 var DiffContext = require('../contexts/diff').DiffContext;
 var PatchContext = require('../contexts/patch').PatchContext;
 var ReverseContext = require('../contexts/reverse').ReverseContext;
@@ -3067,7 +3124,7 @@ exports.collectChildrenPatchFilter = collectChildrenPatchFilter;
 exports.reverseFilter = reverseFilter;
 exports.collectChildrenReverseFilter = collectChildrenReverseFilter;
 
-},{"../contexts/diff":14,"../contexts/patch":15,"../contexts/reverse":16}],24:[function(require,module,exports){
+},{"../contexts/diff":15,"../contexts/patch":16,"../contexts/reverse":17}],25:[function(require,module,exports){
 /* global diff_match_patch */
 var TEXT_DIFF = 2;
 var DEFAULT_MIN_LENGTH = 60;
@@ -3196,7 +3253,7 @@ exports.diffFilter = diffFilter;
 exports.patchFilter = patchFilter;
 exports.reverseFilter = reverseFilter;
 
-},{}],25:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 var isArray = (typeof Array.isArray === 'function') ?
   // use native function
   Array.isArray :
@@ -3299,7 +3356,7 @@ exports.diffFilter = diffFilter;
 exports.patchFilter = patchFilter;
 exports.reverseFilter = reverseFilter;
 
-},{}],26:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 
 var environment = require('./environment');
 
@@ -3358,7 +3415,7 @@ if (environment.isBrowser) {
 	exports.console = formatters.console;
 }
 
-},{"./date-reviver":17,"./diffpatcher":18,"./environment":19}],27:[function(require,module,exports){
+},{"./date-reviver":18,"./diffpatcher":19,"./environment":20}],28:[function(require,module,exports){
 var Pipe = function Pipe(name) {
   this.name = name;
   this.filters = [];
@@ -3472,7 +3529,7 @@ Pipe.prototype.shouldHaveResult = function(should) {
 
 exports.Pipe = Pipe;
 
-},{}],28:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 
 var Processor = function Processor(options){
 	this.selfOptions = options;
@@ -3534,7 +3591,7 @@ Processor.prototype.process = function(input, pipe) {
 
 exports.Processor = Processor;
 
-},{}],29:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 /*
 * loglevel - https://github.com/pimterry/loglevel
 *
@@ -3693,7 +3750,7 @@ exports.Processor = Processor;
     return self;
 }));
 
-},{}],30:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 "use strict";
 
 var utils = require('./utils');
@@ -4478,7 +4535,7 @@ AbstractPouchDB.prototype.destroy =
   });
 });
 
-},{"./changes":42,"./deps/errors":48,"./deps/upsert":56,"./merge":61,"./utils":66,"events":9}],31:[function(require,module,exports){
+},{"./changes":43,"./deps/errors":49,"./deps/upsert":57,"./merge":62,"./utils":67,"events":10}],32:[function(require,module,exports){
 (function (process){
 "use strict";
 
@@ -5533,7 +5590,7 @@ HttpPouch.valid = function () {
 module.exports = HttpPouch;
 
 }).call(this,require('_process'))
-},{"../../deps/buffer":47,"../../deps/errors":48,"../../utils":66,"_process":10,"debug":69}],32:[function(require,module,exports){
+},{"../../deps/buffer":48,"../../deps/errors":49,"../../utils":67,"_process":11,"debug":70}],33:[function(require,module,exports){
 'use strict';
 
 var merge = require('../../merge');
@@ -5718,7 +5775,7 @@ function idbAllDocs(opts, api, idb, callback) {
 }
 
 module.exports = idbAllDocs;
-},{"../../deps/errors":48,"../../merge":61,"./idb-constants":35,"./idb-utils":36}],33:[function(require,module,exports){
+},{"../../deps/errors":49,"../../merge":62,"./idb-constants":36,"./idb-utils":37}],34:[function(require,module,exports){
 'use strict';
 
 var utils = require('../../utils');
@@ -5782,7 +5839,7 @@ function checkBlobSupport(txn, idb) {
 }
 
 module.exports = checkBlobSupport;
-},{"../../utils":66,"./idb-constants":35}],34:[function(require,module,exports){
+},{"../../utils":67,"./idb-constants":36}],35:[function(require,module,exports){
 'use strict';
 
 var utils = require('../../utils');
@@ -6145,7 +6202,7 @@ function idbBulkDocs(req, opts, api, idb, Changes, callback) {
 }
 
 module.exports = idbBulkDocs;
-},{"../../deps/errors":48,"../../utils":66,"./idb-constants":35,"./idb-utils":36}],35:[function(require,module,exports){
+},{"../../deps/errors":49,"../../utils":67,"./idb-constants":36,"./idb-utils":37}],36:[function(require,module,exports){
 'use strict';
 
 // IndexedDB requires a versioned database structure, so we use the
@@ -6172,7 +6229,7 @@ exports.META_STORE = 'meta-store';
 exports.LOCAL_STORE = 'local-store';
 // Where we detect blob support
 exports.DETECT_BLOB_SUPPORT_STORE = 'detect-blob-support';
-},{}],36:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -6418,7 +6475,7 @@ exports.openTransactionSafely = function (idb, stores, mode) {
   }
 };
 }).call(this,require('_process'))
-},{"../../deps/errors":48,"../../utils":66,"./idb-constants":35,"_process":10}],37:[function(require,module,exports){
+},{"../../deps/errors":49,"../../utils":67,"./idb-constants":36,"_process":11}],38:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -7373,7 +7430,7 @@ IdbPouch.Changes = new utils.Changes();
 module.exports = IdbPouch;
 
 }).call(this,require('_process'))
-},{"../../deps/errors":48,"../../merge":61,"../../utils":66,"./idb-all-docs":32,"./idb-blob-support":33,"./idb-bulk-docs":34,"./idb-constants":35,"./idb-utils":36,"_process":10}],38:[function(require,module,exports){
+},{"../../deps/errors":49,"../../merge":62,"../../utils":67,"./idb-all-docs":33,"./idb-blob-support":34,"./idb-bulk-docs":35,"./idb-constants":36,"./idb-utils":37,"_process":11}],39:[function(require,module,exports){
 'use strict';
 
 var utils = require('../../utils');
@@ -7698,7 +7755,7 @@ function websqlBulkDocs(req, opts, api, db, Changes, callback) {
 
 module.exports = websqlBulkDocs;
 
-},{"../../deps/errors":48,"../../utils":66,"./websql-constants":39,"./websql-utils":40}],39:[function(require,module,exports){
+},{"../../deps/errors":49,"../../utils":67,"./websql-constants":40,"./websql-utils":41}],40:[function(require,module,exports){
 'use strict';
 
 function quote(str) {
@@ -7722,7 +7779,7 @@ exports.META_STORE = quote('metadata-store');
 exports.ATTACH_AND_SEQ_STORE = quote('attach-seq-store');
 
 
-},{}],40:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 'use strict';
 
 var utils = require('../../utils');
@@ -7951,7 +8008,7 @@ module.exports = {
   openDB: openDB,
   valid: valid
 };
-},{"../../deps/errors":48,"../../utils":66,"./websql-constants":39}],41:[function(require,module,exports){
+},{"../../deps/errors":49,"../../utils":67,"./websql-constants":40}],42:[function(require,module,exports){
 'use strict';
 
 var utils = require('../../utils');
@@ -8960,7 +9017,7 @@ WebSqlPouch.Changes = new utils.Changes();
 
 module.exports = WebSqlPouch;
 
-},{"../../deps/errors":48,"../../deps/parse-hex":52,"../../merge":61,"../../utils":66,"./websql-bulk-docs":38,"./websql-constants":39,"./websql-utils":40}],42:[function(require,module,exports){
+},{"../../deps/errors":49,"../../deps/parse-hex":53,"../../merge":62,"../../utils":67,"./websql-bulk-docs":39,"./websql-constants":40,"./websql-utils":41}],43:[function(require,module,exports){
 'use strict';
 var utils = require('./utils');
 var merge = require('./merge');
@@ -9216,7 +9273,7 @@ Changes.prototype.filterChanges = function (opts) {
     });
   }
 };
-},{"./deps/errors":48,"./evalFilter":58,"./evalView":59,"./merge":61,"./utils":66,"events":9}],43:[function(require,module,exports){
+},{"./deps/errors":49,"./evalFilter":59,"./evalView":60,"./merge":62,"./utils":67,"events":10}],44:[function(require,module,exports){
 'use strict';
 
 var Promise = require('./deps/promise');
@@ -9319,7 +9376,7 @@ Checkpointer.prototype.getCheckpoint = function () {
 
 module.exports = Checkpointer;
 
-},{"./deps/explain404":49,"./deps/promise":54,"pouchdb-collate":91}],44:[function(require,module,exports){
+},{"./deps/explain404":50,"./deps/promise":55,"pouchdb-collate":92}],45:[function(require,module,exports){
 (function (process,global){
 /*globals cordova */
 "use strict";
@@ -9483,7 +9540,7 @@ PouchDB.debug = require('debug');
 module.exports = PouchDB;
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./adapter":30,"./taskqueue":65,"./utils":66,"_process":10,"debug":69}],45:[function(require,module,exports){
+},{"./adapter":31,"./taskqueue":66,"./utils":67,"_process":11,"debug":70}],46:[function(require,module,exports){
 (function (process){
 "use strict";
 
@@ -9624,7 +9681,7 @@ function ajax(options, adapterCallback) {
 module.exports = ajax;
 
 }).call(this,require('_process'))
-},{"../utils":66,"./buffer":47,"./errors":48,"_process":10,"request":55}],46:[function(require,module,exports){
+},{"../utils":67,"./buffer":48,"./errors":49,"_process":11,"request":56}],47:[function(require,module,exports){
 (function (global){
 "use strict";
 
@@ -9656,10 +9713,10 @@ module.exports = createBlob;
 
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],47:[function(require,module,exports){
+},{}],48:[function(require,module,exports){
 // hey guess what, we don't need this in the browser
 module.exports = {};
-},{}],48:[function(require,module,exports){
+},{}],49:[function(require,module,exports){
 "use strict";
 
 var inherits = require('inherits');
@@ -9921,7 +9978,7 @@ exports.generateErrorFromResponse = function (res) {
   return error;
 };
 
-},{"inherits":72}],49:[function(require,module,exports){
+},{"inherits":73}],50:[function(require,module,exports){
 (function (process,global){
 'use strict';
 
@@ -9935,7 +9992,7 @@ function explain404(str) {
 
 module.exports = explain404;
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"_process":10}],50:[function(require,module,exports){
+},{"_process":11}],51:[function(require,module,exports){
 (function (process,global){
 'use strict';
 
@@ -10018,7 +10075,7 @@ module.exports = function (data, callback) {
 };
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"_process":10,"crypto":8,"spark-md5":102}],51:[function(require,module,exports){
+},{"_process":11,"crypto":9,"spark-md5":103}],52:[function(require,module,exports){
 'use strict';
 
 var errors = require('./errors');
@@ -10186,7 +10243,7 @@ exports.parseDoc = function (doc, newEdits) {
   }
   return result;
 };
-},{"./errors":48,"./uuid":57}],52:[function(require,module,exports){
+},{"./errors":49,"./uuid":58}],53:[function(require,module,exports){
 'use strict';
 
 //
@@ -10254,7 +10311,7 @@ function parseHexString(str, encoding) {
 }
 
 module.exports = parseHexString;
-},{}],53:[function(require,module,exports){
+},{}],54:[function(require,module,exports){
 'use strict';
 
 // originally parseUri 1.2.2, now patched by us
@@ -10300,7 +10357,7 @@ function parseUri(str) {
 
 
 module.exports = parseUri;
-},{}],54:[function(require,module,exports){
+},{}],55:[function(require,module,exports){
 'use strict';
 
 if (typeof Promise === 'function') {
@@ -10308,7 +10365,7 @@ if (typeof Promise === 'function') {
 } else {
   module.exports = require('bluebird');
 }
-},{"bluebird":76}],55:[function(require,module,exports){
+},{"bluebird":77}],56:[function(require,module,exports){
 /* global fetch */
 /* global Headers */
 'use strict';
@@ -10532,7 +10589,7 @@ module.exports = function(options, callback) {
   }
 };
 
-},{"../utils":66,"./blob.js":46}],56:[function(require,module,exports){
+},{"../utils":67,"./blob.js":47}],57:[function(require,module,exports){
 'use strict';
 
 var upsert = require('pouchdb-upsert').upsert;
@@ -10541,7 +10598,7 @@ module.exports = function (db, doc, diffFun, cb) {
   return upsert.call(db, doc, diffFun, cb);
 };
 
-},{"pouchdb-upsert":101}],57:[function(require,module,exports){
+},{"pouchdb-upsert":102}],58:[function(require,module,exports){
 "use strict";
 
 // BEGIN Math.uuid.js
@@ -10626,7 +10683,7 @@ function uuid(len, radix) {
 module.exports = uuid;
 
 
-},{}],58:[function(require,module,exports){
+},{}],59:[function(require,module,exports){
 'use strict';
 
 module.exports = evalFilter;
@@ -10638,7 +10695,7 @@ function evalFilter(input) {
     ' })()'
   ].join(''));
 }
-},{}],59:[function(require,module,exports){
+},{}],60:[function(require,module,exports){
 'use strict';
 
 module.exports = evalView;
@@ -10660,7 +10717,7 @@ function evalView(input) {
     '})()'
   ].join('\n'));
 }
-},{}],60:[function(require,module,exports){
+},{}],61:[function(require,module,exports){
 (function (process){
 "use strict";
 
@@ -10688,7 +10745,7 @@ if (!process.browser) {
 }
 
 }).call(this,require('_process'))
-},{"./adapters/http/http":31,"./adapters/idb/idb":37,"./adapters/leveldb/leveldb":8,"./adapters/websql/websql":41,"./deps/ajax":45,"./deps/errors":48,"./replicate":62,"./setup":63,"./sync":64,"./utils":66,"./version":67,"_process":10,"pouchdb-mapreduce":97}],61:[function(require,module,exports){
+},{"./adapters/http/http":32,"./adapters/idb/idb":38,"./adapters/leveldb/leveldb":9,"./adapters/websql/websql":42,"./deps/ajax":46,"./deps/errors":49,"./replicate":63,"./setup":64,"./sync":65,"./utils":67,"./version":68,"_process":11,"pouchdb-mapreduce":98}],62:[function(require,module,exports){
 'use strict';
 var extend = require('pouchdb-extend');
 
@@ -10990,7 +11047,7 @@ PouchMerge.rootToLeaf = function (tree) {
 
 module.exports = PouchMerge;
 
-},{"pouchdb-extend":94}],62:[function(require,module,exports){
+},{"pouchdb-extend":95}],63:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -11621,7 +11678,7 @@ function replicateWrapper(src, target, opts, callback) {
   return replicateRet;
 }
 
-},{"./checkpointer":43,"./utils":66,"events":9}],63:[function(require,module,exports){
+},{"./checkpointer":44,"./utils":67,"events":10}],64:[function(require,module,exports){
 "use strict";
 
 var PouchDB = require("./constructor");
@@ -11783,7 +11840,7 @@ PouchDB.defaults = function (defaultOpts) {
 
 module.exports = PouchDB;
 
-},{"./constructor":44,"./utils":66,"events":9}],64:[function(require,module,exports){
+},{"./constructor":45,"./utils":67,"events":10}],65:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -11969,7 +12026,7 @@ Sync.prototype.cancel = function () {
   }
 };
 
-},{"./replicate":62,"./utils":66,"events":9}],65:[function(require,module,exports){
+},{"./replicate":63,"./utils":67,"events":10}],66:[function(require,module,exports){
 'use strict';
 
 module.exports = TaskQueue;
@@ -12039,7 +12096,7 @@ TaskQueue.prototype.addTask = function (name, parameters) {
   }
 };
 
-},{}],66:[function(require,module,exports){
+},{}],67:[function(require,module,exports){
 (function (process){
 /*jshint strict: false */
 /*global chrome */
@@ -12856,10 +12913,10 @@ exports.safeJsonStringify = function safeJsonStringify(json) {
 };
 
 }).call(this,require('_process'))
-},{"./deps/ajax":45,"./deps/blob":46,"./deps/buffer":47,"./deps/errors":48,"./deps/explain404":49,"./deps/md5":50,"./deps/parse-doc":51,"./deps/parse-uri":53,"./deps/promise":54,"./deps/uuid":57,"./merge":61,"_process":10,"argsarray":68,"debug":69,"events":9,"inherits":72,"pouchdb-collections":93,"pouchdb-extend":94,"vuvuzela":103}],67:[function(require,module,exports){
+},{"./deps/ajax":46,"./deps/blob":47,"./deps/buffer":48,"./deps/errors":49,"./deps/explain404":50,"./deps/md5":51,"./deps/parse-doc":52,"./deps/parse-uri":54,"./deps/promise":55,"./deps/uuid":58,"./merge":62,"_process":11,"argsarray":69,"debug":70,"events":10,"inherits":73,"pouchdb-collections":94,"pouchdb-extend":95,"vuvuzela":104}],68:[function(require,module,exports){
 module.exports = "3.5.0";
 
-},{}],68:[function(require,module,exports){
+},{}],69:[function(require,module,exports){
 'use strict';
 
 module.exports = argsArray;
@@ -12879,7 +12936,7 @@ function argsArray(fun) {
     }
   };
 }
-},{}],69:[function(require,module,exports){
+},{}],70:[function(require,module,exports){
 
 /**
  * This is the web browser implementation of `debug()`.
@@ -13049,7 +13106,7 @@ function localstorage(){
   } catch (e) {}
 }
 
-},{"./debug":70}],70:[function(require,module,exports){
+},{"./debug":71}],71:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -13248,7 +13305,7 @@ function coerce(val) {
   return val;
 }
 
-},{"ms":71}],71:[function(require,module,exports){
+},{"ms":72}],72:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -13375,7 +13432,7 @@ function plural(ms, n, name) {
   return Math.ceil(ms / n) + ' ' + name + 's';
 }
 
-},{}],72:[function(require,module,exports){
+},{}],73:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -13400,13 +13457,13 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],73:[function(require,module,exports){
+},{}],74:[function(require,module,exports){
 'use strict';
 
 module.exports = INTERNAL;
 
 function INTERNAL() {}
-},{}],74:[function(require,module,exports){
+},{}],75:[function(require,module,exports){
 'use strict';
 var Promise = require('./promise');
 var reject = require('./reject');
@@ -13450,7 +13507,7 @@ function all(iterable) {
     }
   }
 }
-},{"./INTERNAL":73,"./handlers":75,"./promise":77,"./reject":80,"./resolve":81}],75:[function(require,module,exports){
+},{"./INTERNAL":74,"./handlers":76,"./promise":78,"./reject":81,"./resolve":82}],76:[function(require,module,exports){
 'use strict';
 var tryCatch = require('./tryCatch');
 var resolveThenable = require('./resolveThenable');
@@ -13496,14 +13553,14 @@ function getThen(obj) {
     };
   }
 }
-},{"./resolveThenable":82,"./states":83,"./tryCatch":84}],76:[function(require,module,exports){
+},{"./resolveThenable":83,"./states":84,"./tryCatch":85}],77:[function(require,module,exports){
 module.exports = exports = require('./promise');
 
 exports.resolve = require('./resolve');
 exports.reject = require('./reject');
 exports.all = require('./all');
 exports.race = require('./race');
-},{"./all":74,"./promise":77,"./race":79,"./reject":80,"./resolve":81}],77:[function(require,module,exports){
+},{"./all":75,"./promise":78,"./race":80,"./reject":81,"./resolve":82}],78:[function(require,module,exports){
 'use strict';
 
 var unwrap = require('./unwrap');
@@ -13549,7 +13606,7 @@ Promise.prototype.then = function (onFulfilled, onRejected) {
   return promise;
 };
 
-},{"./INTERNAL":73,"./queueItem":78,"./resolveThenable":82,"./states":83,"./unwrap":85}],78:[function(require,module,exports){
+},{"./INTERNAL":74,"./queueItem":79,"./resolveThenable":83,"./states":84,"./unwrap":86}],79:[function(require,module,exports){
 'use strict';
 var handlers = require('./handlers');
 var unwrap = require('./unwrap');
@@ -13578,7 +13635,7 @@ QueueItem.prototype.callRejected = function (value) {
 QueueItem.prototype.otherCallRejected = function (value) {
   unwrap(this.promise, this.onRejected, value);
 };
-},{"./handlers":75,"./unwrap":85}],79:[function(require,module,exports){
+},{"./handlers":76,"./unwrap":86}],80:[function(require,module,exports){
 'use strict';
 var Promise = require('./promise');
 var reject = require('./reject');
@@ -13619,7 +13676,7 @@ function race(iterable) {
     });
   }
 }
-},{"./INTERNAL":73,"./handlers":75,"./promise":77,"./reject":80,"./resolve":81}],80:[function(require,module,exports){
+},{"./INTERNAL":74,"./handlers":76,"./promise":78,"./reject":81,"./resolve":82}],81:[function(require,module,exports){
 'use strict';
 
 var Promise = require('./promise');
@@ -13631,7 +13688,7 @@ function reject(reason) {
 	var promise = new Promise(INTERNAL);
 	return handlers.reject(promise, reason);
 }
-},{"./INTERNAL":73,"./handlers":75,"./promise":77}],81:[function(require,module,exports){
+},{"./INTERNAL":74,"./handlers":76,"./promise":78}],82:[function(require,module,exports){
 'use strict';
 
 var Promise = require('./promise');
@@ -13666,7 +13723,7 @@ function resolve(value) {
       return EMPTYSTRING;
   }
 }
-},{"./INTERNAL":73,"./handlers":75,"./promise":77}],82:[function(require,module,exports){
+},{"./INTERNAL":74,"./handlers":76,"./promise":78}],83:[function(require,module,exports){
 'use strict';
 var handlers = require('./handlers');
 var tryCatch = require('./tryCatch');
@@ -13699,13 +13756,13 @@ function safelyResolveThenable(self, thenable) {
   }
 }
 exports.safely = safelyResolveThenable;
-},{"./handlers":75,"./tryCatch":84}],83:[function(require,module,exports){
+},{"./handlers":76,"./tryCatch":85}],84:[function(require,module,exports){
 // Lazy man's symbols for states
 
 exports.REJECTED = ['REJECTED'];
 exports.FULFILLED = ['FULFILLED'];
 exports.PENDING = ['PENDING'];
-},{}],84:[function(require,module,exports){
+},{}],85:[function(require,module,exports){
 'use strict';
 
 module.exports = tryCatch;
@@ -13721,7 +13778,7 @@ function tryCatch(func, value) {
   }
   return out;
 }
-},{}],85:[function(require,module,exports){
+},{}],86:[function(require,module,exports){
 'use strict';
 
 var immediate = require('immediate');
@@ -13743,7 +13800,7 @@ function unwrap(promise, func, value) {
     }
   });
 }
-},{"./handlers":75,"immediate":86}],86:[function(require,module,exports){
+},{"./handlers":76,"immediate":87}],87:[function(require,module,exports){
 'use strict';
 var types = [
   require('./nextTick'),
@@ -13801,7 +13858,7 @@ function immediate(task) {
     scheduleDrain();
   }
 }
-},{"./messageChannel":87,"./mutation.js":88,"./nextTick":8,"./stateChange":89,"./timeout":90}],87:[function(require,module,exports){
+},{"./messageChannel":88,"./mutation.js":89,"./nextTick":9,"./stateChange":90,"./timeout":91}],88:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -13822,7 +13879,7 @@ exports.install = function (func) {
   };
 };
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],88:[function(require,module,exports){
+},{}],89:[function(require,module,exports){
 (function (global){
 'use strict';
 //based off rsvp https://github.com/tildeio/rsvp.js
@@ -13847,7 +13904,7 @@ exports.install = function (handle) {
   };
 };
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],89:[function(require,module,exports){
+},{}],90:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -13874,7 +13931,7 @@ exports.install = function (handle) {
   };
 };
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],90:[function(require,module,exports){
+},{}],91:[function(require,module,exports){
 'use strict';
 exports.test = function () {
   return true;
@@ -13885,7 +13942,7 @@ exports.install = function (t) {
     setTimeout(t, 0);
   };
 };
-},{}],91:[function(require,module,exports){
+},{}],92:[function(require,module,exports){
 'use strict';
 
 var MIN_MAGNITUDE = -324; // verified by -Number.MIN_VALUE
@@ -14240,7 +14297,7 @@ function numToIndexableString(num) {
   return result;
 }
 
-},{"./utils":92}],92:[function(require,module,exports){
+},{"./utils":93}],93:[function(require,module,exports){
 'use strict';
 
 function pad(str, padWith, upToLength) {
@@ -14311,7 +14368,7 @@ exports.intToDecimalForm = function (int) {
 
   return result;
 };
-},{}],93:[function(require,module,exports){
+},{}],94:[function(require,module,exports){
 'use strict';
 exports.Map = LazyMap; // TODO: use ES6 map
 exports.Set = LazySet; // TODO: use ES6 set
@@ -14383,7 +14440,7 @@ LazySet.prototype.delete = function (key) {
   return this.store.delete(key);
 };
 
-},{}],94:[function(require,module,exports){
+},{}],95:[function(require,module,exports){
 "use strict";
 
 // Extends method
@@ -14564,7 +14621,7 @@ module.exports = extend;
 
 
 
-},{}],95:[function(require,module,exports){
+},{}],96:[function(require,module,exports){
 'use strict';
 
 var upsert = require('./upsert');
@@ -14643,7 +14700,7 @@ module.exports = function (opts) {
   });
 };
 
-},{"./upsert":99,"./utils":100}],96:[function(require,module,exports){
+},{"./upsert":100,"./utils":101}],97:[function(require,module,exports){
 'use strict';
 
 module.exports = function (func, emit, sum, log, isArray, toJSON) {
@@ -14651,7 +14708,7 @@ module.exports = function (func, emit, sum, log, isArray, toJSON) {
   return eval("'use strict'; (" + func.replace(/;\s*$/, "") + ");");
 };
 
-},{}],97:[function(require,module,exports){
+},{}],98:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -15525,7 +15582,7 @@ function BuiltInError(message) {
 
 utils.inherits(BuiltInError, Error);
 }).call(this,require('_process'))
-},{"./create-view":95,"./evalfunc":96,"./taskqueue":98,"./utils":100,"_process":10,"pouchdb-collate":91}],98:[function(require,module,exports){
+},{"./create-view":96,"./evalfunc":97,"./taskqueue":99,"./utils":101,"_process":11,"pouchdb-collate":92}],99:[function(require,module,exports){
 'use strict';
 /*
  * Simple task queue to sequentialize actions. Assumes callbacks will eventually fire (once).
@@ -15550,7 +15607,7 @@ TaskQueue.prototype.finish = function () {
 
 module.exports = TaskQueue;
 
-},{"./utils":100}],99:[function(require,module,exports){
+},{"./utils":101}],100:[function(require,module,exports){
 'use strict';
 
 var upsert = require('pouchdb-upsert').upsert;
@@ -15558,7 +15615,7 @@ var upsert = require('pouchdb-upsert').upsert;
 module.exports = function (db, doc, diffFun) {
   return upsert.apply(db, [doc, diffFun]);
 };
-},{"pouchdb-upsert":101}],100:[function(require,module,exports){
+},{"pouchdb-upsert":102}],101:[function(require,module,exports){
 (function (process,global){
 'use strict';
 /* istanbul ignore if */
@@ -15667,7 +15724,7 @@ exports.MD5 = function (string) {
   }
 };
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"_process":10,"argsarray":68,"crypto":8,"inherits":72,"lie":76,"pouchdb-extend":94,"spark-md5":102}],101:[function(require,module,exports){
+},{"_process":11,"argsarray":69,"crypto":9,"inherits":73,"lie":77,"pouchdb-extend":95,"spark-md5":103}],102:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -15774,7 +15831,7 @@ if (typeof window !== 'undefined' && window.PouchDB) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"lie":76}],102:[function(require,module,exports){
+},{"lie":77}],103:[function(require,module,exports){
 /*jshint bitwise:false*/
 /*global unescape*/
 
@@ -16375,7 +16432,7 @@ if (typeof window !== 'undefined' && window.PouchDB) {
     return SparkMD5;
 }));
 
-},{}],103:[function(require,module,exports){
+},{}],104:[function(require,module,exports){
 'use strict';
 
 /**
@@ -16550,11 +16607,11 @@ exports.parse = function (str) {
   }
 };
 
-},{}],104:[function(require,module,exports){
+},{}],105:[function(require,module,exports){
 
 module.exports = require('./lib/');
 
-},{"./lib/":105}],105:[function(require,module,exports){
+},{"./lib/":106}],106:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -16643,7 +16700,7 @@ exports.connect = lookup;
 exports.Manager = require('./manager');
 exports.Socket = require('./socket');
 
-},{"./manager":106,"./socket":108,"./url":109,"debug":113,"socket.io-parser":149}],106:[function(require,module,exports){
+},{"./manager":107,"./socket":109,"./url":110,"debug":114,"socket.io-parser":150}],107:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -17148,7 +17205,7 @@ Manager.prototype.onreconnect = function(){
   this.emitAll('reconnect', attempt);
 };
 
-},{"./on":107,"./socket":108,"./url":109,"backo2":110,"component-bind":111,"component-emitter":112,"debug":113,"engine.io-client":114,"indexof":145,"object-component":146,"socket.io-parser":149}],107:[function(require,module,exports){
+},{"./on":108,"./socket":109,"./url":110,"backo2":111,"component-bind":112,"component-emitter":113,"debug":114,"engine.io-client":115,"indexof":146,"object-component":147,"socket.io-parser":150}],108:[function(require,module,exports){
 
 /**
  * Module exports.
@@ -17174,7 +17231,7 @@ function on(obj, ev, fn) {
   };
 }
 
-},{}],108:[function(require,module,exports){
+},{}],109:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -17561,7 +17618,7 @@ Socket.prototype.disconnect = function(){
   return this;
 };
 
-},{"./on":107,"component-bind":111,"component-emitter":112,"debug":113,"has-binary":143,"socket.io-parser":149,"to-array":153}],109:[function(require,module,exports){
+},{"./on":108,"component-bind":112,"component-emitter":113,"debug":114,"has-binary":144,"socket.io-parser":150,"to-array":154}],110:[function(require,module,exports){
 (function (global){
 
 /**
@@ -17638,7 +17695,7 @@ function url(uri, loc){
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"debug":113,"parseuri":147}],110:[function(require,module,exports){
+},{"debug":114,"parseuri":148}],111:[function(require,module,exports){
 
 /**
  * Expose `Backoff`.
@@ -17725,7 +17782,7 @@ Backoff.prototype.setJitter = function(jitter){
 };
 
 
-},{}],111:[function(require,module,exports){
+},{}],112:[function(require,module,exports){
 /**
  * Slice reference.
  */
@@ -17750,7 +17807,7 @@ module.exports = function(obj, fn){
   }
 };
 
-},{}],112:[function(require,module,exports){
+},{}],113:[function(require,module,exports){
 
 /**
  * Expose `Emitter`.
@@ -17916,7 +17973,7 @@ Emitter.prototype.hasListeners = function(event){
   return !! this.listeners(event).length;
 };
 
-},{}],113:[function(require,module,exports){
+},{}],114:[function(require,module,exports){
 
 /**
  * Expose `debug()` as the module.
@@ -18055,11 +18112,11 @@ try {
   if (window.localStorage) debug.enable(localStorage.debug);
 } catch(e){}
 
-},{}],114:[function(require,module,exports){
+},{}],115:[function(require,module,exports){
 
 module.exports =  require('./lib/');
 
-},{"./lib/":115}],115:[function(require,module,exports){
+},{"./lib/":116}],116:[function(require,module,exports){
 
 module.exports = require('./socket');
 
@@ -18071,7 +18128,7 @@ module.exports = require('./socket');
  */
 module.exports.parser = require('engine.io-parser');
 
-},{"./socket":116,"engine.io-parser":128}],116:[function(require,module,exports){
+},{"./socket":117,"engine.io-parser":129}],117:[function(require,module,exports){
 (function (global){
 /**
  * Module dependencies.
@@ -18780,7 +18837,7 @@ Socket.prototype.filterUpgrades = function (upgrades) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./transport":117,"./transports":118,"component-emitter":112,"debug":125,"engine.io-parser":128,"indexof":145,"parsejson":139,"parseqs":140,"parseuri":141}],117:[function(require,module,exports){
+},{"./transport":118,"./transports":119,"component-emitter":113,"debug":126,"engine.io-parser":129,"indexof":146,"parsejson":140,"parseqs":141,"parseuri":142}],118:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -18941,7 +18998,7 @@ Transport.prototype.onClose = function () {
   this.emit('close');
 };
 
-},{"component-emitter":112,"engine.io-parser":128}],118:[function(require,module,exports){
+},{"component-emitter":113,"engine.io-parser":129}],119:[function(require,module,exports){
 (function (global){
 /**
  * Module dependencies
@@ -18998,7 +19055,7 @@ function polling(opts){
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./polling-jsonp":119,"./polling-xhr":120,"./websocket":122,"xmlhttprequest":123}],119:[function(require,module,exports){
+},{"./polling-jsonp":120,"./polling-xhr":121,"./websocket":123,"xmlhttprequest":124}],120:[function(require,module,exports){
 (function (global){
 
 /**
@@ -19235,7 +19292,7 @@ JSONPPolling.prototype.doWrite = function (data, fn) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./polling":121,"component-inherit":124}],120:[function(require,module,exports){
+},{"./polling":122,"component-inherit":125}],121:[function(require,module,exports){
 (function (global){
 /**
  * Module requirements.
@@ -19623,7 +19680,7 @@ function unloadHandler() {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./polling":121,"component-emitter":112,"component-inherit":124,"debug":125,"xmlhttprequest":123}],121:[function(require,module,exports){
+},{"./polling":122,"component-emitter":113,"component-inherit":125,"debug":126,"xmlhttprequest":124}],122:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -19870,7 +19927,7 @@ Polling.prototype.uri = function(){
   return schema + '://' + this.hostname + port + this.path + query;
 };
 
-},{"../transport":117,"component-inherit":124,"debug":125,"engine.io-parser":128,"parseqs":140,"xmlhttprequest":123}],122:[function(require,module,exports){
+},{"../transport":118,"component-inherit":125,"debug":126,"engine.io-parser":129,"parseqs":141,"xmlhttprequest":124}],123:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -20110,7 +20167,7 @@ WS.prototype.check = function(){
   return !!WebSocket && !('__initialize' in WebSocket && this.name === WS.prototype.name);
 };
 
-},{"../transport":117,"component-inherit":124,"debug":125,"engine.io-parser":128,"parseqs":140,"ws":142}],123:[function(require,module,exports){
+},{"../transport":118,"component-inherit":125,"debug":126,"engine.io-parser":129,"parseqs":141,"ws":143}],124:[function(require,module,exports){
 // browser shim for xmlhttprequest module
 var hasCORS = require('has-cors');
 
@@ -20148,7 +20205,7 @@ module.exports = function(opts) {
   }
 }
 
-},{"has-cors":137}],124:[function(require,module,exports){
+},{"has-cors":138}],125:[function(require,module,exports){
 
 module.exports = function(a, b){
   var fn = function(){};
@@ -20156,7 +20213,7 @@ module.exports = function(a, b){
   a.prototype = new fn;
   a.prototype.constructor = a;
 };
-},{}],125:[function(require,module,exports){
+},{}],126:[function(require,module,exports){
 
 /**
  * This is the web browser implementation of `debug()`.
@@ -20305,9 +20362,9 @@ function load() {
 
 exports.enable(load());
 
-},{"./debug":126}],126:[function(require,module,exports){
-arguments[4][70][0].apply(exports,arguments)
-},{"dup":70,"ms":127}],127:[function(require,module,exports){
+},{"./debug":127}],127:[function(require,module,exports){
+arguments[4][71][0].apply(exports,arguments)
+},{"dup":71,"ms":128}],128:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -20420,7 +20477,7 @@ function plural(ms, n, name) {
   return Math.ceil(ms / n) + ' ' + name + 's';
 }
 
-},{}],128:[function(require,module,exports){
+},{}],129:[function(require,module,exports){
 (function (global){
 /**
  * Module dependencies.
@@ -21018,7 +21075,7 @@ exports.decodePayloadAsBinary = function (data, binaryType, callback) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./keys":129,"after":130,"arraybuffer.slice":131,"base64-arraybuffer":132,"blob":133,"has-binary":134,"utf8":136}],129:[function(require,module,exports){
+},{"./keys":130,"after":131,"arraybuffer.slice":132,"base64-arraybuffer":133,"blob":134,"has-binary":135,"utf8":137}],130:[function(require,module,exports){
 
 /**
  * Gets the keys for an object.
@@ -21039,7 +21096,7 @@ module.exports = Object.keys || function keys (obj){
   return arr;
 };
 
-},{}],130:[function(require,module,exports){
+},{}],131:[function(require,module,exports){
 module.exports = after
 
 function after(count, callback, err_cb) {
@@ -21069,7 +21126,7 @@ function after(count, callback, err_cb) {
 
 function noop() {}
 
-},{}],131:[function(require,module,exports){
+},{}],132:[function(require,module,exports){
 /**
  * An abstraction for slicing an arraybuffer even when
  * ArrayBuffer.prototype.slice is not supported
@@ -21100,7 +21157,7 @@ module.exports = function(arraybuffer, start, end) {
   return result.buffer;
 };
 
-},{}],132:[function(require,module,exports){
+},{}],133:[function(require,module,exports){
 /*
  * base64-arraybuffer
  * https://github.com/niklasvh/base64-arraybuffer
@@ -21161,7 +21218,7 @@ module.exports = function(arraybuffer, start, end) {
   };
 })("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/");
 
-},{}],133:[function(require,module,exports){
+},{}],134:[function(require,module,exports){
 (function (global){
 /**
  * Create a blob builder even when vendor prefixes exist
@@ -21214,7 +21271,7 @@ module.exports = (function() {
 })();
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],134:[function(require,module,exports){
+},{}],135:[function(require,module,exports){
 (function (global){
 
 /*
@@ -21276,12 +21333,12 @@ function hasBinary(data) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"isarray":135}],135:[function(require,module,exports){
+},{"isarray":136}],136:[function(require,module,exports){
 module.exports = Array.isArray || function (arr) {
   return Object.prototype.toString.call(arr) == '[object Array]';
 };
 
-},{}],136:[function(require,module,exports){
+},{}],137:[function(require,module,exports){
 (function (global){
 /*! http://mths.be/utf8js v2.0.0 by @mathias */
 ;(function(root) {
@@ -21524,7 +21581,7 @@ module.exports = Array.isArray || function (arr) {
 }(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],137:[function(require,module,exports){
+},{}],138:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -21549,7 +21606,7 @@ try {
   module.exports = false;
 }
 
-},{"global":138}],138:[function(require,module,exports){
+},{"global":139}],139:[function(require,module,exports){
 
 /**
  * Returns `this`. Execute this without a "context" (i.e. without it being
@@ -21559,7 +21616,7 @@ try {
 
 module.exports = (function () { return this; })();
 
-},{}],139:[function(require,module,exports){
+},{}],140:[function(require,module,exports){
 (function (global){
 /**
  * JSON parse.
@@ -21594,7 +21651,7 @@ module.exports = function parsejson(data) {
   }
 };
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],140:[function(require,module,exports){
+},{}],141:[function(require,module,exports){
 /**
  * Compiles a querystring
  * Returns string representation of the object
@@ -21633,7 +21690,7 @@ exports.decode = function(qs){
   return qry;
 };
 
-},{}],141:[function(require,module,exports){
+},{}],142:[function(require,module,exports){
 /**
  * Parses an URI
  *
@@ -21674,7 +21731,7 @@ module.exports = function parseuri(str) {
     return uri;
 };
 
-},{}],142:[function(require,module,exports){
+},{}],143:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -21719,7 +21776,7 @@ function ws(uri, protocols, opts) {
 
 if (WebSocket) ws.prototype = WebSocket.prototype;
 
-},{}],143:[function(require,module,exports){
+},{}],144:[function(require,module,exports){
 (function (global){
 
 /*
@@ -21781,9 +21838,9 @@ function hasBinary(data) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"isarray":144}],144:[function(require,module,exports){
-arguments[4][135][0].apply(exports,arguments)
-},{"dup":135}],145:[function(require,module,exports){
+},{"isarray":145}],145:[function(require,module,exports){
+arguments[4][136][0].apply(exports,arguments)
+},{"dup":136}],146:[function(require,module,exports){
 
 var indexOf = [].indexOf;
 
@@ -21794,7 +21851,7 @@ module.exports = function(arr, obj){
   }
   return -1;
 };
-},{}],146:[function(require,module,exports){
+},{}],147:[function(require,module,exports){
 
 /**
  * HOP ref.
@@ -21879,7 +21936,7 @@ exports.length = function(obj){
 exports.isEmpty = function(obj){
   return 0 == exports.length(obj);
 };
-},{}],147:[function(require,module,exports){
+},{}],148:[function(require,module,exports){
 /**
  * Parses an URI
  *
@@ -21906,7 +21963,7 @@ module.exports = function parseuri(str) {
   return uri;
 };
 
-},{}],148:[function(require,module,exports){
+},{}],149:[function(require,module,exports){
 (function (global){
 /*global Blob,File*/
 
@@ -22051,7 +22108,7 @@ exports.removeBlobs = function(data, callback) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./is-buffer":150,"isarray":151}],149:[function(require,module,exports){
+},{"./is-buffer":151,"isarray":152}],150:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -22453,7 +22510,7 @@ function error(data){
   };
 }
 
-},{"./binary":148,"./is-buffer":150,"component-emitter":112,"debug":113,"isarray":151,"json3":152}],150:[function(require,module,exports){
+},{"./binary":149,"./is-buffer":151,"component-emitter":113,"debug":114,"isarray":152,"json3":153}],151:[function(require,module,exports){
 (function (global){
 
 module.exports = isBuf;
@@ -22470,9 +22527,9 @@ function isBuf(obj) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],151:[function(require,module,exports){
-arguments[4][135][0].apply(exports,arguments)
-},{"dup":135}],152:[function(require,module,exports){
+},{}],152:[function(require,module,exports){
+arguments[4][136][0].apply(exports,arguments)
+},{"dup":136}],153:[function(require,module,exports){
 /*! JSON v3.2.6 | http://bestiejs.github.io/json3 | Copyright 2012-2013, Kit Cambridge | http://kit.mit-license.org */
 ;(function (window) {
   // Convenience aliases.
@@ -23335,7 +23392,7 @@ arguments[4][135][0].apply(exports,arguments)
   }
 }(this));
 
-},{}],153:[function(require,module,exports){
+},{}],154:[function(require,module,exports){
 module.exports = toArray
 
 function toArray(list, index) {
@@ -23350,7 +23407,7 @@ function toArray(list, index) {
     return array
 }
 
-},{}],154:[function(require,module,exports){
+},{}],155:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -24475,9 +24532,9 @@ request.put = function(url, data, fn){
 
 module.exports = request;
 
-},{"emitter":155,"reduce":156}],155:[function(require,module,exports){
-arguments[4][112][0].apply(exports,arguments)
-},{"dup":112}],156:[function(require,module,exports){
+},{"emitter":156,"reduce":157}],156:[function(require,module,exports){
+arguments[4][113][0].apply(exports,arguments)
+},{"dup":113}],157:[function(require,module,exports){
 
 /**
  * Reduce `arr` with `fn`.
@@ -24502,5 +24559,5 @@ module.exports = function(arr, fn, initial){
   
   return curr;
 };
-},{}]},{},[6])(6)
+},{}]},{},[7])(7)
 });
