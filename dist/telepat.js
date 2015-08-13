@@ -403,6 +403,7 @@ var Monitor = function (tlog, terror, interval) {
 
   this.objects = {};
   this.options = {};
+  this.callbacks = {};
   this.timerInterval = interval || 150;
 
   this.subscriptionKeyForOptions = function(options) {
@@ -418,6 +419,11 @@ var Monitor = function (tlog, terror, interval) {
     var subscriptionKey = self.subscriptionKeyForOptions(subscriptionOptions);
     self.objects[subscriptionKey] = objects;
     self.options[subscriptionKey] = subscriptionOptions;
+    self.callbacks[subscriptionKey] = {
+      add: addCallback,
+      remove: removeCallback,
+      update: updateCallback
+    }
     events[subscriptionKey] = event;
     lastObjects = JSON.parse(JSON.stringify(self.objects));
 
@@ -433,6 +439,7 @@ var Monitor = function (tlog, terror, interval) {
             var root = self.objects[subKey];
             var diff = totalDiff[subKey];
             var options = self.options[subKey];
+            var callbacks = self.callbacks[subKey];
             var diffKeys = Object.keys(diff);
             for (var i=0; i<diffKeys.length; i++) {
               var key = diffKeys[i];
@@ -440,11 +447,11 @@ var Monitor = function (tlog, terror, interval) {
 
               if (Array.isArray(obj)) {
                 if (obj.length === 1) {
-                  addCallback(root[key]);
+                  callbacks.add(root[key]);
                   delete root[key];
                   log.debug('Adding object to ' + subKey + ' channel');
                 } else if (obj.length === 3) {
-                  removeCallback(key);
+                  callbacks.remove(key);
                   log.debug('Removing object from ' + subKey + ' channel');
                 }
               } else {
@@ -468,7 +475,7 @@ var Monitor = function (tlog, terror, interval) {
                   }
                 }
 
-                updateCallback(key, patch);
+                callbacks.update(key, patch);
                 log.debug('Sending patch to object ' + key + ' on ' + options.channel.model + ' channel: ' + JSON.stringify(patch));
               }
             }
