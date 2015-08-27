@@ -658,9 +658,7 @@ var Telepat = function () {
         'info':{
           'os': 'web',
           'userAgent': ((typeof navigator !== 'undefined')?navigator.userAgent:'node'),
-          'info': {
-            'udid': Date.now()
-          }
+          'udid': Date.now().toString()
         },
         'volatile': {
           'type': 'sockets',
