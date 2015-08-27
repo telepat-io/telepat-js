@@ -367,7 +367,8 @@ var EventObject = require('./event');
 var jsondiffpatch = require('jsondiffpatch').create({
   objectHash: function(obj) {
     return obj._id || obj.id;
-  }
+  },
+  textDiff: false
 });
 
 var Monitor = function (tlog, terror, interval) {
