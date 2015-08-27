@@ -25,7 +25,7 @@ var Admin = function (tapi, tlog, terror) {
  *  @param {function} callback The callback function to be invoked when operation is done. The function receives 2 parameters, an error object and the user array.
  */
   this.getAppUsers = function(callback) {
-    api.call('admin/users',
+    api.get('admin/users',
     {},
     function (err, res) {
       if (err) {
