@@ -109,7 +109,7 @@ API.call = function (endpoint, data, callback, method) {
   req.send(data)
     .set('X-BLGREQ-SIGN', SHA256(this.apiKey))
     .set('X-BLGREQ-APPID', this.appId)
-    .set('X-BLGREQ-UDID', this.UDID || '');
+    .set('X-BLGREQ-UDID', this.UDID || 'TP_EMPTY_UDID');
   
   if (this.authenticationToken) {
     req.set('Authorization', 'Bearer ' + this.authenticationToken);
