@@ -9,7 +9,7 @@ var connectOptions = {
   };
 
 
-
+var Telepat = new Telepat();
 Telepat.setLogLevel('debug');
 
 Telepat.on('login', function () {
@@ -20,7 +20,7 @@ Telepat.on('login', function () {
 Telepat.on('logout', function () {
   console.log("logged out");
   $('.list-group').empty();
-})
+});
 
 Telepat.on('connect', function () {
   checkLoginState();
@@ -36,7 +36,13 @@ function connect() {
 
 function statusChangeCallback(response) {
   if (response.status === 'connected') {
-    Telepat.loginWithFacebook(response.authResponse.accessToken);
+    Telepat.user.loginWithFacebook(response.authResponse.accessToken);
+    Telepat.on('login_error', function () {
+      Telepat.user.register({access_token: response.authResponse.accessToken}, function() {
+        Telepat.user.loginWithFacebook(response.authResponse.accessToken);
+      });
+    });
+
   } else if (response.status === 'not_authorized') {
     $('#message').html('Please log into this app.');
     Telepat.logout();
