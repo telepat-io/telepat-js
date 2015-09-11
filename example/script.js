@@ -1,10 +1,10 @@
 var eventChannel;
-var channel = 'events';
+var model = 'events';
 var connectOptions = {
     apiKey: '3406870085495689e34d878f09faf52c',
     appId: 1,
-    apiEndpoint: 'http://blg-octopus-api.cloudapp.net:3000',
-    socketEndpoint: 'http://blg-octopus-api.cloudapp.net',
+    apiEndpoint: 'http://localhost:3000',
+    socketEndpoint: 'http://localhost',
     timerInterval: 150
   };
 
@@ -37,12 +37,6 @@ function connect() {
 function statusChangeCallback(response) {
   if (response.status === 'connected') {
     Telepat.user.loginWithFacebook(response.authResponse.accessToken);
-    Telepat.on('login_error', function () {
-      Telepat.user.register({access_token: response.authResponse.accessToken}, function() {
-        Telepat.user.loginWithFacebook(response.authResponse.accessToken);
-      });
-    });
-
   } else if (response.status === 'not_authorized') {
     $('#message').html('Please log into this app.');
     Telepat.logout();
@@ -77,7 +71,7 @@ function appendToList(key, value) {
 }
 
 function subscribe() {
-  eventChannel = Telepat.subscribe(Telepat.contexts[0].id, channel, null, function () {
+  eventChannel = Telepat.subscribe({ channel: { context: Telepat.contexts[0].id, model: model }}, function () {
     $('#message').empty();
     $.each(eventChannel.objects, function (key, value) {
       appendToList(key, value);
