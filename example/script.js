@@ -37,6 +37,12 @@ function connect() {
 function statusChangeCallback(response) {
   if (response.status === 'connected') {
     Telepat.user.loginWithFacebook(response.authResponse.accessToken);
+    Telepat.on('login_error', function () {
+      Telepat.user.register({access_token: response.authResponse.accessToken}, function() {
+        Telepat.user.loginWithFacebook(response.authResponse.accessToken);
+      });
+    });
+
   } else if (response.status === 'not_authorized') {
     $('#message').html('Please log into this app.');
     Telepat.logout();
