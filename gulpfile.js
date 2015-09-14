@@ -16,7 +16,7 @@ gulp.task('build', function () {
 
 gulp.task('docs', function () {
   var docker = new Docker({ inDir: '.', css: ['doc/custom.css'] });
-  docker.doc(['README.md', 'lib/telepat.js', 'lib/channel.js']);
+  docker.doc(['README.md', 'lib/telepat.js', 'lib/channel.js', 'lib/user.js', 'lib/admin.js']);
 });
 
 gulp.task('js-watch', ['build'], browserSync.reload);
