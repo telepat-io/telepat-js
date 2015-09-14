@@ -6,7 +6,7 @@
     "type": "git",
     "url": "https://github.com/telepat-io/telepat-js.git"
   },
-  "author": "Telepat <founders@telepat.io>",
+  "author": "Telepat <dev@telepat.io>",
   "contributors": [
     {
       "name": "Gabi Dobocan",
@@ -23,7 +23,7 @@
     "synchronization",
     "sockets"
   ],
-  "description": "Javscript Client for Telepat",
+  "description": "Javascript Client for Telepat",
   "main": "lib/telepat.js",
   "scripts": {},
   "ignore": [

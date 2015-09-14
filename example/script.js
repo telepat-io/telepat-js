@@ -1,7 +1,7 @@
 var eventChannel;
 var model = 'events';
 var connectOptions = {
-    apiKey: '3406870085495689e34d878f09faf52c',
+    apiKey: 'APIKEY',
     appId: 1,
     apiEndpoint: 'http://localhost:3000',
     socketEndpoint: 'http://localhost',
