@@ -570,6 +570,7 @@ var Monitor = function (tlog, terror, interval) {
 
 module.exports = Monitor;
 },{"./event":4,"jsondiffpatch":27}],7:[function(require,module,exports){
+(function (__dirname){
 'use strict';
 // # Telepat Javascript Client
 // **Telepat** is an open-source backend stack, designed to deliver information and information updates in real-time to clients, while allowing for flexible deployment and simple scaling.
@@ -589,7 +590,7 @@ var Monitor = require('./monitor');
 // * `subscriptions`, an object that holds references to [Channel](http://docs.telepat.io/telepat-js/lib/channel.js.html) objects, on keys named after the respective channel
 
 var Telepat = function () {
-  var db = new PouchDB('_telepat');
+  var db = new PouchDB(__dirname + '/_telepat');
   var Event = new EventObject(log);
   var apiEndpoint = null;
   var socketEndpoint = null;
@@ -817,6 +818,7 @@ var Telepat = function () {
 
 module.exports = Telepat;
 
+}).call(this,"/lib")
 },{"./api":2,"./channel":3,"./event":4,"./logger":5,"./monitor":6,"./user":8,"pouchdb":67,"socket.io-client":113}],8:[function(require,module,exports){
 'use strict';
 // # Telepat User Class
