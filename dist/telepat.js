@@ -131,7 +131,7 @@ API.get = function (endpoint, data, callback) {
 };
 
 module.exports = API;
-},{"crypto-js/sha256":13,"superagent":161}],3:[function(require,module,exports){
+},{"crypto-js/sha256":13,"superagent":155}],3:[function(require,module,exports){
 'use strict';
 
 // # Telepat Channel Class
@@ -570,7 +570,7 @@ var Monitor = function (tlog, terror, interval) {
 
 module.exports = Monitor;
 },{"./event":4,"jsondiffpatch":27}],7:[function(require,module,exports){
-(function (__dirname){
+(function (process){
 'use strict';
 // # Telepat Javascript Client
 // **Telepat** is an open-source backend stack, designed to deliver information and information updates in real-time to clients, while allowing for flexible deployment and simple scaling.
@@ -590,7 +590,19 @@ var Monitor = require('./monitor');
 // * `subscriptions`, an object that holds references to [Channel](http://docs.telepat.io/telepat-js/lib/channel.js.html) objects, on keys named after the respective channel
 
 var Telepat = function () {
-  var db = new PouchDB(__dirname + '/_telepat');
+  function getUserHome() {
+   return process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'];
+  }
+
+  function getTelepatDir() {
+   var dir = getUserHome() + '/.telepat-cli';
+   if (!path.existsSync(dir)) {
+     fs.mkdirSync(dir,744);
+   }
+   return getUserHome()+'/.telepat-cli';
+  }
+  console.log(window !== undefined);
+  var db = new PouchDB((window !== undefined)?'/_telepat':getTelepatDir());
   var Event = new EventObject(log);
   var apiEndpoint = null;
   var socketEndpoint = null;
@@ -818,8 +830,8 @@ var Telepat = function () {
 
 module.exports = Telepat;
 
-}).call(this,"/lib")
-},{"./api":2,"./channel":3,"./event":4,"./logger":5,"./monitor":6,"./user":8,"pouchdb":67,"socket.io-client":113}],8:[function(require,module,exports){
+}).call(this,require('_process'))
+},{"./api":2,"./channel":3,"./event":4,"./logger":5,"./monitor":6,"./user":8,"_process":11,"pouchdb":61,"socket.io-client":105}],8:[function(require,module,exports){
 'use strict';
 // # Telepat User Class
 
@@ -1308,9 +1320,7 @@ function drainQueue() {
         currentQueue = queue;
         queue = [];
         while (++queueIndex < len) {
-            if (currentQueue) {
-                currentQueue[queueIndex].run();
-            }
+            currentQueue[queueIndex].run();
         }
         queueIndex = -1;
         len = queue.length;
@@ -1328,7 +1338,7 @@ process.nextTick = function (fun) {
         }
     }
     queue.push(new Item(fun, args));
-    if (queue.length === 1 && !draining) {
+    if (!draining) {
         setTimeout(drainQueue, 0);
     }
 };
@@ -1362,6 +1372,7 @@ process.binding = function (name) {
     throw new Error('process.binding is not supported');
 };
 
+// TODO(shtylman)
 process.cwd = function () { return '/' };
 process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
@@ -1596,11 +1607,14 @@ process.umask = function() { return 0; };
 	                    var thatByte = (thatWords[i >>> 2] >>> (24 - (i % 4) * 8)) & 0xff;
 	                    thisWords[(thisSigBytes + i) >>> 2] |= thatByte << (24 - ((thisSigBytes + i) % 4) * 8);
 	                }
-	            } else {
+	            } else if (thatWords.length > 0xffff) {
 	                // Copy one word at a time
 	                for (var i = 0; i < thatSigBytes; i += 4) {
 	                    thisWords[(thisSigBytes + i) >>> 2] = thatWords[i >>> 2];
 	                }
+	            } else {
+	                // Copy all words at once
+	                thisWords.push.apply(thisWords, thatWords);
 	            }
 	            this.sigBytes += thatSigBytes;
 
@@ -3624,7 +3638,6 @@ exports.Processor = Processor;
 * Licensed under the MIT license.
 */
 (function (root, definition) {
-    "use strict";
     if (typeof module === 'object' && module.exports && typeof require === 'function') {
         module.exports = definition();
     } else if (typeof define === 'function' && typeof define.amd === 'object') {
@@ -3633,7 +3646,7 @@ exports.Processor = Processor;
         root.log = definition();
     }
 }(this, function () {
-    "use strict";
+    var self = {};
     var noop = function() {};
     var undefinedType = "undefined";
 
@@ -3665,31 +3678,13 @@ exports.Processor = Processor;
         }
     }
 
-    // these private functions always need `this` to be set properly
-
-    function enableLoggingWhenConsoleArrives(methodName, level, loggerName) {
+    function enableLoggingWhenConsoleArrives(methodName, level) {
         return function () {
             if (typeof console !== undefinedType) {
-                replaceLoggingMethods.call(this, level, loggerName);
-                this[methodName].apply(this, arguments);
+                replaceLoggingMethods(level);
+                self[methodName].apply(self, arguments);
             }
         };
-    }
-
-    function replaceLoggingMethods(level, loggerName) {
-        /*jshint validthis:true */
-        for (var i = 0; i < logMethods.length; i++) {
-            var methodName = logMethods[i];
-            this[methodName] = (i < level) ?
-                noop :
-                this.methodFactory(methodName, level, loggerName);
-        }
-    }
-
-    function defaultMethodFactory(methodName, level, loggerName) {
-        /*jshint validthis:true */
-        return realMethod(methodName) ||
-               enableLoggingWhenConsoleArrives.apply(this, arguments);
     }
 
     var logMethods = [
@@ -3700,149 +3695,101 @@ exports.Processor = Processor;
         "error"
     ];
 
-    function Logger(name, defaultLevel, factory) {
-      var self = this;
-      var currentLevel;
-      var storageKey = "loglevel";
-      if (name) {
-        storageKey += ":" + name;
-      }
+    function replaceLoggingMethods(level) {
+        for (var i = 0; i < logMethods.length; i++) {
+            var methodName = logMethods[i];
+            self[methodName] = (i < level) ? noop : self.methodFactory(methodName, level);
+        }
+    }
 
-      function persistLevelIfPossible(levelNum) {
-          var levelName = (logMethods[levelNum] || 'silent').toUpperCase();
+    function persistLevelIfPossible(levelNum) {
+        var levelName = (logMethods[levelNum] || 'silent').toUpperCase();
 
-          // Use localStorage if available
-          try {
-              window.localStorage[storageKey] = levelName;
-              return;
-          } catch (ignore) {}
+        // Use localStorage if available
+        try {
+            window.localStorage['loglevel'] = levelName;
+            return;
+        } catch (ignore) {}
 
-          // Use session cookie as fallback
-          try {
-              window.document.cookie =
-                encodeURIComponent(storageKey) + "=" + levelName + ";";
-          } catch (ignore) {}
-      }
+        // Use session cookie as fallback
+        try {
+            window.document.cookie = "loglevel=" + levelName + ";";
+        } catch (ignore) {}
+    }
 
-      function getPersistedLevel() {
-          var storedLevel;
+    function loadPersistedLevel() {
+        var storedLevel;
 
-          try {
-              storedLevel = window.localStorage[storageKey];
-          } catch (ignore) {}
+        try {
+            storedLevel = window.localStorage['loglevel'];
+        } catch (ignore) {}
 
-          if (typeof storedLevel === undefinedType) {
-              try {
-                  var cookie = window.document.cookie;
-                  var location = cookie.indexOf(
-                      encodeURIComponent(storageKey) + "=");
-                  if (location) {
-                      storedLevel = /^([^;]+)/.exec(cookie.slice(location))[1];
-                  }
-              } catch (ignore) {}
-          }
+        if (typeof storedLevel === undefinedType) {
+            try {
+                storedLevel = /loglevel=([^;]+)/.exec(window.document.cookie)[1];
+            } catch (ignore) {}
+        }
+        
+        if (self.levels[storedLevel] === undefined) {
+            storedLevel = "WARN";
+        }
 
-          // If the stored level is not valid, treat it as if nothing was stored.
-          if (self.levels[storedLevel] === undefined) {
-              storedLevel = undefined;
-          }
-
-          return storedLevel;
-      }
-
-      /*
-       *
-       * Public API
-       *
-       */
-
-      self.levels = { "TRACE": 0, "DEBUG": 1, "INFO": 2, "WARN": 3,
-          "ERROR": 4, "SILENT": 5};
-
-      self.methodFactory = factory || defaultMethodFactory;
-
-      self.getLevel = function () {
-          return currentLevel;
-      };
-
-      self.setLevel = function (level, persist) {
-          if (typeof level === "string" && self.levels[level.toUpperCase()] !== undefined) {
-              level = self.levels[level.toUpperCase()];
-          }
-          if (typeof level === "number" && level >= 0 && level <= self.levels.SILENT) {
-              currentLevel = level;
-              if (persist !== false) {  // defaults to true
-                  persistLevelIfPossible(level);
-              }
-              replaceLoggingMethods.call(self, level, name);
-              if (typeof console === undefinedType && level < self.levels.SILENT) {
-                  return "No console available for logging";
-              }
-          } else {
-              throw "log.setLevel() called with invalid level: " + level;
-          }
-      };
-
-      self.setDefaultLevel = function (level) {
-          if (!getPersistedLevel()) {
-              self.setLevel(level, false);
-          }
-      };
-
-      self.enableAll = function(persist) {
-          self.setLevel(self.levels.TRACE, persist);
-      };
-
-      self.disableAll = function(persist) {
-          self.setLevel(self.levels.SILENT, persist);
-      };
-
-      // Initialize with the right level
-      var initialLevel = getPersistedLevel();
-      if (initialLevel == null) {
-          initialLevel = defaultLevel == null ? "WARN" : defaultLevel;
-      }
-      self.setLevel(initialLevel, false);
+        self.setLevel(self.levels[storedLevel]);
     }
 
     /*
      *
-     * Package-level API
+     * Public API
      *
      */
 
-    var defaultLogger = new Logger();
+    self.levels = { "TRACE": 0, "DEBUG": 1, "INFO": 2, "WARN": 3,
+        "ERROR": 4, "SILENT": 5};
 
-    var _loggersByName = {};
-    defaultLogger.getLogger = function getLogger(name) {
-        if (typeof name !== "string" || name === "") {
-          throw new TypeError("You must supply a name when creating a logger.");
-        }
+    self.methodFactory = function (methodName, level) {
+        return realMethod(methodName) ||
+               enableLoggingWhenConsoleArrives(methodName, level);
+    };
 
-        var logger = _loggersByName[name];
-        if (!logger) {
-          logger = _loggersByName[name] = new Logger(
-            name, defaultLogger.getLevel(), defaultLogger.methodFactory);
+    self.setLevel = function (level) {
+        if (typeof level === "string" && self.levels[level.toUpperCase()] !== undefined) {
+            level = self.levels[level.toUpperCase()];
         }
-        return logger;
+        if (typeof level === "number" && level >= 0 && level <= self.levels.SILENT) {
+            persistLevelIfPossible(level);
+            replaceLoggingMethods(level);
+            if (typeof console === undefinedType && level < self.levels.SILENT) {
+                return "No console available for logging";
+            }
+        } else {
+            throw "log.setLevel() called with invalid level: " + level;
+        }
+    };
+
+    self.enableAll = function() {
+        self.setLevel(self.levels.TRACE);
+    };
+
+    self.disableAll = function() {
+        self.setLevel(self.levels.SILENT);
     };
 
     // Grab the current global log variable in case of overwrite
     var _log = (typeof window !== undefinedType) ? window.log : undefined;
-    defaultLogger.noConflict = function() {
+    self.noConflict = function() {
         if (typeof window !== undefinedType &&
-               window.log === defaultLogger) {
+               window.log === self) {
             window.log = _log;
         }
 
-        return defaultLogger;
+        return self;
     };
 
-    return defaultLogger;
+    loadPersistedLevel();
+    return self;
 }));
 
 },{}],31:[function(require,module,exports){
-(function (process){
 "use strict";
 
 var utils = require('./utils');
@@ -3877,35 +3824,6 @@ function yankError(callback) {
       callback(null, results.length ? results[0]  : results);
     }
   };
-}
-
-// clean docs given to us by the user
-function cleanDocs(docs) {
-  for (var i = 0; i < docs.length; i++) {
-    var doc = docs[i];
-    if (doc._deleted) {
-      delete doc._attachments; // ignore atts for deleted docs
-    } else if (doc._attachments) {
-      // filter out extraneous keys from _attachments
-      var atts = Object.keys(doc._attachments);
-      for (var j = 0; j < atts.length; j++) {
-        var att = atts[j];
-        doc._attachments[att] = utils.pick(doc._attachments[att],
-          ['data', 'digest', 'content_type', 'revpos', 'stub']);
-      }
-    }
-  }
-}
-
-// compare two docs, first by _id then by _rev
-function compareByIdThenRev(a, b) {
-  var idCompare = utils.compare(a._id, b._id);
-  if (idCompare !== 0) {
-    return idCompare;
-  }
-  var aStart = a._revisions ? a._revisions.start : 0;
-  var bStart = b._revisions ? b._revisions.start : 0;
-  return utils.compare(aStart, bStart);
 }
 
 // for every node in a revision tree computes its distance from the closest
@@ -3965,34 +3883,6 @@ function allDocsKeysQuery(api, opts, callback) {
   })).then(function (results) {
     finalResults.rows = results;
     return finalResults;
-  });
-}
-
-// all compaction is done in a queue, to avoid attaching
-// too many listeners at once
-function doNextCompaction(self) {
-  var task = self._compactionQueue[0];
-  var opts = task.opts;
-  var callback = task.callback;
-  self.get('_local/compaction').catch(function () {
-    return false;
-  }).then(function (doc) {
-    if (doc && doc.last_seq) {
-      opts.last_seq = doc.last_seq;
-    }
-    self._compact(opts, function (err, res) {
-      if (err) {
-        callback(err);
-      } else {
-        callback(null, res);
-      }
-      process.nextTick(function () {
-        self._compactionQueue.shift();
-        if (self._compactionQueue.length) {
-          doNextCompaction(self);
-        }
-      });
-    });
   });
 }
 
@@ -4266,11 +4156,17 @@ AbstractPouchDB.prototype.compact =
 
   opts = utils.clone(opts || {});
 
-  self._compactionQueue = self._compactionQueue || [];
-  self._compactionQueue.push({opts: opts, callback: callback});
-  if (self._compactionQueue.length === 1) {
-    doNextCompaction(self);
-  }
+  self.get('_local/compaction').catch(function () {
+    return false;
+  }).then(function (doc) {
+    if (typeof self._compact === 'function') {
+      if (doc && doc.last_seq) {
+        opts.last_seq = doc.last_seq;
+      }
+      return self._compact(opts, callback);
+    }
+
+  });
 });
 AbstractPouchDB.prototype._compact = function (opts, callback) {
   var self = this;
@@ -4589,10 +4485,22 @@ AbstractPouchDB.prototype.bulkDocs =
   if (!opts.new_edits && this.type() !== 'http') {
     // ensure revisions of the same doc are sorted, so that
     // the local adapter processes them correctly (#2935)
-    req.docs.sort(compareByIdThenRev);
+    req.docs.sort(function (a, b) {
+      var idCompare = utils.compare(a._id, b._id);
+      if (idCompare !== 0) {
+        return idCompare;
+      }
+      var aStart = a._revisions ? a._revisions.start : 0;
+      var bStart = b._revisions ? b._revisions.start : 0;
+      return utils.compare(aStart, bStart);
+    });
   }
 
-  cleanDocs(req.docs);
+  req.docs.forEach(function (doc) {
+    if (doc._deleted) {
+      delete doc._attachments; // ignore atts for deleted docs
+    }
+  });
 
   return this._bulkDocs(req, opts, function (err, res) {
     if (err) {
@@ -4666,44 +4574,24 @@ AbstractPouchDB.prototype.destroy =
   });
 });
 
-}).call(this,require('_process'))
-},{"./changes":43,"./deps/errors":54,"./deps/upsert":63,"./merge":68,"./utils":79,"_process":11,"events":10}],32:[function(require,module,exports){
+},{"./changes":43,"./deps/errors":49,"./deps/upsert":57,"./merge":62,"./utils":67,"events":10}],32:[function(require,module,exports){
 (function (process){
 "use strict";
 
 var CHANGES_BATCH_SIZE = 25;
 
 // according to http://stackoverflow.com/a/417184/680742,
-// the de facto URL length limit is 2000 characters.
+// the de factor URL length limit is 2000 characters.
 // but since most of our measurements don't take the full
 // URL into account, we fudge it a bit.
 // TODO: we could measure the full URL to enforce exactly 2000 chars
 var MAX_URL_LENGTH = 1800;
 
-var readAsBinaryString = require('../../deps/binary/readAsBinaryString');
-var binaryStringToBlob = require('../../deps/binary/binaryStringToBlob');
 var utils = require('../../utils');
-var Promise = utils.Promise;
-var clone = utils.clone;
-var base64 = require('../../deps/binary/base64');
-var btoa = base64.btoa;
-var atob = base64.atob;
 var errors = require('../../deps/errors');
 var log = require('debug')('pouchdb:http');
 var isBrowser = typeof process === 'undefined' || process.browser;
 var buffer = require('../../deps/buffer');
-var createMultipart = require('../../deps/multipart');
-
-function blobToBase64(blobOrBuffer) {
-  if (!isBrowser) {
-    return Promise.resolve(blobOrBuffer.toString('base64'));
-  }
-  return new Promise(function (resolve) {
-    readAsBinaryString(blobOrBuffer, function (bin) {
-      resolve(btoa(bin));
-    });
-  });
-}
 
 function encodeDocId(id) {
   if (/^_design/.test(id)) {
@@ -4717,15 +4605,22 @@ function encodeDocId(id) {
 
 function preprocessAttachments(doc) {
   if (!doc._attachments || !Object.keys(doc._attachments)) {
-    return Promise.resolve();
+    return utils.Promise.resolve();
   }
 
-  return Promise.all(Object.keys(doc._attachments).map(function (key) {
+  return utils.Promise.all(Object.keys(doc._attachments).map(function (key) {
     var attachment = doc._attachments[key];
     if (attachment.data && typeof attachment.data !== 'string') {
-      return blobToBase64(attachment.data).then(function (b64) {
-        attachment.data = b64;
-      });
+      if (isBrowser) {
+        return new utils.Promise(function (resolve) {
+          utils.readAsBinaryString(attachment.data, function (binary) {
+            attachment.data = utils.btoa(binary);
+            resolve();
+          });
+        });
+      } else {
+        attachment.data = attachment.data.toString('base64');
+      }
     }
   }));
 }
@@ -4758,12 +4653,12 @@ function getHost(name, opts) {
     // except for the database name) with '/'s
     uri.path = parts.join('/');
     opts = opts || {};
-    opts = clone(opts);
+    opts = utils.clone(opts);
     uri.headers = opts.headers || (opts.ajax && opts.ajax.headers) || {};
 
     if (opts.auth || uri.auth) {
       var nAuth = opts.auth || uri.auth;
-      var token = btoa(nAuth.username + ':' + nAuth.password);
+      var token = utils.btoa(nAuth.username + ':' + nAuth.password);
       uri.headers.Authorization = 'Basic ' + token;
     }
 
@@ -4814,38 +4709,23 @@ function HttpPouch(opts, callback) {
   var dbUrl = genDBUrl(host, '');
 
   api.getUrl = function () {return dbUrl; };
-  api.getHeaders = function () {return clone(host.headers); };
+  api.getHeaders = function () {return utils.clone(host.headers); };
 
   var ajaxOpts = opts.ajax || {};
-  opts = clone(opts);
+  opts = utils.clone(opts);
   function ajax(options, callback) {
-    var reqOpts = utils.extend(true, clone(ajaxOpts), options);
+    var reqOpts = utils.extend(true, utils.clone(ajaxOpts), options);
     log(reqOpts.method + ' ' + reqOpts.url);
     return utils.ajax(reqOpts, callback);
   }
 
-  function ajaxPromise(opts) {
-    return new Promise(function (resolve, reject) {
-      ajax(opts, function (err, res) {
-        if (err) {
-          return reject(err);
-        }
-        resolve(res);
-      });
-    });
-  }
-
   // Create a new CouchDB database based on the given opts
   var createDB = function () {
-    ajax({
-      headers: clone(host.headers),
-      method: 'PUT',
-      url: dbUrl
-    }, function (err) {
+    ajax({headers: host.headers, method: 'PUT', url: dbUrl}, function (err) {
       // If we get an "Unauthorized" error
       if (err && err.status === 401) {
         // Test if the database already exists
-        ajax({headers: clone(host.headers), method: 'HEAD', url: dbUrl},
+        ajax({headers: host.headers, method: 'HEAD', url: dbUrl},
              function (err) {
           // If there is still an error
           if (err) {
@@ -4869,11 +4749,7 @@ function HttpPouch(opts, callback) {
   };
 
   if (!opts.skipSetup) {
-    ajax({
-      headers: clone(host.headers),
-      method: 'GET',
-      url: dbUrl
-    }, function (err) {
+    ajax({headers: host.headers, method: 'GET', url: dbUrl}, function (err) {
       //check if the db exists
       if (err) {
         if (err.status === 404) {
@@ -4897,13 +4773,10 @@ function HttpPouch(opts, callback) {
 
   api.id = utils.adapterFun('id', function (callback) {
     ajax({
-      headers: clone(host.headers),
+      headers: host.headers,
       method: 'GET',
       url: genUrl(host, '')
     }, function (err, result) {
-      if (err) {
-        return callback(err);
-      }
       var uuid = (result && result.uuid) ?
         result.uuid + host.db : genDBUrl(host, '');
       callback(null, uuid);
@@ -4923,9 +4796,9 @@ function HttpPouch(opts, callback) {
       callback = opts;
       opts = {};
     }
-    opts = clone(opts);
+    opts = utils.clone(opts);
     ajax({
-      headers: clone(host.headers),
+      headers: host.headers,
       url: genDBUrl(host, '_compact'),
       method: 'POST'
     }, function () {
@@ -4950,7 +4823,7 @@ function HttpPouch(opts, callback) {
   //    version: The version of CouchDB it is running
   api._info = function (callback) {
     ajax({
-      headers: clone(host.headers),
+      headers: host.headers,
       method: 'GET',
       url: genDBUrl(host, '')
     }, function (err, res) {
@@ -4972,7 +4845,10 @@ function HttpPouch(opts, callback) {
       callback = opts;
       opts = {};
     }
-    opts = clone(opts);
+    opts = utils.clone(opts);
+    if (opts.auto_encode === undefined) {
+      opts.auto_encode = true;
+    }
 
     // List of parameters to add to the GET request
     var params = [];
@@ -5006,6 +4882,13 @@ function HttpPouch(opts, callback) {
       params.push('open_revs=' + opts.open_revs);
     }
 
+    // If it exists, add the opts.attachments value to the list of parameters.
+    // If attachments=true the resulting JSON will include the base64-encoded
+    // contents in the "data" property of each attachment.
+    if (opts.attachments) {
+      params.push('attachments=true');
+    }
+
     // If it exists, add the opts.rev value to the list of parameters.
     // If rev is given a revision number then get the specified revision.
     if (opts.rev) {
@@ -5023,64 +4906,43 @@ function HttpPouch(opts, callback) {
     params = params.join('&');
     params = params === '' ? '' : '?' + params;
 
-    id = encodeDocId(id);
+    if (opts.auto_encode) {
+      id = encodeDocId(id);
+    }
 
     // Set the options for the ajax call
     var options = {
-      headers: clone(host.headers),
+      headers: host.headers,
       method: 'GET',
       url: genDBUrl(host, id + params)
     };
     var getRequestAjaxOpts = opts.ajax || {};
     utils.extend(true, options, getRequestAjaxOpts);
 
-    function fetchAttachments(doc) {
-      var atts = doc._attachments;
-      var filenames = atts && Object.keys(atts);
-      if (!atts || !filenames.length) {
-        return;
-      }
-      // we fetch these manually in separate XHRs, because
-      // Sync Gateway would normally send it back as multipart/mixed,
-      // which we cannot parse. Also, this is more efficient than
-      // receiving attachments as base64-encoded strings.
-      return Promise.all(filenames.map(function (filename) {
-        var att = atts[filename];
-        var path = encodeDocId(doc._id) + '/' + encodeAttachmentId(filename) +
-          '?rev=' + doc._rev;
-        return ajaxPromise({
-          headers: clone(host.headers),
-          method: 'GET',
-          url: genDBUrl(host, path),
-          binary: true
-        }).then(blobToBase64).then(function (b64) {
-          delete att.stub;
-          delete att.length;
-          att.data = b64;
-        });
-      }));
+    // If the given id contains at least one '/' and the part before the '/'
+    // is NOT "_design" and is NOT "_local"
+    // OR
+    // If the given id contains at least two '/' and the part before the first
+    // '/' is "_design".
+    // TODO This second condition seems strange since if parts[0] === '_design'
+    // then we already know that parts[0] !== '_local'.
+    var parts = id.split('/');
+    if ((parts.length > 1 && parts[0] !== '_design' && parts[0] !== '_local') ||
+        (parts.length > 2 && parts[0] === '_design' && parts[0] !== '_local')) {
+      // Binary is expected back from the server
+      options.binary = true;
     }
 
-    function fetchAllAttachments(docOrDocs) {
-      if (Array.isArray(docOrDocs)) {
-        return Promise.all(docOrDocs.map(function (doc) {
-          if (doc.ok) {
-            return fetchAttachments(doc.ok);
-          }
-        }));
+    // Get the document
+    ajax(options, function (err, doc, xhr) {
+      // If the document does not exist, send an error to the callback
+      if (err) {
+        return callback(err);
       }
-      return fetchAttachments(docOrDocs);
-    }
 
-    ajaxPromise(options).then(function (res) {
-      return Promise.resolve().then(function () {
-        if (opts.attachments) {
-          return fetchAllAttachments(res);
-        }
-      }).then(function () {
-        callback(null, res);
-      });
-    }).catch(callback);
+      // Send the document to the callback
+      callback(null, doc, xhr);
+    });
   });
 
   // Delete the document given by doc from the database given by host.
@@ -5113,7 +4975,7 @@ function HttpPouch(opts, callback) {
 
     // Delete the document
     ajax({
-      headers: clone(host.headers),
+      headers: host.headers,
       method: 'DELETE',
       url: genDBUrl(host, encodeDocId(doc._id)) + '?rev=' + rev
     }, callback);
@@ -5131,15 +4993,15 @@ function HttpPouch(opts, callback) {
       callback = opts;
       opts = {};
     }
-    var params = opts.rev ? ('?rev=' + opts.rev) : '';
-    var url = genDBUrl(host, encodeDocId(docId)) + '/' +
-      encodeAttachmentId(attachmentId) + params;
-    ajax({
-      headers: clone(host.headers),
-      method: 'GET',
-      url: url,
-      binary: true
-    }, callback);
+    opts = utils.clone(opts);
+    if (opts.auto_encode === undefined) {
+      opts.auto_encode = true;
+    }
+    if (opts.auto_encode) {
+      docId = encodeDocId(docId);
+    }
+    opts.auto_encode = false;
+    api.get(docId + '/' + encodeAttachmentId(attachmentId), opts, callback);
   });
 
   // Remove the attachment given by the id and rev
@@ -5151,7 +5013,7 @@ function HttpPouch(opts, callback) {
       encodeAttachmentId(attachmentId)) + '?rev=' + rev;
 
     ajax({
-      headers: clone(host.headers),
+      headers: host.headers,
       method: 'DELETE',
       url: url
     }, callback);
@@ -5183,21 +5045,21 @@ function HttpPouch(opts, callback) {
     if (typeof blob === 'string') {
       var binary;
       try {
-        binary = atob(blob);
+        binary = utils.atob(blob);
       } catch (err) {
         // it's not base64-encoded, so throw error
         return callback(errors.error(errors.BAD_ARG,
                         'Attachments need to be base64 encoded'));
       }
       if (isBrowser) {
-        blob = binaryStringToBlob(binary, type);
+        blob = utils.createBlob([utils.fixBinary(binary)], {type: type});
       } else {
         blob = binary ? new buffer(binary, 'binary') : '';
       }
     }
 
     var opts = {
-      headers: clone(host.headers),
+      headers: utils.clone(host.headers),
       method: 'PUT',
       url: url,
       processData: false,
@@ -5220,7 +5082,7 @@ function HttpPouch(opts, callback) {
       return callback(errors.error(errors.NOT_AN_OBJECT));
     }
 
-    doc = clone(doc);
+    doc = utils.clone(doc);
 
     preprocessAttachments(doc).then(function () {
       while (true) {
@@ -5232,7 +5094,7 @@ function HttpPouch(opts, callback) {
         } else if (temptype === "string" && id && !('_rev' in doc)) {
           doc._rev = temp;
         } else if (temptype === "object") {
-          opts = clone(temp);
+          opts = utils.clone(temp);
         }
         if (!args.length) {
           break;
@@ -5260,38 +5122,25 @@ function HttpPouch(opts, callback) {
         params = '?' + params;
       }
 
-      var ajaxOpts = {
-        headers: clone(host.headers),
+      // Add the document
+      ajax({
+        headers: host.headers,
         method: 'PUT',
         url: genDBUrl(host, encodeDocId(doc._id)) + params,
         body: doc
-      };
-
-      return Promise.resolve().then(function () {
-        var hasNonStubAttachments = doc._attachments &&
-          Object.keys(doc._attachments).filter(function (att) {
-            return !doc._attachments[att].stub;
-          }).length;
-        if (hasNonStubAttachments) {
-          // use multipart/related for more efficient attachment uploading
-          var multipart = createMultipart(doc);
-          ajaxOpts.body = multipart.body;
-          ajaxOpts.processData = false;
-          ajaxOpts.headers = utils.extend(ajaxOpts.headers, multipart.headers);
+      }, function (err, res) {
+        if (err) {
+          return callback(err);
         }
-      }).catch(function () {
-        throw new Error('Did you forget to base64-encode an attachment?');
-      }).then(function () {
-        return ajaxPromise(ajaxOpts);
-      }).then(function (res) {
-        res.ok = true; // smooths out cloudant not doing this
+        res.ok = true;
         callback(null, res);
       });
     }).catch(callback);
+
   }));
 
   // Add the document given by doc (in JSON string format) to the database
-  // given by host. This does not assume that doc is a new document
+  // given by host. This does not assume that doc is a new document 
   // (i.e. does not have a _id or a _rev field.)
   api.post = utils.adapterFun('post', function (doc, opts, callback) {
     // If no options were given, set the callback to be the second parameter
@@ -5299,7 +5148,7 @@ function HttpPouch(opts, callback) {
       callback = opts;
       opts = {};
     }
-    opts = clone(opts);
+    opts = utils.clone(opts);
     if (typeof doc !== 'object') {
       return callback(errors.error(errors.NOT_AN_OBJECT));
     }
@@ -5327,10 +5176,10 @@ function HttpPouch(opts, callback) {
       req.new_edits = opts.new_edits;
     }
 
-    Promise.all(req.docs.map(preprocessAttachments)).then(function () {
+    utils.Promise.all(req.docs.map(preprocessAttachments)).then(function () {
       // Update/create the documents
       ajax({
-        headers: clone(host.headers),
+        headers: host.headers,
         method: 'POST',
         url: genDBUrl(host, '_bulk_docs'),
         body: req
@@ -5353,7 +5202,7 @@ function HttpPouch(opts, callback) {
       callback = opts;
       opts = {};
     }
-    opts = clone(opts);
+    opts = utils.clone(opts);
     // List of parameters to add to the GET request
     var params = [];
     var body;
@@ -5440,7 +5289,7 @@ function HttpPouch(opts, callback) {
 
     // Get the document listing
     ajax({
-      headers: clone(host.headers),
+      headers: host.headers,
       method: method,
       url: genDBUrl(host, '_all_docs' + params),
       body: body
@@ -5457,7 +5306,7 @@ function HttpPouch(opts, callback) {
     // set of changes to return and attempting to process them at once
     var batchSize = 'batch_size' in opts ? opts.batch_size : CHANGES_BATCH_SIZE;
 
-    opts = clone(opts);
+    opts = utils.clone(opts);
     opts.timeout = opts.timeout || 30 * 1000;
 
     // We give a 5 second buffer for CouchDB changes to respond with
@@ -5571,7 +5420,7 @@ function HttpPouch(opts, callback) {
 
       // Set the options for the ajax call
       var xhrOpts = {
-        headers: clone(host.headers),
+        headers: host.headers,
         method: method,
         url: genDBUrl(host, '_changes' + paramStr),
         // _changes can take a long time to generate, especially when filtered
@@ -5724,7 +5573,7 @@ function HttpPouch(opts, callback) {
       source.close();
       utils.call(opts.complete, err);
     }
-
+    
   };
 
   api._useSSE = false;
@@ -5743,7 +5592,7 @@ function HttpPouch(opts, callback) {
 
     // Get the missing document/revision IDs
     ajax({
-      headers: clone(host.headers),
+      headers: host.headers,
       method: 'POST',
       url: genDBUrl(host, '_revs_diff'),
       body: JSON.stringify(req)
@@ -5758,7 +5607,7 @@ function HttpPouch(opts, callback) {
     ajax({
       url: genDBUrl(host, ''),
       method: 'DELETE',
-      headers: clone(host.headers)
+      headers: host.headers
     }, function (err, resp) {
       if (err) {
         api.emit('error', err);
@@ -5780,7 +5629,7 @@ HttpPouch.valid = function () {
 module.exports = HttpPouch;
 
 }).call(this,require('_process'))
-},{"../../deps/binary/base64":47,"../../deps/binary/binaryStringToBlob":49,"../../deps/binary/readAsBinaryString":52,"../../deps/buffer":53,"../../deps/errors":54,"../../deps/multipart":57,"../../utils":79,"_process":11,"debug":82}],33:[function(require,module,exports){
+},{"../../deps/buffer":48,"../../deps/errors":49,"../../utils":67,"_process":11,"debug":70}],33:[function(require,module,exports){
 'use strict';
 
 var merge = require('../../merge');
@@ -5965,7 +5814,7 @@ function idbAllDocs(opts, api, idb, callback) {
 }
 
 module.exports = idbAllDocs;
-},{"../../deps/errors":54,"../../merge":68,"./idb-constants":36,"./idb-utils":37}],34:[function(require,module,exports){
+},{"../../deps/errors":49,"../../merge":62,"./idb-constants":36,"./idb-utils":37}],34:[function(require,module,exports){
 'use strict';
 
 var utils = require('../../utils');
@@ -6029,7 +5878,7 @@ function checkBlobSupport(txn, idb) {
 }
 
 module.exports = checkBlobSupport;
-},{"../../utils":79,"./idb-constants":36}],35:[function(require,module,exports){
+},{"../../utils":67,"./idb-constants":36}],35:[function(require,module,exports){
 'use strict';
 
 var utils = require('../../utils');
@@ -6392,7 +6241,7 @@ function idbBulkDocs(req, opts, api, idb, Changes, callback) {
 }
 
 module.exports = idbBulkDocs;
-},{"../../deps/errors":54,"../../utils":79,"./idb-constants":36,"./idb-utils":37}],36:[function(require,module,exports){
+},{"../../deps/errors":49,"../../utils":67,"./idb-constants":36,"./idb-utils":37}],36:[function(require,module,exports){
 'use strict';
 
 // IndexedDB requires a versioned database structure, so we use the
@@ -6425,13 +6274,7 @@ exports.DETECT_BLOB_SUPPORT_STORE = 'detect-blob-support';
 
 var errors = require('../../deps/errors');
 var utils = require('../../utils');
-var base64 = require('../../deps/binary/base64');
-var atob = base64.atob;
-var btoa = base64.btoa;
 var constants = require('./idb-constants');
-var readAsBinaryString = require('../../deps/binary/readAsBinaryString');
-var binaryStringToArrayBuffer =
-  require('../../deps/binary/binaryStringToArrayBuffer');
 
 function tryCode(fun, that, args) {
   try {
@@ -6518,8 +6361,8 @@ exports.readBlobData = function (body, type, encode, callback) {
     if (!body) {
       callback('');
     } else if (typeof body !== 'string') { // we have blob support
-      readAsBinaryString(body, function (binary) {
-        callback(btoa(binary));
+      utils.readAsBinaryString(body, function (binary) {
+        callback(utils.btoa(binary));
       });
     } else { // no blob support
       callback(body);
@@ -6530,7 +6373,7 @@ exports.readBlobData = function (body, type, encode, callback) {
     } else if (typeof body !== 'string') { // we have blob support
       callback(body);
     } else { // no blob support
-      body = binaryStringToArrayBuffer(atob(body));
+      body = utils.fixBinary(atob(body));
       callback(utils.createBlob([body], {type: type}));
     }
   }
@@ -6671,7 +6514,7 @@ exports.openTransactionSafely = function (idb, stores, mode) {
   }
 };
 }).call(this,require('_process'))
-},{"../../deps/binary/base64":47,"../../deps/binary/binaryStringToArrayBuffer":48,"../../deps/binary/readAsBinaryString":52,"../../deps/errors":54,"../../utils":79,"./idb-constants":36,"_process":11}],38:[function(require,module,exports){
+},{"../../deps/errors":49,"../../utils":67,"./idb-constants":36,"_process":11}],38:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -7626,7 +7469,7 @@ IdbPouch.Changes = new utils.Changes();
 module.exports = IdbPouch;
 
 }).call(this,require('_process'))
-},{"../../deps/errors":54,"../../merge":68,"../../utils":79,"./idb-all-docs":33,"./idb-blob-support":34,"./idb-bulk-docs":35,"./idb-constants":36,"./idb-utils":37,"_process":11}],39:[function(require,module,exports){
+},{"../../deps/errors":49,"../../merge":62,"../../utils":67,"./idb-all-docs":33,"./idb-blob-support":34,"./idb-bulk-docs":35,"./idb-constants":36,"./idb-utils":37,"_process":11}],39:[function(require,module,exports){
 'use strict';
 
 var utils = require('../../utils');
@@ -7951,7 +7794,7 @@ function websqlBulkDocs(req, opts, api, db, Changes, callback) {
 
 module.exports = websqlBulkDocs;
 
-},{"../../deps/errors":54,"../../utils":79,"./websql-constants":40,"./websql-utils":41}],40:[function(require,module,exports){
+},{"../../deps/errors":49,"../../utils":67,"./websql-constants":40,"./websql-utils":41}],40:[function(require,module,exports){
 'use strict';
 
 function quote(str) {
@@ -8204,14 +8047,13 @@ module.exports = {
   openDB: openDB,
   valid: valid
 };
-},{"../../deps/errors":54,"../../utils":79,"./websql-constants":40}],42:[function(require,module,exports){
+},{"../../deps/errors":49,"../../utils":67,"./websql-constants":40}],42:[function(require,module,exports){
 'use strict';
 
 var utils = require('../../utils');
 var merge = require('../../merge');
 var errors = require('../../deps/errors');
 var parseHexString = require('../../deps/parse-hex');
-var binaryStringToBlob = require('../../deps/binary/binaryStringToBlob');
 
 var websqlConstants = require('./websql-constants');
 var websqlUtils = require('./websql-utils');
@@ -8313,8 +8155,7 @@ function WebSqlPouch(opts, callback) {
     description: api._name,
     size: size,
     location: opts.location,
-    createFromLocation: opts.createFromLocation,
-    androidDatabaseImplementation: opts.androidDatabaseImplementation
+    createFromLocation: opts.createFromLocation
   });
   if (!db) {
     return callback(errors.error(errors.UNKNOWN_ERROR));
@@ -9051,9 +8892,10 @@ function WebSqlPouch(opts, callback) {
       var data = item.escaped ? websqlUtils.unescapeBlob(item.body) :
         parseHexString(item.body, encoding);
       if (opts.encode) {
-        res = utils.btoa(data);
+        res = btoa(data);
       } else {
-        res = binaryStringToBlob(data, type);
+        data = utils.fixBinary(data);
+        res = utils.createBlob([data], {type: type});
       }
       callback(null, res);
     });
@@ -9214,7 +9056,7 @@ WebSqlPouch.Changes = new utils.Changes();
 
 module.exports = WebSqlPouch;
 
-},{"../../deps/binary/binaryStringToBlob":49,"../../deps/errors":54,"../../deps/parse-hex":59,"../../merge":68,"../../utils":79,"./websql-bulk-docs":39,"./websql-constants":40,"./websql-utils":41}],43:[function(require,module,exports){
+},{"../../deps/errors":49,"../../deps/parse-hex":53,"../../merge":62,"../../utils":67,"./websql-bulk-docs":39,"./websql-constants":40,"./websql-utils":41}],43:[function(require,module,exports){
 'use strict';
 var utils = require('./utils');
 var merge = require('./merge');
@@ -9289,7 +9131,6 @@ function Changes(db, opts, callback) {
     if (oldOnChange) {
       self.removeListener('change', oldOnChange);
     }
-    db.removeListener('destroyed', onDestroy);
     opts.complete(null, {status: 'cancelled'});
   });
   this.then = promise.then.bind(promise);
@@ -9471,7 +9312,110 @@ Changes.prototype.filterChanges = function (opts) {
     });
   }
 };
-},{"./deps/errors":54,"./evalFilter":65,"./evalView":66,"./merge":68,"./utils":79,"events":10}],44:[function(require,module,exports){
+},{"./deps/errors":49,"./evalFilter":59,"./evalView":60,"./merge":62,"./utils":67,"events":10}],44:[function(require,module,exports){
+'use strict';
+
+var Promise = require('./deps/promise');
+var explain404 = require('./deps/explain404');
+var pouchCollate = require('pouchdb-collate');
+var collate = pouchCollate.collate;
+
+function updateCheckpoint(db, id, checkpoint, returnValue) {
+  return db.get(id).catch(function (err) {
+    if (err.status === 404) {
+      if (db.type() === 'http') {
+        explain404(
+          'PouchDB is just checking if a remote checkpoint exists.');
+      }
+      return {_id: id};
+    }
+    throw err;
+  }).then(function (doc) {
+    if (returnValue.cancelled) {
+      return;
+    }
+    doc.last_seq = checkpoint;
+    return db.put(doc).catch(function (err) {
+      if (err.status === 409) {
+        // retry; someone is trying to write a checkpoint simultaneously
+        return updateCheckpoint(db, id, checkpoint, returnValue);
+      }
+      throw err;
+    });
+  });
+}
+
+function Checkpointer(src, target, id, returnValue) {
+  this.src = src;
+  this.target = target;
+  this.id = id;
+  this.returnValue = returnValue;
+}
+
+Checkpointer.prototype.writeCheckpoint = function (checkpoint) {
+  var self = this;
+  return this.updateTarget(checkpoint).then(function () {
+    return self.updateSource(checkpoint);
+  });
+};
+
+Checkpointer.prototype.updateTarget = function (checkpoint) {
+  return updateCheckpoint(this.target, this.id, checkpoint, this.returnValue);
+};
+
+Checkpointer.prototype.updateSource = function (checkpoint) {
+  var self = this;
+  if (this.readOnlySource) {
+    return Promise.resolve(true);
+  }
+  return updateCheckpoint(this.src, this.id, checkpoint, this.returnValue)
+    .catch(function (err) {
+      var isForbidden = typeof err.status === 'number' &&
+        Math.floor(err.status / 100) === 4;
+      if (isForbidden) {
+        self.readOnlySource = true;
+        return true;
+      }
+      throw err;
+    });
+};
+
+Checkpointer.prototype.getCheckpoint = function () {
+  var self = this;
+  return self.target.get(self.id).then(function (targetDoc) {
+    return self.src.get(self.id).then(function (sourceDoc) {
+      if (collate(targetDoc.last_seq, sourceDoc.last_seq) === 0) {
+        return sourceDoc.last_seq;
+      }
+      return 0;
+    }, function (err) {
+      if (err.status === 404 && targetDoc.last_seq) {
+        return self.src.put({
+          _id: self.id,
+          last_seq: 0
+        }).then(function () {
+          return 0;
+        }, function (err) {
+          if (err.status === 401) {
+            self.readOnlySource = true;
+            return targetDoc.last_seq;
+          }
+          return 0;
+        });
+      }
+      throw err;
+    });
+  }).catch(function (err) {
+    if (err.status !== 404) {
+      throw err;
+    }
+    return 0;
+  });
+};
+
+module.exports = Checkpointer;
+
+},{"./deps/explain404":50,"./deps/promise":55,"pouchdb-collate":92}],45:[function(require,module,exports){
 (function (process,global){
 /*globals cordova */
 "use strict";
@@ -9635,7 +9579,7 @@ PouchDB.debug = require('debug');
 module.exports = PouchDB;
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./adapter":31,"./taskqueue":78,"./utils":79,"_process":11,"debug":82}],45:[function(require,module,exports){
+},{"./adapter":31,"./taskqueue":66,"./utils":67,"_process":11,"debug":70}],46:[function(require,module,exports){
 (function (process){
 "use strict";
 
@@ -9776,83 +9720,13 @@ function ajax(options, adapterCallback) {
 module.exports = ajax;
 
 }).call(this,require('_process'))
-},{"../utils":79,"./buffer":53,"./errors":54,"_process":11,"request":62}],46:[function(require,module,exports){
-'use strict';
-
-//Can't find original post, but this is close
-//http://stackoverflow.com/questions/6965107/ (continues on next line)
-//converting-between-strings-and-arraybuffers
-module.exports = function (buffer) {
-  var binary = '';
-  var bytes = new Uint8Array(buffer);
-  var length = bytes.byteLength;
-  for (var i = 0; i < length; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return binary;
-};
-},{}],47:[function(require,module,exports){
-'use strict';
-
-var buffer = require('./../buffer');
-
-if (typeof atob === 'function') {
-  exports.atob = function (str) {
-    /* global atob */
-    return atob(str);
-  };
-} else {
-  exports.atob = function (str) {
-    var base64 = new buffer(str, 'base64');
-    // Node.js will just skip the characters it can't encode instead of
-    // throwing and exception
-    if (base64.toString('base64') !== str) {
-      throw ("Cannot base64 encode full string");
-    }
-    return base64.toString('binary');
-  };
-}
-
-if (typeof btoa === 'function') {
-  exports.btoa = function (str) {
-    /* global btoa */
-    return btoa(str);
-  };
-} else {
-  exports.btoa = function (str) {
-    return new buffer(str, 'binary').toString('base64');
-  };
-}
-},{"./../buffer":53}],48:[function(require,module,exports){
-'use strict';
-
-// From http://stackoverflow.com/questions/14967647/ (continues on next line)
-// encode-decode-image-with-base64-breaks-image (2013-04-21)
-module.exports = function (bin) {
-  var length = bin.length;
-  var buf = new ArrayBuffer(length);
-  var arr = new Uint8Array(buf);
-  for (var i = 0; i < length; i++) {
-    arr[i] = bin.charCodeAt(i);
-  }
-  return buf;
-};
-},{}],49:[function(require,module,exports){
-'use strict';
-
-var createBlob = require('./blob');
-var binaryStringToArrayBuffer = require('./binaryStringToArrayBuffer');
-
-module.exports = function binaryStringToBlob(binString, type) {
-  return createBlob([binaryStringToArrayBuffer(binString)], {type: type});
-};
-},{"./binaryStringToArrayBuffer":48,"./blob":50}],50:[function(require,module,exports){
+},{"../utils":67,"./buffer":48,"./errors":49,"_process":11,"request":56}],47:[function(require,module,exports){
 (function (global){
 "use strict";
 
-// Abstracts constructing a Blob object, so it also works in older
-// browsers that don't support the native Blob constructor (e.g.
-// old QtWebKit versions, Android < 4.4).
+//Abstracts constructing a Blob object, so it also works in older
+//browsers that don't support the native Blob constructor. (i.e.
+//old QtWebKit versions, at least).
 function createBlob(parts, properties) {
   parts = parts || [];
   properties = properties || {};
@@ -9878,44 +9752,10 @@ module.exports = createBlob;
 
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],51:[function(require,module,exports){
-'use strict';
-
-// simplified API. universal browser support is assumed
-module.exports = function (blob, callback) {
-  var reader = new FileReader();
-  reader.onloadend = function (e) {
-    var result = e.target.result || new ArrayBuffer(0);
-    callback(result);
-  };
-  reader.readAsArrayBuffer(blob);
-};
-},{}],52:[function(require,module,exports){
-'use strict';
-
-var arrayBufferToBinaryString = require('./arrayBufferToBinaryString');
-
-// shim for browsers that don't support it
-module.exports = function (blob, callback) {
-  var reader = new FileReader();
-  var hasBinaryString = typeof reader.readAsBinaryString === 'function';
-  reader.onloadend = function (e) {
-    var result = e.target.result || '';
-    if (hasBinaryString) {
-      return callback(result);
-    }
-    callback(arrayBufferToBinaryString(result));
-  };
-  if (hasBinaryString) {
-    reader.readAsBinaryString(blob);
-  } else {
-    reader.readAsArrayBuffer(blob);
-  }
-};
-},{"./arrayBufferToBinaryString":46}],53:[function(require,module,exports){
+},{}],48:[function(require,module,exports){
 // hey guess what, we don't need this in the browser
 module.exports = {};
-},{}],54:[function(require,module,exports){
+},{}],49:[function(require,module,exports){
 "use strict";
 
 var inherits = require('inherits');
@@ -10177,7 +10017,7 @@ exports.generateErrorFromResponse = function (res) {
   return error;
 };
 
-},{"inherits":85}],55:[function(require,module,exports){
+},{"inherits":73}],50:[function(require,module,exports){
 (function (process,global){
 'use strict';
 
@@ -10191,11 +10031,10 @@ function explain404(str) {
 
 module.exports = explain404;
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"_process":11}],56:[function(require,module,exports){
+},{"_process":11}],51:[function(require,module,exports){
 (function (process,global){
 'use strict';
 
-var base64 = require('./binary/base64');
 var crypto = require('crypto');
 var Md5 = require('spark-md5');
 var setImmediateShim = global.setImmediate || global.setTimeout;
@@ -10203,20 +10042,25 @@ var MD5_CHUNK_SIZE = 32768;
 
 // convert a 64-bit int to a binary string
 function intToString(int) {
-  return String.fromCharCode(int & 0xff) +
-    String.fromCharCode((int >>> 8) & 0xff) +
-    String.fromCharCode((int >>> 16) & 0xff) +
-    String.fromCharCode((int >>> 24) & 0xff);
+  var bytes = [
+    (int & 0xff),
+    ((int >>> 8) & 0xff),
+    ((int >>> 16) & 0xff),
+    ((int >>> 24) & 0xff)
+  ];
+  return bytes.map(function (byte) {
+    return String.fromCharCode(byte);
+  }).join('');
 }
 
 // convert an array of 64-bit ints into
 // a base64-encoded string
 function rawToBase64(raw) {
   var res = '';
-  for (var i = 0, len = raw.length; i < len; i++) {
+  for (var i = 0; i < raw.length; i++) {
     res += intToString(raw[i]);
   }
-  return base64.btoa(res);
+  return btoa(res);
 }
 
 function appendBuffer(buffer, data, start, end) {
@@ -10270,89 +10114,7 @@ module.exports = function (data, callback) {
 };
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./binary/base64":47,"_process":11,"crypto":9,"spark-md5":111}],57:[function(require,module,exports){
-(function (process){
-'use strict';
-
-// Create a multipart/related stream out of a document,
-// so we can upload documents in that format when
-// attachments are large. This is shamefully stolen from
-// https://github.com/sballesteros/couch-multipart-stream/
-// and https://github.com/npm/npm-fullfat-registry
-
-var base64 = require('./binary/base64');
-var atob = base64.atob;
-var uuid = require('./uuid');
-var createBlob = require('./binary/blob');
-var binaryStringToArrayBuffer = require('./binary/binaryStringToArrayBuffer');
-var utils = require('../utils');
-var clone = utils.clone;
-var isBrowser = typeof process === 'undefined' || process.browser;
-var buffer = require('./buffer');
-
-function createBlobOrBuffer(parts, type) {
-  if (isBrowser) {
-    return createBlob(parts, {type: type});
-  }
-  return buffer.concat(parts.map(function (part) {
-    return new buffer(part, 'binary');
-  }));
-}
-
-function createMultipart(doc) {
-  doc = clone(doc);
-
-  var boundary = uuid();
-
-  var nonStubAttachments = {};
-
-  Object.keys(doc._attachments).forEach(function (filename) {
-    var att = doc._attachments[filename];
-    if (att.stub) {
-      return;
-    }
-    var binData = atob(att.data);
-    nonStubAttachments[filename] = {type: att.content_type, data: binData};
-    att.length = binData.length;
-    att.follows = true;
-    delete att.digest;
-    delete att.data;
-  });
-
-  var preamble = '--' + boundary +
-    '\r\nContent-Type: application/json\r\n\r\n';
-
-  var parts = [preamble, JSON.stringify(doc)];
-
-  Object.keys(nonStubAttachments).forEach(function (filename) {
-    var att = nonStubAttachments[filename];
-    var preamble = '\r\n--' + boundary +
-      '\r\nContent-Disposition: attachment; filename=' +
-        JSON.stringify(filename) +
-      '\r\nContent-Type: ' + att.type +
-      '\r\nContent-Length: ' + att.data.length +
-      '\r\n\r\n';
-    parts.push(preamble);
-    parts.push(isBrowser ? binaryStringToArrayBuffer(att.data) : att.data);
-  });
-
-  parts.push('\r\n--' + boundary + '--');
-
-  var type = 'multipart/related; boundary=' + boundary;
-  var body = createBlobOrBuffer(parts, type);
-
-  return {
-    headers: {
-      'Content-Type': type
-    },
-    body: body
-  };
-}
-
-module.exports = createMultipart;
-
-}).call(this,require('_process'))
-},{"../utils":79,"./binary/base64":47,"./binary/binaryStringToArrayBuffer":48,"./binary/blob":50,"./buffer":53,"./uuid":64,"_process":11}],58:[function(require,module,exports){
+},{"_process":11,"crypto":9,"spark-md5":103}],52:[function(require,module,exports){
 'use strict';
 
 var errors = require('./errors');
@@ -10520,7 +10282,7 @@ exports.parseDoc = function (doc, newEdits) {
   }
   return result;
 };
-},{"./errors":54,"./uuid":64}],59:[function(require,module,exports){
+},{"./errors":49,"./uuid":58}],53:[function(require,module,exports){
 'use strict';
 
 //
@@ -10588,7 +10350,7 @@ function parseHexString(str, encoding) {
 }
 
 module.exports = parseHexString;
-},{}],60:[function(require,module,exports){
+},{}],54:[function(require,module,exports){
 'use strict';
 
 // originally parseUri 1.2.2, now patched by us
@@ -10634,7 +10396,7 @@ function parseUri(str) {
 
 
 module.exports = parseUri;
-},{}],61:[function(require,module,exports){
+},{}],55:[function(require,module,exports){
 'use strict';
 
 if (typeof Promise === 'function') {
@@ -10642,14 +10404,13 @@ if (typeof Promise === 'function') {
 } else {
   module.exports = require('bluebird');
 }
-},{"bluebird":89}],62:[function(require,module,exports){
+},{"bluebird":77}],56:[function(require,module,exports){
 /* global fetch */
 /* global Headers */
 'use strict';
 
-var createBlob = require('./binary/blob.js');
+var createBlob = require('./blob.js');
 var utils = require('../utils');
-var readAsArrayBuffer = require('./binary/readAsArrayBuffer');
 
 function wrappedFetch() {
   var wrappedPromise = {};
@@ -10665,21 +10426,23 @@ function wrappedFetch() {
     args[i] = arguments[i];
   }
 
+  wrappedPromise.then = promise.then.bind(promise);
+  wrappedPromise.catch = promise.catch.bind(promise);
   wrappedPromise.promise = promise;
 
-  utils.Promise.resolve().then(function () {
-    return fetch.apply(null, args);
-  }).then(function(response) {
+  fetch.apply(null, args).then(function(response) {
     wrappedPromise.resolve(response);
-  }).catch(function(error) {
+  }, function(error) {
     wrappedPromise.reject(error);
+  }).catch(function(error) {
+    wrappedPromise.catch(error);
   });
 
   return wrappedPromise;
 }
 
 function fetchRequest(options, callback) {
-  var wrappedPromise, timer, response;
+  var wrappedPromise, timer, fetchResponse;
 
   var headers = new Headers();
 
@@ -10696,8 +10459,8 @@ function fetchRequest(options, callback) {
   }
 
   if (options.body && (options.body instanceof Blob)) {
-    readAsArrayBuffer(options.body, function (arrayBuffer) {
-      fetchOptions.body = arrayBuffer;
+    utils.readAsBinaryString(options.body, function(binary) {
+      fetchOptions.body = utils.fixBinary(binary);
     });
   } else if (options.body &&
              options.processData &&
@@ -10724,28 +10487,28 @@ function fetchRequest(options, callback) {
     }, options.timeout);
   }
 
-  wrappedPromise.promise.then(function(fetchResponse) {
-    response = {
-      statusCode: fetchResponse.status
-    };
+  wrappedPromise.promise.then(function(response) {
+    var result;
+
+    fetchResponse = response;
 
     if (options.timeout > 0) {
       clearTimeout(timer);
     }
 
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      return options.binary ? fetchResponse.blob() : fetchResponse.text();
+    if (response.status >= 200 && response.status < 300) {
+      return options.binary ? response.blob() : response.text();
     }
 
-    return fetchResponse.json();
+    return result.json();
   }).then(function(result) {
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      callback(null, response, result);
+    if (fetchResponse.status >= 200 && fetchResponse.status < 300) {
+      callback(null, fetchResponse, result);
     } else {
-      callback(result, response);
+      callback(result, fetchResponse);
     }
   }).catch(function(error) {
-    callback(error, response);
+    callback(error, fetchResponse);
   });
 
   return {abort: wrappedPromise.reject};
@@ -10847,8 +10610,8 @@ function xhRequest(options, callback) {
   };
 
   if (options.body && (options.body instanceof Blob)) {
-    readAsArrayBuffer(options.body, function (arrayBuffer) {
-      xhr.send(arrayBuffer);
+    utils.readAsBinaryString(options.body, function (binary) {
+      xhr.send(utils.fixBinary(binary));
     });
   } else {
     xhr.send(options.body);
@@ -10857,26 +10620,15 @@ function xhRequest(options, callback) {
   return {abort: abortReq};
 }
 
-function testXhr() {
-  try {
-    new XMLHttpRequest();
-    return true;
-  } catch (err) {
-    return false;
-  }
-}
-
-var hasXhr = testXhr();
-
 module.exports = function(options, callback) {
-  if (hasXhr || options.xhr) {
-    return xhRequest(options, callback);
-  } else {
+  if (typeof XMLHttpRequest === 'undefined' && !options.xhr) {
     return fetchRequest(options, callback);
+  } else {
+    return xhRequest(options, callback);
   }
 };
 
-},{"../utils":79,"./binary/blob.js":50,"./binary/readAsArrayBuffer":51}],63:[function(require,module,exports){
+},{"../utils":67,"./blob.js":47}],57:[function(require,module,exports){
 'use strict';
 
 var upsert = require('pouchdb-upsert').upsert;
@@ -10885,7 +10637,7 @@ module.exports = function (db, doc, diffFun, cb) {
   return upsert.call(db, doc, diffFun, cb);
 };
 
-},{"pouchdb-upsert":110}],64:[function(require,module,exports){
+},{"pouchdb-upsert":102}],58:[function(require,module,exports){
 "use strict";
 
 // BEGIN Math.uuid.js
@@ -10970,7 +10722,7 @@ function uuid(len, radix) {
 module.exports = uuid;
 
 
-},{}],65:[function(require,module,exports){
+},{}],59:[function(require,module,exports){
 'use strict';
 
 module.exports = evalFilter;
@@ -10982,7 +10734,7 @@ function evalFilter(input) {
     ' })()'
   ].join(''));
 }
-},{}],66:[function(require,module,exports){
+},{}],60:[function(require,module,exports){
 'use strict';
 
 module.exports = evalView;
@@ -11004,7 +10756,7 @@ function evalView(input) {
     '})()'
   ].join('\n'));
 }
-},{}],67:[function(require,module,exports){
+},{}],61:[function(require,module,exports){
 (function (process){
 "use strict";
 
@@ -11032,7 +10784,7 @@ if (!process.browser) {
 }
 
 }).call(this,require('_process'))
-},{"./adapters/http/http":32,"./adapters/idb/idb":38,"./adapters/leveldb/leveldb":9,"./adapters/websql/websql":42,"./deps/ajax":45,"./deps/errors":54,"./replicate":73,"./setup":76,"./sync":77,"./utils":79,"./version":80,"_process":11,"pouchdb-mapreduce":106}],68:[function(require,module,exports){
+},{"./adapters/http/http":32,"./adapters/idb/idb":38,"./adapters/leveldb/leveldb":9,"./adapters/websql/websql":42,"./deps/ajax":46,"./deps/errors":49,"./replicate":63,"./setup":64,"./sync":65,"./utils":67,"./version":68,"_process":11,"pouchdb-mapreduce":98}],62:[function(require,module,exports){
 'use strict';
 var extend = require('pouchdb-extend');
 
@@ -11334,10 +11086,15 @@ PouchMerge.rootToLeaf = function (tree) {
 
 module.exports = PouchMerge;
 
-},{"pouchdb-extend":103}],69:[function(require,module,exports){
+},{"pouchdb-extend":95}],63:[function(require,module,exports){
 'use strict';
 
-var STARTING_BACK_OFF = 0;
+var utils = require('./utils');
+var EE = require('events').EventEmitter;
+var Checkpointer = require('./checkpointer');
+
+var MAX_SIMULTANEOUS_REVS = 50;
+var RETRY_DEFAULT = false;
 
 function randomNumber(min, max) {
   min = parseInt(min, 10);
@@ -11364,136 +11121,83 @@ function defaultBackOff(min) {
   return randomNumber(min, max);
 }
 
-function backOff(opts, returnValue, error, callback) {
+function backOff(repId, src, target, opts, returnValue, result, error) {
   if (opts.retry === false) {
     returnValue.emit('error', error);
     returnValue.removeAllListeners();
     return;
   }
+  opts.default_back_off = opts.default_back_off || 0;
+  opts.retries = opts.retries || 0;
   if (typeof opts.back_off_function !== 'function') {
     opts.back_off_function = defaultBackOff;
+  }
+  opts.retries++;
+  if (opts.max_retries && opts.retries > opts.max_retries) {
+    returnValue.emit('error', new Error('tried ' +
+      opts.retries + ' times but replication failed'));
+    returnValue.removeAllListeners();
+    return;
   }
   returnValue.emit('requestError', error);
   if (returnValue.state === 'active') {
     returnValue.emit('paused', error);
     returnValue.state = 'stopped';
     returnValue.once('active', function () {
-      opts.current_back_off = STARTING_BACK_OFF;
+      opts.current_back_off = opts.default_back_off;
     });
   }
 
-  opts.current_back_off = opts.current_back_off || STARTING_BACK_OFF;
+  opts.current_back_off = opts.current_back_off || opts.default_back_off;
   opts.current_back_off = opts.back_off_function(opts.current_back_off);
-  setTimeout(callback, opts.current_back_off);
+  setTimeout(function () {
+    replicate(repId, src, target, opts, returnValue);
+  }, opts.current_back_off);
 }
 
-module.exports = backOff;
-},{}],70:[function(require,module,exports){
-'use strict';
-
-var Promise = require('./../deps/promise');
-var explain404 = require('./../deps/explain404');
-var pouchCollate = require('pouchdb-collate');
-var collate = pouchCollate.collate;
-
-function updateCheckpoint(db, id, checkpoint, returnValue) {
-  return db.get(id).catch(function (err) {
-    if (err.status === 404) {
-      if (db.type() === 'http') {
-        explain404('PouchDB is just checking if a remote checkpoint exists.');
-      }
-      return {_id: id};
-    }
-    throw err;
-  }).then(function (doc) {
-    if (returnValue.cancelled) {
-      return;
-    }
-    doc.last_seq = checkpoint;
-    return db.put(doc).catch(function (err) {
-      if (err.status === 409) {
-        // retry; someone is trying to write a checkpoint simultaneously
-        return updateCheckpoint(db, id, checkpoint, returnValue);
-      }
-      throw err;
-    });
-  });
-}
-
-function Checkpointer(src, target, id, returnValue) {
-  this.src = src;
-  this.target = target;
-  this.id = id;
-  this.returnValue = returnValue;
-}
-
-Checkpointer.prototype.writeCheckpoint = function (checkpoint) {
+// We create a basic promise so the caller can cancel the replication possibly
+// before we have actually started listening to changes etc
+utils.inherits(Replication, EE);
+function Replication() {
+  EE.call(this);
+  this.cancelled = false;
+  this.state = 'pending';
   var self = this;
-  return this.updateTarget(checkpoint).then(function () {
-    return self.updateSource(checkpoint);
+  var promise = new utils.Promise(function (fulfill, reject) {
+    self.once('complete', fulfill);
+    self.once('error', reject);
   });
+  self.then = function (resolve, reject) {
+    return promise.then(resolve, reject);
+  };
+  self.catch = function (reject) {
+    return promise.catch(reject);
+  };
+  // As we allow error handling via "error" event as well,
+  // put a stub in here so that rejecting never throws UnhandledError.
+  self.catch(function () {});
+}
+
+Replication.prototype.cancel = function () {
+  this.cancelled = true;
+  this.state = 'cancelled';
+  this.emit('cancel');
 };
 
-Checkpointer.prototype.updateTarget = function (checkpoint) {
-  return updateCheckpoint(this.target, this.id, checkpoint, this.returnValue);
-};
-
-Checkpointer.prototype.updateSource = function (checkpoint) {
+Replication.prototype.ready = function (src, target) {
   var self = this;
-  if (this.readOnlySource) {
-    return Promise.resolve(true);
+  function onDestroy() {
+    self.cancel();
   }
-  return updateCheckpoint(this.src, this.id, checkpoint, this.returnValue)
-    .catch(function (err) {
-      var isForbidden = typeof err.status === 'number' &&
-        Math.floor(err.status / 100) === 4;
-      if (isForbidden) {
-        self.readOnlySource = true;
-        return true;
-      }
-      throw err;
-    });
+  src.once('destroyed', onDestroy);
+  target.once('destroyed', onDestroy);
+  function cleanup() {
+    src.removeListener('destroyed', onDestroy);
+    target.removeListener('destroyed', onDestroy);
+  }
+  this.then(cleanup, cleanup);
 };
 
-Checkpointer.prototype.getCheckpoint = function () {
-  var self = this;
-  return self.target.get(self.id).then(function (targetDoc) {
-    return self.src.get(self.id).then(function (sourceDoc) {
-      if (collate(targetDoc.last_seq, sourceDoc.last_seq) === 0) {
-        return sourceDoc.last_seq;
-      }
-      return 0;
-    }, function (err) {
-      if (err.status === 404 && targetDoc.last_seq) {
-        return self.src.put({
-          _id: self.id,
-          last_seq: 0
-        }).then(function () {
-          return 0;
-        }, function (err) {
-          if (err.status === 401) {
-            self.readOnlySource = true;
-            return targetDoc.last_seq;
-          }
-          return 0;
-        });
-      }
-      throw err;
-    });
-  }).catch(function (err) {
-    if (err.status !== 404) {
-      throw err;
-    }
-    return 0;
-  });
-};
-
-module.exports = Checkpointer;
-
-},{"./../deps/explain404":55,"./../deps/promise":61,"pouchdb-collate":100}],71:[function(require,module,exports){
-'use strict';
-
-var utils = require('../utils');
 
 // TODO: check CouchDB's replication id generation
 // Generate a unique id particular to this replication
@@ -11514,173 +11218,7 @@ function genReplicationId(src, target, opts) {
   });
 }
 
-module.exports = genReplicationId;
-},{"../utils":79}],72:[function(require,module,exports){
-'use strict';
-
-var utils = require('./../utils');
-var clone = utils.clone;
-var Promise = utils.Promise;
-
-var MAX_SIMULTANEOUS_REVS = 50;
-
-function isGenOne(rev) {
-  return /^1-/.test(rev);
-}
-
-//
-// Fetch all the documents from the src as described in the "diffs",
-// which is a mapping of docs IDs to revisions. If the state ever
-// changes to "cancelled", then the returned promise will be rejected.
-// Else it will be resolved with a list of fetched documents.
-//
-function getDocs(src, diffs, state) {
-  diffs = clone(diffs); // we do not need to modify this
-
-  var resultDocs = [];
-
-  function fetchMissingRevs(id, missingRevs) {
-    var opts = {
-      revs: true,
-      open_revs: missingRevs,
-      attachments: true
-    };
-    return src.get(id, opts).then(function (docs) {
-      if (state.cancelled) {
-        throw new Error('cancelled');
-      }
-      docs.forEach(function (doc) {
-        if (doc.ok) {
-          resultDocs.push(doc.ok);
-        }
-      });
-    });
-  }
-
-  function processDiffDoc(id) {
-    var missing = diffs[id].missing;
-    // avoid url too long error by batching
-    var missingBatches = [];
-    for (var i = 0; i < missing.length; i += MAX_SIMULTANEOUS_REVS) {
-      var missingBatch = missing.slice(i,
-        Math.min(missing.length, i + MAX_SIMULTANEOUS_REVS));
-      missingBatches.push(missingBatch);
-    }
-
-    return Promise.all(missingBatches.map(function (missingRevs) {
-      return fetchMissingRevs(id, missingRevs);
-    }));
-  }
-
-  function getAllDocs() {
-    var diffKeys = Object.keys(diffs);
-    return Promise.all(diffKeys.map(processDiffDoc));
-  }
-
-  function hasAttachments(doc) {
-    return doc._attachments && Object.keys(doc._attachments).length > 0;
-  }
-
-  function fetchRevisionOneDocs(ids) {
-    // Optimization: fetch gen-1 docs and attachments in
-    // a single request using _all_docs
-    return src.allDocs({
-      keys: ids,
-      include_docs: true
-    }).then(function (res) {
-      if (state.cancelled) {
-        throw new Error('cancelled');
-      }
-      res.rows.forEach(function (row) {
-        if (row.deleted || !row.doc || !isGenOne(row.value.rev) ||
-            hasAttachments(row.doc)) {
-          // if any of these conditions apply, we need to fetch using get()
-          return;
-        }
-
-        // the doc we got back from allDocs() is sufficient
-        resultDocs.push(row.doc);
-        delete diffs[row.id];
-      });
-    });
-  }
-
-  function getRevisionOneDocs() {
-    // filter out the generation 1 docs and get them
-    // leaving the non-generation one docs to be got otherwise
-    var ids = Object.keys(diffs).filter(function (id) {
-      var missing = diffs[id].missing;
-      return missing.length === 1 && isGenOne(missing[0]);
-    });
-    if (ids.length > 0) {
-      return fetchRevisionOneDocs(ids);
-    }
-  }
-
-  function returnDocs() {
-    return resultDocs;
-  }
-
-  return Promise.resolve()
-    .then(getRevisionOneDocs)
-    .then(getAllDocs)
-    .then(returnDocs);
-}
-
-module.exports = getDocs;
-},{"./../utils":79}],73:[function(require,module,exports){
-'use strict';
-
-var utils = require('../utils');
-var replicate = require('./replicate');
-var Replication = require('./replication');
-
-function toPouch(db, opts) {
-  var PouchConstructor = opts.PouchConstructor;
-  if (typeof db === 'string') {
-    return new PouchConstructor(db, opts);
-  } else {
-    return db;
-  }
-}
-
-function replicateWrapper(src, target, opts, callback) {
-  if (typeof opts === 'function') {
-    callback = opts;
-    opts = {};
-  }
-  if (typeof opts === 'undefined') {
-    opts = {};
-  }
-  if (!opts.complete) {
-    opts.complete = callback || function () {};
-  }
-  opts = utils.clone(opts);
-  opts.continuous = opts.continuous || opts.live;
-  opts.retry = ('retry' in opts) ? opts.retry : false;
-  /*jshint validthis:true */
-  opts.PouchConstructor = opts.PouchConstructor || this;
-  var replicateRet = new Replication(opts);
-  var srcPouch = toPouch(src, opts);
-  var targetPouch = toPouch(target, opts);
-  replicate(srcPouch, targetPouch, opts, replicateRet);
-  return replicateRet;
-}
-
-module.exports = {
-  replicate : replicateWrapper,
-  toPouch: toPouch
-};
-},{"../utils":79,"./replicate":74,"./replication":75}],74:[function(require,module,exports){
-'use strict';
-
-var utils = require('./../utils');
-var Checkpointer = require('./checkpointer');
-var backOff = require('./backoff');
-var genReplicationId = require('./gen-replication-id');
-var getDocs = require('./get-docs');
-
-function replicate(src, target, opts, returnValue, result) {
+function replicate(repId, src, target, opts, returnValue, result) {
   var batches = [];               // list of batches to be processed
   var currentBatch;               // the batch currently being processed
   var pendingBatch = {
@@ -11700,8 +11238,7 @@ function replicate(src, target, opts, returnValue, result) {
   var state = {
     cancelled: false
   };
-  var repId;
-  var checkpointer;
+  var checkpointer = new Checkpointer(src, target, repId, state);
   var allErrors = [];
   var changedDocs = [];
 
@@ -11716,16 +11253,6 @@ function replicate(src, target, opts, returnValue, result) {
 
   var changesOpts = {};
   returnValue.ready(src, target);
-
-  function initCheckpointer() {
-    if (checkpointer) {
-      return utils.Promise.resolve();
-    }
-    return genReplicationId(src, target, opts).then(function (res) {
-      repId = res;
-      checkpointer = new Checkpointer(src, target, repId, state);
-    });
-  }
 
   function writeDocs() {
     if (currentBatch.docs.length === 0) {
@@ -11774,6 +11301,82 @@ function replicate(src, target, opts, returnValue, result) {
     });
   }
 
+  function processDiffDoc(id) {
+    var diffs = currentBatch.diffs;
+    var allMissing = diffs[id].missing;
+    // avoid url too long error by batching
+    var missingBatches = [];
+    for (var i = 0; i < allMissing.length; i += MAX_SIMULTANEOUS_REVS) {
+      missingBatches.push(allMissing.slice(i, Math.min(allMissing.length,
+        i + MAX_SIMULTANEOUS_REVS)));
+    }
+
+    return utils.Promise.all(missingBatches.map(function (missing) {
+      var opts = {
+        revs: true,
+        open_revs: missing,
+        attachments: true
+      };
+      return src.get(id, opts).then(function (docs) {
+        docs.forEach(function (doc) {
+          if (state.cancelled) {
+            return completeReplication();
+          }
+          if (doc.ok) {
+            result.docs_read++;
+            currentBatch.pendingRevs++;
+            currentBatch.docs.push(doc.ok);
+          }
+        });
+        delete diffs[id];
+      });
+    }));
+  }
+
+  function getAllDocs() {
+    var diffKeys = Object.keys(currentBatch.diffs);
+    return utils.Promise.all(diffKeys.map(processDiffDoc));
+  }
+
+
+  function getRevisionOneDocs() {
+    // filter out the generation 1 docs and get them
+    // leaving the non-generation one docs to be got otherwise
+    var ids = Object.keys(currentBatch.diffs).filter(function (id) {
+      var missing = currentBatch.diffs[id].missing;
+      return missing.length === 1 && missing[0].slice(0, 2) === '1-';
+    });
+    if (!ids.length) { // nothing to fetch
+      return utils.Promise.resolve();
+    }
+    return src.allDocs({
+      keys: ids,
+      include_docs: true
+    }).then(function (res) {
+      if (state.cancelled) {
+        completeReplication();
+        throw (new Error('cancelled'));
+      }
+      res.rows.forEach(function (row) {
+        if (row.doc && !row.deleted &&
+          row.value.rev.slice(0, 2) === '1-' && (
+            !row.doc._attachments ||
+            Object.keys(row.doc._attachments).length === 0
+          )
+        ) {
+          result.docs_read++;
+          currentBatch.pendingRevs++;
+          currentBatch.docs.push(row.doc);
+          delete currentBatch.diffs[row.id];
+        }
+      });
+    });
+  }
+
+  function getDocs() {
+    return getRevisionOneDocs().then(getAllDocs);
+  }
+
   function finishBatch() {
     writingCheckpoint = true;
     return checkpointer.writeCheckpoint(currentBatch.seq).then(function () {
@@ -11813,16 +11416,7 @@ function replicate(src, target, opts, returnValue, result) {
       }
       // currentBatch.diffs elements are deleted as the documents are written
       currentBatch.diffs = diffs;
-    });
-  }
-
-  function getBatchDocs() {
-    return getDocs(src, currentBatch.diffs, state).then(function (docs) {
-      docs.forEach(function (doc) {
-        delete currentBatch.diffs[doc._id];
-        result.docs_read++;
-        currentBatch.docs.push(doc);
-      });
+      currentBatch.pendingRevs = 0;
     });
   }
 
@@ -11836,7 +11430,7 @@ function replicate(src, target, opts, returnValue, result) {
     }
     currentBatch = batches.shift();
     getDiffs()
-      .then(getBatchDocs)
+      .then(getDocs)
       .then(writeDocs)
       .then(finishBatch)
       .then(startNextBatch)
@@ -11924,9 +11518,7 @@ function replicate(src, target, opts, returnValue, result) {
         error.other_errors = allErrors;
       }
       error.result = result;
-      backOff(opts, returnValue, error, function () {
-        replicate(src, target, opts, returnValue);
-      });
+      backOff(repId, src, target, opts, returnValue, result, error);
     } else {
       result.errors = allErrors;
       returnValue.emit('complete', result);
@@ -11942,6 +11534,13 @@ function replicate(src, target, opts, returnValue, result) {
     var filter = utils.filterChange(opts)(change);
     if (!filter) {
       return;
+    }
+    if (
+      pendingBatch.changes.length === 0 &&
+      batches.length === 0 &&
+      !currentBatch
+    ) {
+      returnValue.emit('outofdate', result);
     }
     pendingBatch.seq = change.seq;
     pendingBatch.changes.push(change);
@@ -11986,7 +11585,7 @@ function replicate(src, target, opts, returnValue, result) {
       !changesPending &&
       !changesCompleted &&
       batches.length < batches_limit
-      )) {
+    )) {
       return;
     }
     changesPending = true;
@@ -11996,59 +11595,41 @@ function replicate(src, target, opts, returnValue, result) {
     function removeListener() {
       returnValue.removeListener('cancel', abortChanges);
     }
-
-    if (returnValue._changes) { // remove old changes() and listeners
-      returnValue.removeListener('cancel', returnValue._abortChanges);
-      returnValue._changes.cancel();
-    }
     returnValue.once('cancel', abortChanges);
-
     var changes = src.changes(changesOpts)
-      .on('change', onChange);
+    .on('change', onChange);
     changes.then(removeListener, removeListener);
     changes.then(onChangesComplete)
-      .catch(onChangesError);
-
-    if (opts.retry) {
-      // save for later so we can cancel if necessary
-      returnValue._changes = changes;
-      returnValue._abortChanges = abortChanges;
-    }
+    .catch(onChangesError);
   }
 
 
   function startChanges() {
-    initCheckpointer().then(function () {
-      if (state.cancelled) {
-        completeReplication();
-        return;
+    checkpointer.getCheckpoint().then(function (checkpoint) {
+      last_seq = checkpoint;
+      changesOpts = {
+        since: last_seq,
+        limit: batch_size,
+        batch_size: batch_size,
+        style: 'all_docs',
+        doc_ids: doc_ids,
+        returnDocs: true // required so we know when we're done
+      };
+      if (opts.filter) {
+        if (typeof opts.filter !== 'string') {
+          // required for the client-side filter in onChange
+          changesOpts.include_docs = true;
+        } else { // ddoc filter
+          changesOpts.filter = opts.filter;
+        }
       }
-      return checkpointer.getCheckpoint().then(function (checkpoint) {
-        last_seq = checkpoint;
-        changesOpts = {
-          since: last_seq,
-          limit: batch_size,
-          batch_size: batch_size,
-          style: 'all_docs',
-          doc_ids: doc_ids,
-          returnDocs: true // required so we know when we're done
-        };
-        if (opts.filter) {
-          if (typeof opts.filter !== 'string') {
-            // required for the client-side filter in onChange
-            changesOpts.include_docs = true;
-          } else { // ddoc filter
-            changesOpts.filter = opts.filter;
-          }
-        }
-        if (opts.query_params) {
-          changesOpts.query_params = opts.query_params;
-        }
-        if (opts.view) {
-          changesOpts.view = opts.view;
-        }
-        getChanges();
-      });
+      if (opts.query_params) {
+        changesOpts.query_params = opts.query_params;
+      }
+      if (opts.view) {
+        changesOpts.view = opts.view;
+      }
+      getChanges();
     }).catch(function (err) {
       abortReplication('getCheckpoint rejected with ', err);
     });
@@ -12059,29 +11640,24 @@ function replicate(src, target, opts, returnValue, result) {
     return;
   }
 
-  if (!returnValue._addedListeners) {
-    returnValue.once('cancel', completeReplication);
+  returnValue.once('cancel', completeReplication);
 
-    if (typeof opts.onChange === 'function') {
-      returnValue.on('change', opts.onChange);
-    }
+  if (typeof opts.onChange === 'function') {
+    returnValue.on('change', opts.onChange);
+  }
 
-    if (typeof opts.complete === 'function') {
-      returnValue.once('error', opts.complete);
-      returnValue.once('complete', function (result) {
-        opts.complete(null, result);
-      });
-    }
-    returnValue._addedListeners = true;
+  if (typeof opts.complete === 'function') {
+    returnValue.once('error', opts.complete);
+    returnValue.once('complete', function (result) {
+      opts.complete(null, result);
+    });
   }
 
   if (typeof opts.since === 'undefined') {
     startChanges();
   } else {
-    initCheckpointer().then(function () {
-      writingCheckpoint = true;
-      return checkpointer.writeCheckpoint(opts.since);
-    }).then(function () {
+    writingCheckpoint = true;
+    checkpointer.writeCheckpoint(opts.since).then(function () {
       writingCheckpoint = false;
       if (state.cancelled) {
         completeReplication();
@@ -12097,64 +11673,51 @@ function replicate(src, target, opts, returnValue, result) {
   }
 }
 
-module.exports = replicate;
-},{"./../utils":79,"./backoff":69,"./checkpointer":70,"./gen-replication-id":71,"./get-docs":72}],75:[function(require,module,exports){
-'use strict';
-
-var utils = require('./../utils');
-var EE = require('events').EventEmitter;
-var Promise = utils.Promise;
-
-// We create a basic promise so the caller can cancel the replication possibly
-// before we have actually started listening to changes etc
-utils.inherits(Replication, EE);
-function Replication() {
-  EE.call(this);
-  this.cancelled = false;
-  this.state = 'pending';
-  var self = this;
-  var promise = new Promise(function (fulfill, reject) {
-    self.once('complete', fulfill);
-    self.once('error', reject);
-  });
-  self.then = function (resolve, reject) {
-    return promise.then(resolve, reject);
-  };
-  self.catch = function (reject) {
-    return promise.catch(reject);
-  };
-  // As we allow error handling via "error" event as well,
-  // put a stub in here so that rejecting never throws UnhandledError.
-  self.catch(function () {});
+exports.toPouch = toPouch;
+function toPouch(db, opts) {
+  var PouchConstructor = opts.PouchConstructor;
+  if (typeof db === 'string') {
+    return new PouchConstructor(db, opts);
+  } else if (db.then) {
+    return db;
+  } else {
+    return utils.Promise.resolve(db);
+  }
 }
 
-Replication.prototype.cancel = function () {
-  this.cancelled = true;
-  this.state = 'cancelled';
-  this.emit('cancel');
-};
 
-Replication.prototype.ready = function (src, target) {
-  var self = this;
-  if (self._readyCalled) {
-    return;
+exports.replicate = replicateWrapper;
+function replicateWrapper(src, target, opts, callback) {
+  if (typeof opts === 'function') {
+    callback = opts;
+    opts = {};
   }
-  self._readyCalled = true;
+  if (typeof opts === 'undefined') {
+    opts = {};
+  }
+  if (!opts.complete) {
+    opts.complete = callback || function () {};
+  }
+  opts = utils.clone(opts);
+  opts.continuous = opts.continuous || opts.live;
+  opts.retry = ('retry' in opts) ? opts.retry : RETRY_DEFAULT;
+  /*jshint validthis:true */
+  opts.PouchConstructor = opts.PouchConstructor || this;
+  var replicateRet = new Replication(opts);
+  toPouch(src, opts).then(function (src) {
+    return toPouch(target, opts).then(function (target) {
+      return genReplicationId(src, target, opts).then(function (repId) {
+        replicate(repId, src, target, opts, replicateRet);
+      });
+    });
+  }).catch(function (err) {
+    replicateRet.emit('error', err);
+    opts.complete(err);
+  });
+  return replicateRet;
+}
 
-  function onDestroy() {
-    self.cancel();
-  }
-  src.once('destroyed', onDestroy);
-  target.once('destroyed', onDestroy);
-  function cleanup() {
-    src.removeListener('destroyed', onDestroy);
-    target.removeListener('destroyed', onDestroy);
-  }
-  self.once('complete', cleanup);
-};
-
-module.exports = Replication;
-},{"./../utils":79,"events":10}],76:[function(require,module,exports){
+},{"./checkpointer":44,"./utils":67,"events":10}],64:[function(require,module,exports){
 "use strict";
 
 var PouchDB = require("./constructor");
@@ -12302,7 +11865,7 @@ PouchDB.defaults = function (defaultOpts) {
   eventEmitterMethods.forEach(function (method) {
     PouchAlt[method] = eventEmitter[method].bind(eventEmitter);
   });
-  PouchAlt.setMaxListeners(10);
+  PouchAlt.setMaxListeners(0);
 
   PouchAlt.preferredAdapters = PouchDB.preferredAdapters.slice();
   Object.keys(PouchDB).forEach(function (key) {
@@ -12316,7 +11879,7 @@ PouchDB.defaults = function (defaultOpts) {
 
 module.exports = PouchDB;
 
-},{"./constructor":44,"./utils":79,"events":10}],77:[function(require,module,exports){
+},{"./constructor":45,"./utils":67,"events":10}],65:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -12502,7 +12065,7 @@ Sync.prototype.cancel = function () {
   }
 };
 
-},{"./replicate":73,"./utils":79,"events":10}],78:[function(require,module,exports){
+},{"./replicate":63,"./utils":67,"events":10}],66:[function(require,module,exports){
 'use strict';
 
 module.exports = TaskQueue;
@@ -12572,16 +12135,17 @@ TaskQueue.prototype.addTask = function (name, parameters) {
   }
 };
 
-},{}],79:[function(require,module,exports){
+},{}],67:[function(require,module,exports){
 (function (process){
 /*jshint strict: false */
 /*global chrome */
 var merge = require('./merge');
 exports.extend = require('pouchdb-extend');
 exports.ajax = require('./deps/ajax');
-exports.createBlob = require('./deps/binary/blob');
+exports.createBlob = require('./deps/blob');
 exports.uuid = require('./deps/uuid');
 exports.getArguments = require('argsarray');
+var buffer = require('./deps/buffer');
 var errors = require('./deps/errors');
 var EventEmitter = require('events').EventEmitter;
 var collections = require('pouchdb-collections');
@@ -12591,20 +12155,6 @@ var parseDoc = require('./deps/parse-doc');
 
 var Promise = require('./deps/promise');
 exports.Promise = Promise;
-
-var base64 = require('./deps/binary/base64');
-
-// TODO: don't export these
-exports.atob = base64.atob;
-exports.btoa = base64.btoa;
-
-var binaryStringToBlob = require('./deps/binary/binaryStringToBlob');
-var arrayBufferToBinaryString =
-  require('./deps/binary/arrayBufferToBinaryString');
-var readAsArrayBuffer = require('./deps/binary/readAsArrayBuffer');
-
-// TODO: only used by the integration tests
-exports.binaryStringToBlob = binaryStringToBlob;
 
 exports.lastIndexOf = function (str, char) {
   for (var i = str.length - 1; i >= 0; i--) {
@@ -12740,7 +12290,7 @@ function Changes() {
   var self = this;
   EventEmitter.call(this);
   this.isChrome = isChromeApp();
-  this._listeners = {};
+  this.listeners = {};
   this.hasLocal = false;
   if (!this.isChrome) {
     this.hasLocal = exports.hasLocalStorage();
@@ -12767,13 +12317,13 @@ function Changes() {
 
 }
 Changes.prototype.addListener = function (dbName, id, db, opts) {
-  if (this._listeners[id]) {
+  if (this.listeners[id]) {
     return;
   }
   var self = this;
   var inprogress = false;
   function eventFunction() {
-    if (!self._listeners[id]) {
+    if (!self.listeners[id]) {
       return;
     }
     if (inprogress) {
@@ -12809,16 +12359,16 @@ Changes.prototype.addListener = function (dbName, id, db, opts) {
       inprogress = false;
     });
   }
-  this._listeners[id] = eventFunction;
+  this.listeners[id] = eventFunction;
   this.on(dbName, eventFunction);
 };
 
 Changes.prototype.removeListener = function (dbName, id) {
-  if (!(id in this._listeners)) {
+  if (!(id in this.listeners)) {
     return;
   }
   EventEmitter.prototype.removeListener.call(this, dbName,
-    this._listeners[id]);
+    this.listeners[id]);
 };
 
 
@@ -12835,6 +12385,77 @@ Changes.prototype.notifyLocalWindows = function (dbName) {
 Changes.prototype.notify = function (dbName) {
   this.emit(dbName);
   this.notifyLocalWindows(dbName);
+};
+
+if (typeof atob === 'function') {
+  exports.atob = function (str) {
+    return atob(str);
+  };
+} else {
+  exports.atob = function (str) {
+    var base64 = new buffer(str, 'base64');
+    // Node.js will just skip the characters it can't encode instead of
+    // throwing and exception
+    if (base64.toString('base64') !== str) {
+      throw ("Cannot base64 encode full string");
+    }
+    return base64.toString('binary');
+  };
+}
+
+if (typeof btoa === 'function') {
+  exports.btoa = function (str) {
+    return btoa(str);
+  };
+} else {
+  exports.btoa = function (str) {
+    return new buffer(str, 'binary').toString('base64');
+  };
+}
+
+// From http://stackoverflow.com/questions/14967647/ (continues on next line)
+// encode-decode-image-with-base64-breaks-image (2013-04-21)
+exports.fixBinary = function (bin) {
+  if (!process.browser) {
+    // don't need to do this in Node
+    return bin;
+  }
+
+  var length = bin.length;
+  var buf = new ArrayBuffer(length);
+  var arr = new Uint8Array(buf);
+  for (var i = 0; i < length; i++) {
+    arr[i] = bin.charCodeAt(i);
+  }
+  return buf;
+};
+
+// shim for browsers that don't support it
+exports.readAsBinaryString = function (blob, callback) {
+  var reader = new FileReader();
+  var hasBinaryString = typeof reader.readAsBinaryString === 'function';
+  reader.onloadend = function (e) {
+    var result = e.target.result || '';
+    if (hasBinaryString) {
+      return callback(result);
+    }
+    callback(exports.arrayBufferToBinaryString(result));
+  };
+  if (hasBinaryString) {
+    reader.readAsBinaryString(blob);
+  } else {
+    reader.readAsArrayBuffer(blob);
+  }
+};
+
+// simplified API. universal browser support is assumed
+exports.readAsArrayBuffer = function (blob, callback) {
+  var reader = new FileReader();
+  reader.onloadend = function (e) {
+    var result = e.target.result || new ArrayBuffer(0);
+    callback(result);
+  };
+  reader.readAsArrayBuffer(blob);
 };
 
 exports.once = function (fun) {
@@ -12945,6 +12566,19 @@ exports.adapterFun = function (name, callback) {
     }
     return callback.apply(this, args);
   }));
+};
+
+//Can't find original post, but this is close
+//http://stackoverflow.com/questions/6965107/ (continues on next line)
+//converting-between-strings-and-arraybuffers
+exports.arrayBufferToBinaryString = function (buffer) {
+  var binary = "";
+  var bytes = new Uint8Array(buffer);
+  var length = bytes.byteLength;
+  for (var i = 0; i < length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return binary;
 };
 
 exports.cancellableFun = function (fun, self, opts) {
@@ -13197,7 +12831,7 @@ exports.preprocessAttachments = function preprocessAttachments(
 
   function parseBase64(data) {
     try {
-      return base64.atob(data);
+      return exports.atob(data);
     } catch (e) {
       var err = errors.error(errors.BAD_ARG,
                              'Attachments need to be base64 encoded');
@@ -13219,9 +12853,10 @@ exports.preprocessAttachments = function preprocessAttachments(
 
       att.length = asBinary.length;
       if (blobType === 'blob') {
-        att.data = binaryStringToBlob(asBinary, att.content_type);
+        att.data = exports.createBlob([exports.fixBinary(asBinary)],
+          {type: att.content_type});
       } else if (blobType === 'base64') {
-        att.data = base64.btoa(asBinary);
+        att.data = exports.btoa(asBinary);
       } else { // binary
         att.data = asBinary;
       }
@@ -13230,11 +12865,11 @@ exports.preprocessAttachments = function preprocessAttachments(
         callback();
       });
     } else { // input is a blob
-      readAsArrayBuffer(att.data, function (buff) {
+      exports.readAsArrayBuffer(att.data, function (buff) {
         if (blobType === 'binary') {
-          att.data = arrayBufferToBinaryString(buff);
+          att.data = exports.arrayBufferToBinaryString(buff);
         } else if (blobType === 'base64') {
-          att.data = base64.btoa(arrayBufferToBinaryString(buff));
+          att.data = exports.btoa(exports.arrayBufferToBinaryString(buff));
         }
         exports.MD5(buff).then(function (result) {
           att.digest = 'md5-' + result;
@@ -13317,10 +12952,10 @@ exports.safeJsonStringify = function safeJsonStringify(json) {
 };
 
 }).call(this,require('_process'))
-},{"./deps/ajax":45,"./deps/binary/arrayBufferToBinaryString":46,"./deps/binary/base64":47,"./deps/binary/binaryStringToBlob":49,"./deps/binary/blob":50,"./deps/binary/readAsArrayBuffer":51,"./deps/errors":54,"./deps/explain404":55,"./deps/md5":56,"./deps/parse-doc":58,"./deps/parse-uri":60,"./deps/promise":61,"./deps/uuid":64,"./merge":68,"_process":11,"argsarray":81,"debug":82,"events":10,"inherits":85,"pouchdb-collections":102,"pouchdb-extend":103,"vuvuzela":112}],80:[function(require,module,exports){
-module.exports = "3.6.0";
+},{"./deps/ajax":46,"./deps/blob":47,"./deps/buffer":48,"./deps/errors":49,"./deps/explain404":50,"./deps/md5":51,"./deps/parse-doc":52,"./deps/parse-uri":54,"./deps/promise":55,"./deps/uuid":58,"./merge":62,"_process":11,"argsarray":69,"debug":70,"events":10,"inherits":73,"pouchdb-collections":94,"pouchdb-extend":95,"vuvuzela":104}],68:[function(require,module,exports){
+module.exports = "3.5.0";
 
-},{}],81:[function(require,module,exports){
+},{}],69:[function(require,module,exports){
 'use strict';
 
 module.exports = argsArray;
@@ -13340,7 +12975,7 @@ function argsArray(fun) {
     }
   };
 }
-},{}],82:[function(require,module,exports){
+},{}],70:[function(require,module,exports){
 
 /**
  * This is the web browser implementation of `debug()`.
@@ -13510,7 +13145,7 @@ function localstorage(){
   } catch (e) {}
 }
 
-},{"./debug":83}],83:[function(require,module,exports){
+},{"./debug":71}],71:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -13709,7 +13344,7 @@ function coerce(val) {
   return val;
 }
 
-},{"ms":84}],84:[function(require,module,exports){
+},{"ms":72}],72:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -13836,7 +13471,7 @@ function plural(ms, n, name) {
   return Math.ceil(ms / n) + ' ' + name + 's';
 }
 
-},{}],85:[function(require,module,exports){
+},{}],73:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -13861,13 +13496,13 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],86:[function(require,module,exports){
+},{}],74:[function(require,module,exports){
 'use strict';
 
 module.exports = INTERNAL;
 
 function INTERNAL() {}
-},{}],87:[function(require,module,exports){
+},{}],75:[function(require,module,exports){
 'use strict';
 var Promise = require('./promise');
 var reject = require('./reject');
@@ -13911,7 +13546,7 @@ function all(iterable) {
     }
   }
 }
-},{"./INTERNAL":86,"./handlers":88,"./promise":90,"./reject":93,"./resolve":94}],88:[function(require,module,exports){
+},{"./INTERNAL":74,"./handlers":76,"./promise":78,"./reject":81,"./resolve":82}],76:[function(require,module,exports){
 'use strict';
 var tryCatch = require('./tryCatch');
 var resolveThenable = require('./resolveThenable');
@@ -13957,16 +13592,14 @@ function getThen(obj) {
     };
   }
 }
-
-},{"./resolveThenable":95,"./states":96,"./tryCatch":97}],89:[function(require,module,exports){
+},{"./resolveThenable":83,"./states":84,"./tryCatch":85}],77:[function(require,module,exports){
 module.exports = exports = require('./promise');
 
 exports.resolve = require('./resolve');
 exports.reject = require('./reject');
 exports.all = require('./all');
 exports.race = require('./race');
-
-},{"./all":87,"./promise":90,"./race":92,"./reject":93,"./resolve":94}],90:[function(require,module,exports){
+},{"./all":75,"./promise":78,"./race":80,"./reject":81,"./resolve":82}],78:[function(require,module,exports){
 'use strict';
 
 var unwrap = require('./unwrap');
@@ -14000,8 +13633,10 @@ Promise.prototype.then = function (onFulfilled, onRejected) {
     return this;
   }
   var promise = new Promise(INTERNAL);
+
+  
   if (this.state !== states.PENDING) {
-    var resolver = this.state === states.FULFILLED ? onFulfilled : onRejected;
+    var resolver = this.state === states.FULFILLED ? onFulfilled: onRejected;
     unwrap(promise, resolver, this.outcome);
   } else {
     this.queue.push(new QueueItem(promise, onFulfilled, onRejected));
@@ -14010,7 +13645,7 @@ Promise.prototype.then = function (onFulfilled, onRejected) {
   return promise;
 };
 
-},{"./INTERNAL":86,"./queueItem":91,"./resolveThenable":95,"./states":96,"./unwrap":98}],91:[function(require,module,exports){
+},{"./INTERNAL":74,"./queueItem":79,"./resolveThenable":83,"./states":84,"./unwrap":86}],79:[function(require,module,exports){
 'use strict';
 var handlers = require('./handlers');
 var unwrap = require('./unwrap');
@@ -14039,8 +13674,7 @@ QueueItem.prototype.callRejected = function (value) {
 QueueItem.prototype.otherCallRejected = function (value) {
   unwrap(this.promise, this.onRejected, value);
 };
-
-},{"./handlers":88,"./unwrap":98}],92:[function(require,module,exports){
+},{"./handlers":76,"./unwrap":86}],80:[function(require,module,exports){
 'use strict';
 var Promise = require('./promise');
 var reject = require('./reject');
@@ -14059,9 +13693,10 @@ function race(iterable) {
     return resolve([]);
   }
 
+  var resolved = 0;
   var i = -1;
   var promise = new Promise(INTERNAL);
-
+  
   while (++i < len) {
     resolver(iterable[i]);
   }
@@ -14080,8 +13715,7 @@ function race(iterable) {
     });
   }
 }
-
-},{"./INTERNAL":86,"./handlers":88,"./promise":90,"./reject":93,"./resolve":94}],93:[function(require,module,exports){
+},{"./INTERNAL":74,"./handlers":76,"./promise":78,"./reject":81,"./resolve":82}],81:[function(require,module,exports){
 'use strict';
 
 var Promise = require('./promise');
@@ -14093,7 +13727,7 @@ function reject(reason) {
 	var promise = new Promise(INTERNAL);
 	return handlers.reject(promise, reason);
 }
-},{"./INTERNAL":86,"./handlers":88,"./promise":90}],94:[function(require,module,exports){
+},{"./INTERNAL":74,"./handlers":76,"./promise":78}],82:[function(require,module,exports){
 'use strict';
 
 var Promise = require('./promise');
@@ -14128,7 +13762,7 @@ function resolve(value) {
       return EMPTYSTRING;
   }
 }
-},{"./INTERNAL":86,"./handlers":88,"./promise":90}],95:[function(require,module,exports){
+},{"./INTERNAL":74,"./handlers":76,"./promise":78}],83:[function(require,module,exports){
 'use strict';
 var handlers = require('./handlers');
 var tryCatch = require('./tryCatch');
@@ -14161,14 +13795,13 @@ function safelyResolveThenable(self, thenable) {
   }
 }
 exports.safely = safelyResolveThenable;
-},{"./handlers":88,"./tryCatch":97}],96:[function(require,module,exports){
+},{"./handlers":76,"./tryCatch":85}],84:[function(require,module,exports){
 // Lazy man's symbols for states
 
 exports.REJECTED = ['REJECTED'];
 exports.FULFILLED = ['FULFILLED'];
 exports.PENDING = ['PENDING'];
-
-},{}],97:[function(require,module,exports){
+},{}],85:[function(require,module,exports){
 'use strict';
 
 module.exports = tryCatch;
@@ -14184,7 +13817,7 @@ function tryCatch(func, value) {
   }
   return out;
 }
-},{}],98:[function(require,module,exports){
+},{}],86:[function(require,module,exports){
 'use strict';
 
 var immediate = require('immediate');
@@ -14206,80 +13839,149 @@ function unwrap(promise, func, value) {
     }
   });
 }
-},{"./handlers":88,"immediate":99}],99:[function(require,module,exports){
-(function (global){
+},{"./handlers":76,"immediate":87}],87:[function(require,module,exports){
 'use strict';
-var Mutation = global.MutationObserver || global.WebKitMutationObserver;
-
-var scheduleDrain;
-
-{
-  if (Mutation) {
-    var called = 0;
-    var observer = new Mutation(nextTick);
-    var element = global.document.createTextNode('');
-    observer.observe(element, {
-      characterData: true
-    });
-    scheduleDrain = function () {
-      element.data = (called = ++called % 2);
-    };
-  } else if (!global.setImmediate && typeof global.MessageChannel !== 'undefined') {
-    var channel = new global.MessageChannel();
-    channel.port1.onmessage = nextTick;
-    scheduleDrain = function () {
-      channel.port2.postMessage(0);
-    };
-  } else if ('document' in global && 'onreadystatechange' in global.document.createElement('script')) {
-    scheduleDrain = function () {
-
-      // Create a <script> element; its readystatechange event will be fired asynchronously once it is inserted
-      // into the document. Do so, thus queuing up the task. Remember to clean up once it's been called.
-      var scriptEl = global.document.createElement('script');
-      scriptEl.onreadystatechange = function () {
-        nextTick();
-
-        scriptEl.onreadystatechange = null;
-        scriptEl.parentNode.removeChild(scriptEl);
-        scriptEl = null;
-      };
-      global.document.documentElement.appendChild(scriptEl);
-    };
-  } else {
-    scheduleDrain = function () {
-      setTimeout(nextTick, 0);
-    };
-  }
+var types = [
+  require('./nextTick'),
+  require('./mutation.js'),
+  require('./messageChannel'),
+  require('./stateChange'),
+  require('./timeout')
+];
+var draining;
+var currentQueue;
+var queueIndex = -1;
+var queue = [];
+function cleanUpNextTick() {
+    draining = false;
+    if (currentQueue && currentQueue.length) {
+      queue = currentQueue.concat(queue);
+    } else {
+      queueIndex = -1;
+    }
+    if (queue.length) {
+      nextTick();
+    }
 }
 
-var draining;
-var queue = [];
 //named nextTick for less confusing stack traces
 function nextTick() {
   draining = true;
-  var i, oldQueue;
   var len = queue.length;
+  var timeout = setTimeout(cleanUpNextTick);
   while (len) {
-    oldQueue = queue;
+    currentQueue = queue;
     queue = [];
-    i = -1;
-    while (++i < len) {
-      oldQueue[i]();
+    while (++queueIndex < len) {
+      currentQueue[queueIndex]();
     }
+    queueIndex = -1;
     len = queue.length;
   }
+  queueIndex = -1;
   draining = false;
+  clearTimeout(timeout);
 }
-
+var scheduleDrain;
+var i = -1;
+var len = types.length;
+while (++ i < len) {
+  if (types[i] && types[i].test && types[i].test()) {
+    scheduleDrain = types[i].install(nextTick);
+    break;
+  }
+}
 module.exports = immediate;
 function immediate(task) {
   if (queue.push(task) === 1 && !draining) {
     scheduleDrain();
   }
 }
+},{"./messageChannel":88,"./mutation.js":89,"./nextTick":9,"./stateChange":90,"./timeout":91}],88:[function(require,module,exports){
+(function (global){
+'use strict';
 
+exports.test = function () {
+  if (global.setImmediate) {
+    // we can only get here in IE10
+    // which doesn't handel postMessage well
+    return false;
+  }
+  return typeof global.MessageChannel !== 'undefined';
+};
+
+exports.install = function (func) {
+  var channel = new global.MessageChannel();
+  channel.port1.onmessage = func;
+  return function () {
+    channel.port2.postMessage(0);
+  };
+};
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],100:[function(require,module,exports){
+},{}],89:[function(require,module,exports){
+(function (global){
+'use strict';
+//based off rsvp https://github.com/tildeio/rsvp.js
+//license https://github.com/tildeio/rsvp.js/blob/master/LICENSE
+//https://github.com/tildeio/rsvp.js/blob/master/lib/rsvp/asap.js
+
+var Mutation = global.MutationObserver || global.WebKitMutationObserver;
+
+exports.test = function () {
+  return Mutation;
+};
+
+exports.install = function (handle) {
+  var called = 0;
+  var observer = new Mutation(handle);
+  var element = global.document.createTextNode('');
+  observer.observe(element, {
+    characterData: true
+  });
+  return function () {
+    element.data = (called = ++called % 2);
+  };
+};
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{}],90:[function(require,module,exports){
+(function (global){
+'use strict';
+
+exports.test = function () {
+  return 'document' in global && 'onreadystatechange' in global.document.createElement('script');
+};
+
+exports.install = function (handle) {
+  return function () {
+
+    // Create a <script> element; its readystatechange event will be fired asynchronously once it is inserted
+    // into the document. Do so, thus queuing up the task. Remember to clean up once it's been called.
+    var scriptEl = global.document.createElement('script');
+    scriptEl.onreadystatechange = function () {
+      handle();
+
+      scriptEl.onreadystatechange = null;
+      scriptEl.parentNode.removeChild(scriptEl);
+      scriptEl = null;
+    };
+    global.document.documentElement.appendChild(scriptEl);
+
+    return handle;
+  };
+};
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{}],91:[function(require,module,exports){
+'use strict';
+exports.test = function () {
+  return true;
+};
+
+exports.install = function (t) {
+  return function () {
+    setTimeout(t, 0);
+  };
+};
+},{}],92:[function(require,module,exports){
 'use strict';
 
 var MIN_MAGNITUDE = -324; // verified by -Number.MIN_VALUE
@@ -14634,7 +14336,7 @@ function numToIndexableString(num) {
   return result;
 }
 
-},{"./utils":101}],101:[function(require,module,exports){
+},{"./utils":93}],93:[function(require,module,exports){
 'use strict';
 
 function pad(str, padWith, upToLength) {
@@ -14705,7 +14407,7 @@ exports.intToDecimalForm = function (int) {
 
   return result;
 };
-},{}],102:[function(require,module,exports){
+},{}],94:[function(require,module,exports){
 'use strict';
 exports.Map = LazyMap; // TODO: use ES6 map
 exports.Set = LazySet; // TODO: use ES6 set
@@ -14726,8 +14428,9 @@ LazyMap.prototype.get = function (key) {
   var mangled = this.mangle(key);
   if (mangled in this.store) {
     return this.store[mangled];
+  } else {
+    return void 0;
   }
-  return void 0;
 };
 LazyMap.prototype.set = function (key, value) {
   var mangled = this.mangle(key);
@@ -14747,13 +14450,13 @@ LazyMap.prototype.delete = function (key) {
   return false;
 };
 LazyMap.prototype.forEach = function (cb) {
-  var keys = Object.keys(this.store);
-  for (var i = 0, len = keys.length; i < len; i++) {
-    var key = keys[i];
-    var value = this.store[key];
-    key = this.unmangle(key);
+  var self = this;
+  var keys = Object.keys(self.store);
+  keys.forEach(function (key) {
+    var value = self.store[key];
+    key = self.unmangle(key);
     cb(value, key);
-  }
+  });
 };
 
 function LazySet(array) {
@@ -14776,7 +14479,7 @@ LazySet.prototype.delete = function (key) {
   return this.store.delete(key);
 };
 
-},{}],103:[function(require,module,exports){
+},{}],95:[function(require,module,exports){
 "use strict";
 
 // Extends method
@@ -14957,7 +14660,7 @@ module.exports = extend;
 
 
 
-},{}],104:[function(require,module,exports){
+},{}],96:[function(require,module,exports){
 'use strict';
 
 var upsert = require('./upsert');
@@ -15036,7 +14739,7 @@ module.exports = function (opts) {
   });
 };
 
-},{"./upsert":108,"./utils":109}],105:[function(require,module,exports){
+},{"./upsert":100,"./utils":101}],97:[function(require,module,exports){
 'use strict';
 
 module.exports = function (func, emit, sum, log, isArray, toJSON) {
@@ -15044,7 +14747,7 @@ module.exports = function (func, emit, sum, log, isArray, toJSON) {
   return eval("'use strict'; (" + func.replace(/;\s*$/, "") + ");");
 };
 
-},{}],106:[function(require,module,exports){
+},{}],98:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -15918,7 +15621,7 @@ function BuiltInError(message) {
 
 utils.inherits(BuiltInError, Error);
 }).call(this,require('_process'))
-},{"./create-view":104,"./evalfunc":105,"./taskqueue":107,"./utils":109,"_process":11,"pouchdb-collate":100}],107:[function(require,module,exports){
+},{"./create-view":96,"./evalfunc":97,"./taskqueue":99,"./utils":101,"_process":11,"pouchdb-collate":92}],99:[function(require,module,exports){
 'use strict';
 /*
  * Simple task queue to sequentialize actions. Assumes callbacks will eventually fire (once).
@@ -15943,7 +15646,7 @@ TaskQueue.prototype.finish = function () {
 
 module.exports = TaskQueue;
 
-},{"./utils":109}],108:[function(require,module,exports){
+},{"./utils":101}],100:[function(require,module,exports){
 'use strict';
 
 var upsert = require('pouchdb-upsert').upsert;
@@ -15951,7 +15654,7 @@ var upsert = require('pouchdb-upsert').upsert;
 module.exports = function (db, doc, diffFun) {
   return upsert.apply(db, [doc, diffFun]);
 };
-},{"pouchdb-upsert":110}],109:[function(require,module,exports){
+},{"pouchdb-upsert":102}],101:[function(require,module,exports){
 (function (process,global){
 'use strict';
 /* istanbul ignore if */
@@ -16060,7 +15763,7 @@ exports.MD5 = function (string) {
   }
 };
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"_process":11,"argsarray":81,"crypto":9,"inherits":85,"lie":89,"pouchdb-extend":103,"spark-md5":111}],110:[function(require,module,exports){
+},{"_process":11,"argsarray":69,"crypto":9,"inherits":73,"lie":77,"pouchdb-extend":95,"spark-md5":103}],102:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -16167,7 +15870,7 @@ if (typeof window !== 'undefined' && window.PouchDB) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"lie":89}],111:[function(require,module,exports){
+},{"lie":77}],103:[function(require,module,exports){
 /*jshint bitwise:false*/
 /*global unescape*/
 
@@ -16768,7 +16471,7 @@ if (typeof window !== 'undefined' && window.PouchDB) {
     return SparkMD5;
 }));
 
-},{}],112:[function(require,module,exports){
+},{}],104:[function(require,module,exports){
 'use strict';
 
 /**
@@ -16943,11 +16646,11 @@ exports.parse = function (str) {
   }
 };
 
-},{}],113:[function(require,module,exports){
+},{}],105:[function(require,module,exports){
 
 module.exports = require('./lib/');
 
-},{"./lib/":114}],114:[function(require,module,exports){
+},{"./lib/":106}],106:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -17036,7 +16739,7 @@ exports.connect = lookup;
 exports.Manager = require('./manager');
 exports.Socket = require('./socket');
 
-},{"./manager":115,"./socket":117,"./url":118,"debug":122,"socket.io-parser":156}],115:[function(require,module,exports){
+},{"./manager":107,"./socket":109,"./url":110,"debug":114,"socket.io-parser":150}],107:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -17541,7 +17244,7 @@ Manager.prototype.onreconnect = function(){
   this.emitAll('reconnect', attempt);
 };
 
-},{"./on":116,"./socket":117,"./url":118,"backo2":119,"component-bind":120,"component-emitter":121,"debug":122,"engine.io-client":123,"indexof":152,"object-component":153,"socket.io-parser":156}],116:[function(require,module,exports){
+},{"./on":108,"./socket":109,"./url":110,"backo2":111,"component-bind":112,"component-emitter":113,"debug":114,"engine.io-client":115,"indexof":146,"object-component":147,"socket.io-parser":150}],108:[function(require,module,exports){
 
 /**
  * Module exports.
@@ -17567,7 +17270,7 @@ function on(obj, ev, fn) {
   };
 }
 
-},{}],117:[function(require,module,exports){
+},{}],109:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -17954,7 +17657,7 @@ Socket.prototype.disconnect = function(){
   return this;
 };
 
-},{"./on":116,"component-bind":120,"component-emitter":121,"debug":122,"has-binary":150,"socket.io-parser":156,"to-array":160}],118:[function(require,module,exports){
+},{"./on":108,"component-bind":112,"component-emitter":113,"debug":114,"has-binary":144,"socket.io-parser":150,"to-array":154}],110:[function(require,module,exports){
 (function (global){
 
 /**
@@ -18031,7 +17734,7 @@ function url(uri, loc){
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"debug":122,"parseuri":154}],119:[function(require,module,exports){
+},{"debug":114,"parseuri":148}],111:[function(require,module,exports){
 
 /**
  * Expose `Backoff`.
@@ -18118,7 +17821,7 @@ Backoff.prototype.setJitter = function(jitter){
 };
 
 
-},{}],120:[function(require,module,exports){
+},{}],112:[function(require,module,exports){
 /**
  * Slice reference.
  */
@@ -18143,7 +17846,7 @@ module.exports = function(obj, fn){
   }
 };
 
-},{}],121:[function(require,module,exports){
+},{}],113:[function(require,module,exports){
 
 /**
  * Expose `Emitter`.
@@ -18309,7 +18012,7 @@ Emitter.prototype.hasListeners = function(event){
   return !! this.listeners(event).length;
 };
 
-},{}],122:[function(require,module,exports){
+},{}],114:[function(require,module,exports){
 
 /**
  * Expose `debug()` as the module.
@@ -18448,11 +18151,11 @@ try {
   if (window.localStorage) debug.enable(localStorage.debug);
 } catch(e){}
 
-},{}],123:[function(require,module,exports){
+},{}],115:[function(require,module,exports){
 
 module.exports =  require('./lib/');
 
-},{"./lib/":124}],124:[function(require,module,exports){
+},{"./lib/":116}],116:[function(require,module,exports){
 
 module.exports = require('./socket');
 
@@ -18464,7 +18167,7 @@ module.exports = require('./socket');
  */
 module.exports.parser = require('engine.io-parser');
 
-},{"./socket":125,"engine.io-parser":137}],125:[function(require,module,exports){
+},{"./socket":117,"engine.io-parser":129}],117:[function(require,module,exports){
 (function (global){
 /**
  * Module dependencies.
@@ -19173,7 +18876,7 @@ Socket.prototype.filterUpgrades = function (upgrades) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./transport":126,"./transports":127,"component-emitter":121,"debug":134,"engine.io-parser":137,"indexof":152,"parsejson":146,"parseqs":147,"parseuri":148}],126:[function(require,module,exports){
+},{"./transport":118,"./transports":119,"component-emitter":113,"debug":126,"engine.io-parser":129,"indexof":146,"parsejson":140,"parseqs":141,"parseuri":142}],118:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -19334,7 +19037,7 @@ Transport.prototype.onClose = function () {
   this.emit('close');
 };
 
-},{"component-emitter":121,"engine.io-parser":137}],127:[function(require,module,exports){
+},{"component-emitter":113,"engine.io-parser":129}],119:[function(require,module,exports){
 (function (global){
 /**
  * Module dependencies
@@ -19391,7 +19094,7 @@ function polling(opts){
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./polling-jsonp":128,"./polling-xhr":129,"./websocket":131,"xmlhttprequest":132}],128:[function(require,module,exports){
+},{"./polling-jsonp":120,"./polling-xhr":121,"./websocket":123,"xmlhttprequest":124}],120:[function(require,module,exports){
 (function (global){
 
 /**
@@ -19628,7 +19331,7 @@ JSONPPolling.prototype.doWrite = function (data, fn) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./polling":130,"component-inherit":133}],129:[function(require,module,exports){
+},{"./polling":122,"component-inherit":125}],121:[function(require,module,exports){
 (function (global){
 /**
  * Module requirements.
@@ -20016,7 +19719,7 @@ function unloadHandler() {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./polling":130,"component-emitter":121,"component-inherit":133,"debug":134,"xmlhttprequest":132}],130:[function(require,module,exports){
+},{"./polling":122,"component-emitter":113,"component-inherit":125,"debug":126,"xmlhttprequest":124}],122:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -20263,7 +19966,7 @@ Polling.prototype.uri = function(){
   return schema + '://' + this.hostname + port + this.path + query;
 };
 
-},{"../transport":126,"component-inherit":133,"debug":134,"engine.io-parser":137,"parseqs":147,"xmlhttprequest":132}],131:[function(require,module,exports){
+},{"../transport":118,"component-inherit":125,"debug":126,"engine.io-parser":129,"parseqs":141,"xmlhttprequest":124}],123:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -20503,7 +20206,7 @@ WS.prototype.check = function(){
   return !!WebSocket && !('__initialize' in WebSocket && this.name === WS.prototype.name);
 };
 
-},{"../transport":126,"component-inherit":133,"debug":134,"engine.io-parser":137,"parseqs":147,"ws":149}],132:[function(require,module,exports){
+},{"../transport":118,"component-inherit":125,"debug":126,"engine.io-parser":129,"parseqs":141,"ws":143}],124:[function(require,module,exports){
 // browser shim for xmlhttprequest module
 var hasCORS = require('has-cors');
 
@@ -20541,7 +20244,7 @@ module.exports = function(opts) {
   }
 }
 
-},{"has-cors":144}],133:[function(require,module,exports){
+},{"has-cors":138}],125:[function(require,module,exports){
 
 module.exports = function(a, b){
   var fn = function(){};
@@ -20549,7 +20252,7 @@ module.exports = function(a, b){
   a.prototype = new fn;
   a.prototype.constructor = a;
 };
-},{}],134:[function(require,module,exports){
+},{}],126:[function(require,module,exports){
 
 /**
  * This is the web browser implementation of `debug()`.
@@ -20698,9 +20401,9 @@ function load() {
 
 exports.enable(load());
 
-},{"./debug":135}],135:[function(require,module,exports){
-arguments[4][83][0].apply(exports,arguments)
-},{"dup":83,"ms":136}],136:[function(require,module,exports){
+},{"./debug":127}],127:[function(require,module,exports){
+arguments[4][71][0].apply(exports,arguments)
+},{"dup":71,"ms":128}],128:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -20813,7 +20516,7 @@ function plural(ms, n, name) {
   return Math.ceil(ms / n) + ' ' + name + 's';
 }
 
-},{}],137:[function(require,module,exports){
+},{}],129:[function(require,module,exports){
 (function (global){
 /**
  * Module dependencies.
@@ -21411,7 +21114,7 @@ exports.decodePayloadAsBinary = function (data, binaryType, callback) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./keys":138,"after":139,"arraybuffer.slice":140,"base64-arraybuffer":141,"blob":142,"has-binary":150,"utf8":143}],138:[function(require,module,exports){
+},{"./keys":130,"after":131,"arraybuffer.slice":132,"base64-arraybuffer":133,"blob":134,"has-binary":135,"utf8":137}],130:[function(require,module,exports){
 
 /**
  * Gets the keys for an object.
@@ -21432,7 +21135,7 @@ module.exports = Object.keys || function keys (obj){
   return arr;
 };
 
-},{}],139:[function(require,module,exports){
+},{}],131:[function(require,module,exports){
 module.exports = after
 
 function after(count, callback, err_cb) {
@@ -21462,7 +21165,7 @@ function after(count, callback, err_cb) {
 
 function noop() {}
 
-},{}],140:[function(require,module,exports){
+},{}],132:[function(require,module,exports){
 /**
  * An abstraction for slicing an arraybuffer even when
  * ArrayBuffer.prototype.slice is not supported
@@ -21493,7 +21196,7 @@ module.exports = function(arraybuffer, start, end) {
   return result.buffer;
 };
 
-},{}],141:[function(require,module,exports){
+},{}],133:[function(require,module,exports){
 /*
  * base64-arraybuffer
  * https://github.com/niklasvh/base64-arraybuffer
@@ -21554,7 +21257,7 @@ module.exports = function(arraybuffer, start, end) {
   };
 })("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/");
 
-},{}],142:[function(require,module,exports){
+},{}],134:[function(require,module,exports){
 (function (global){
 /**
  * Create a blob builder even when vendor prefixes exist
@@ -21571,22 +21274,8 @@ var BlobBuilder = global.BlobBuilder
 
 var blobSupported = (function() {
   try {
-    var a = new Blob(['hi']);
-    return a.size === 2;
-  } catch(e) {
-    return false;
-  }
-})();
-
-/**
- * Check if Blob constructor supports ArrayBufferViews
- * Fails in Safari 6, so we need to map to ArrayBuffers there.
- */
-
-var blobSupportsArrayBufferView = blobSupported && (function() {
-  try {
-    var b = new Blob([new Uint8Array([1,2])]);
-    return b.size === 2;
+    var b = new Blob(['hi']);
+    return b.size == 2;
   } catch(e) {
     return false;
   }
@@ -21600,52 +21289,19 @@ var blobBuilderSupported = BlobBuilder
   && BlobBuilder.prototype.append
   && BlobBuilder.prototype.getBlob;
 
-/**
- * Helper function that maps ArrayBufferViews to ArrayBuffers
- * Used by BlobBuilder constructor and old browsers that didn't
- * support it in the Blob constructor.
- */
-
-function mapArrayBufferViews(ary) {
-  for (var i = 0; i < ary.length; i++) {
-    var chunk = ary[i];
-    if (chunk.buffer instanceof ArrayBuffer) {
-      var buf = chunk.buffer;
-
-      // if this is a subarray, make a copy so we only
-      // include the subarray region from the underlying buffer
-      if (chunk.byteLength !== buf.byteLength) {
-        var copy = new Uint8Array(chunk.byteLength);
-        copy.set(new Uint8Array(buf, chunk.byteOffset, chunk.byteLength));
-        buf = copy.buffer;
-      }
-
-      ary[i] = buf;
-    }
-  }
-}
-
 function BlobBuilderConstructor(ary, options) {
   options = options || {};
 
   var bb = new BlobBuilder();
-  mapArrayBufferViews(ary);
-
   for (var i = 0; i < ary.length; i++) {
     bb.append(ary[i]);
   }
-
   return (options.type) ? bb.getBlob(options.type) : bb.getBlob();
-};
-
-function BlobConstructor(ary, options) {
-  mapArrayBufferViews(ary);
-  return new Blob(ary, options || {});
 };
 
 module.exports = (function() {
   if (blobSupported) {
-    return blobSupportsArrayBufferView ? global.Blob : BlobConstructor;
+    return global.Blob;
   } else if (blobBuilderSupported) {
     return BlobBuilderConstructor;
   } else {
@@ -21654,9 +21310,76 @@ module.exports = (function() {
 })();
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],143:[function(require,module,exports){
+},{}],135:[function(require,module,exports){
 (function (global){
-/*! https://mths.be/utf8js v2.0.0 by @mathias */
+
+/*
+ * Module requirements.
+ */
+
+var isArray = require('isarray');
+
+/**
+ * Module exports.
+ */
+
+module.exports = hasBinary;
+
+/**
+ * Checks for binary data.
+ *
+ * Right now only Buffer and ArrayBuffer are supported..
+ *
+ * @param {Object} anything
+ * @api public
+ */
+
+function hasBinary(data) {
+
+  function _hasBinary(obj) {
+    if (!obj) return false;
+
+    if ( (global.Buffer && global.Buffer.isBuffer(obj)) ||
+         (global.ArrayBuffer && obj instanceof ArrayBuffer) ||
+         (global.Blob && obj instanceof Blob) ||
+         (global.File && obj instanceof File)
+        ) {
+      return true;
+    }
+
+    if (isArray(obj)) {
+      for (var i = 0; i < obj.length; i++) {
+          if (_hasBinary(obj[i])) {
+              return true;
+          }
+      }
+    } else if (obj && 'object' == typeof obj) {
+      if (obj.toJSON) {
+        obj = obj.toJSON();
+      }
+
+      for (var key in obj) {
+        if (obj.hasOwnProperty(key) && _hasBinary(obj[key])) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  return _hasBinary(data);
+}
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{"isarray":136}],136:[function(require,module,exports){
+module.exports = Array.isArray || function (arr) {
+  return Object.prototype.toString.call(arr) == '[object Array]';
+};
+
+},{}],137:[function(require,module,exports){
+(function (global){
+/*! http://mths.be/utf8js v2.0.0 by @mathias */
 ;(function(root) {
 
 	// Detect free variables `exports`
@@ -21677,7 +21400,7 @@ module.exports = (function() {
 
 	var stringFromCharCode = String.fromCharCode;
 
-	// Taken from https://mths.be/punycode
+	// Taken from http://mths.be/punycode
 	function ucs2decode(string) {
 		var output = [];
 		var counter = 0;
@@ -21704,7 +21427,7 @@ module.exports = (function() {
 		return output;
 	}
 
-	// Taken from https://mths.be/punycode
+	// Taken from http://mths.be/punycode
 	function ucs2encode(array) {
 		var length = array.length;
 		var index = -1;
@@ -21722,14 +21445,6 @@ module.exports = (function() {
 		return output;
 	}
 
-	function checkScalarValue(codePoint) {
-		if (codePoint >= 0xD800 && codePoint <= 0xDFFF) {
-			throw Error(
-				'Lone surrogate U+' + codePoint.toString(16).toUpperCase() +
-				' is not a scalar value'
-			);
-		}
-	}
 	/*--------------------------------------------------------------------------*/
 
 	function createByte(codePoint, shift) {
@@ -21745,7 +21460,6 @@ module.exports = (function() {
 			symbol = stringFromCharCode(((codePoint >> 6) & 0x1F) | 0xC0);
 		}
 		else if ((codePoint & 0xFFFF0000) == 0) { // 3-byte sequence
-			checkScalarValue(codePoint);
 			symbol = stringFromCharCode(((codePoint >> 12) & 0x0F) | 0xE0);
 			symbol += createByte(codePoint, 6);
 		}
@@ -21760,6 +21474,11 @@ module.exports = (function() {
 
 	function utf8encode(string) {
 		var codePoints = ucs2decode(string);
+
+		// console.log(JSON.stringify(codePoints.map(function(x) {
+		// 	return 'U+' + x.toString(16).toUpperCase();
+		// })));
+
 		var length = codePoints.length;
 		var index = -1;
 		var codePoint;
@@ -21830,7 +21549,6 @@ module.exports = (function() {
 			byte3 = readContinuationByte();
 			codePoint = ((byte1 & 0x0F) << 12) | (byte2 << 6) | byte3;
 			if (codePoint >= 0x0800) {
-				checkScalarValue(codePoint);
 				return codePoint;
 			} else {
 				throw Error('Invalid continuation byte');
@@ -21902,7 +21620,7 @@ module.exports = (function() {
 }(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],144:[function(require,module,exports){
+},{}],138:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -21927,7 +21645,7 @@ try {
   module.exports = false;
 }
 
-},{"global":145}],145:[function(require,module,exports){
+},{"global":139}],139:[function(require,module,exports){
 
 /**
  * Returns `this`. Execute this without a "context" (i.e. without it being
@@ -21937,7 +21655,7 @@ try {
 
 module.exports = (function () { return this; })();
 
-},{}],146:[function(require,module,exports){
+},{}],140:[function(require,module,exports){
 (function (global){
 /**
  * JSON parse.
@@ -21972,7 +21690,7 @@ module.exports = function parsejson(data) {
   }
 };
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],147:[function(require,module,exports){
+},{}],141:[function(require,module,exports){
 /**
  * Compiles a querystring
  * Returns string representation of the object
@@ -22011,7 +21729,7 @@ exports.decode = function(qs){
   return qry;
 };
 
-},{}],148:[function(require,module,exports){
+},{}],142:[function(require,module,exports){
 /**
  * Parses an URI
  *
@@ -22052,7 +21770,7 @@ module.exports = function parseuri(str) {
     return uri;
 };
 
-},{}],149:[function(require,module,exports){
+},{}],143:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -22097,7 +21815,7 @@ function ws(uri, protocols, opts) {
 
 if (WebSocket) ws.prototype = WebSocket.prototype;
 
-},{}],150:[function(require,module,exports){
+},{}],144:[function(require,module,exports){
 (function (global){
 
 /*
@@ -22159,12 +21877,9 @@ function hasBinary(data) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"isarray":151}],151:[function(require,module,exports){
-module.exports = Array.isArray || function (arr) {
-  return Object.prototype.toString.call(arr) == '[object Array]';
-};
-
-},{}],152:[function(require,module,exports){
+},{"isarray":145}],145:[function(require,module,exports){
+arguments[4][136][0].apply(exports,arguments)
+},{"dup":136}],146:[function(require,module,exports){
 
 var indexOf = [].indexOf;
 
@@ -22175,7 +21890,7 @@ module.exports = function(arr, obj){
   }
   return -1;
 };
-},{}],153:[function(require,module,exports){
+},{}],147:[function(require,module,exports){
 
 /**
  * HOP ref.
@@ -22260,7 +21975,7 @@ exports.length = function(obj){
 exports.isEmpty = function(obj){
   return 0 == exports.length(obj);
 };
-},{}],154:[function(require,module,exports){
+},{}],148:[function(require,module,exports){
 /**
  * Parses an URI
  *
@@ -22287,7 +22002,7 @@ module.exports = function parseuri(str) {
   return uri;
 };
 
-},{}],155:[function(require,module,exports){
+},{}],149:[function(require,module,exports){
 (function (global){
 /*global Blob,File*/
 
@@ -22432,7 +22147,7 @@ exports.removeBlobs = function(data, callback) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./is-buffer":157,"isarray":158}],156:[function(require,module,exports){
+},{"./is-buffer":151,"isarray":152}],150:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -22834,7 +22549,7 @@ function error(data){
   };
 }
 
-},{"./binary":155,"./is-buffer":157,"component-emitter":121,"debug":122,"isarray":158,"json3":159}],157:[function(require,module,exports){
+},{"./binary":149,"./is-buffer":151,"component-emitter":113,"debug":114,"isarray":152,"json3":153}],151:[function(require,module,exports){
 (function (global){
 
 module.exports = isBuf;
@@ -22851,9 +22566,9 @@ function isBuf(obj) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],158:[function(require,module,exports){
-arguments[4][151][0].apply(exports,arguments)
-},{"dup":151}],159:[function(require,module,exports){
+},{}],152:[function(require,module,exports){
+arguments[4][136][0].apply(exports,arguments)
+},{"dup":136}],153:[function(require,module,exports){
 /*! JSON v3.2.6 | http://bestiejs.github.io/json3 | Copyright 2012-2013, Kit Cambridge | http://kit.mit-license.org */
 ;(function (window) {
   // Convenience aliases.
@@ -23716,7 +23431,7 @@ arguments[4][151][0].apply(exports,arguments)
   }
 }(this));
 
-},{}],160:[function(require,module,exports){
+},{}],154:[function(require,module,exports){
 module.exports = toArray
 
 function toArray(list, index) {
@@ -23731,7 +23446,7 @@ function toArray(list, index) {
     return array
 }
 
-},{}],161:[function(require,module,exports){
+},{}],155:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -23743,14 +23458,9 @@ var reduce = require('reduce');
  * Root reference for iframes.
  */
 
-var root;
-if (typeof window !== 'undefined') { // Browser window
-  root = window;
-} else if (typeof self !== 'undefined') { // Web Worker
-  root = self;
-} else { // Other environments
-  root = this;
-}
+var root = 'undefined' == typeof window
+  ? (this || self)
+  : window;
 
 /**
  * Noop.
@@ -24086,20 +23796,6 @@ Response.prototype.setHeaderProperties = function(header){
 };
 
 /**
- * Force given parser
- * 
- * Sets the body parser no matter type.
- * 
- * @param {Function}
- * @api public
- */
-
-Response.prototype.parse = function(fn){
-  this.parser = fn;
-  return this;
-};
-
-/**
  * Parse the given body `str`.
  *
  * Used for auto-parsing of bodies. Parsers
@@ -24111,7 +23807,7 @@ Response.prototype.parse = function(fn){
  */
 
 Response.prototype.parseBody = function(str){
-  var parse = this.parser || request.parse[this.type];
+  var parse = request.parse[this.type];
   return parse && str && (str.length || str instanceof Object)
     ? parse(str)
     : null;
@@ -24147,7 +23843,7 @@ Response.prototype.setStatusProperties = function(status){
   var type = status / 100 | 0;
 
   // status / class
-  this.status = this.statusCode = status;
+  this.status = status;
   this.statusType = type;
 
   // basics
@@ -24240,7 +23936,7 @@ function Request(method, url) {
     new_err.response = res;
     new_err.status = res.status;
 
-    self.callback(new_err, res);
+    self.callback(err || new_err, res);
   });
 }
 
@@ -24713,8 +24409,7 @@ Request.prototype.end = function(fn){
   // body
   if ('GET' != this.method && 'HEAD' != this.method && 'string' != typeof data && !isHost(data)) {
     // serialize stuff
-    var contentType = this.getHeader('Content-Type');
-    var serialize = request.serialize[contentType ? contentType.split(';')[0] : ''];
+    var serialize = request.serialize[this.getHeader('Content-Type')];
     if (serialize) data = serialize(data);
   }
 
@@ -24729,20 +24424,6 @@ Request.prototype.end = function(fn){
   xhr.send(data);
   return this;
 };
-
-/**
- * Faux promise support
- *
- * @param {Function} fulfill
- * @param {Function} reject
- * @return {Request}
- */
-
-Request.prototype.then = function (fulfill, reject) {
-  return this.end(function(err, res) {
-    err ? reject(err) : fulfill(res);
-  });
-}
 
 /**
  * Expose `Request`.
@@ -24890,9 +24571,9 @@ request.put = function(url, data, fn){
 
 module.exports = request;
 
-},{"emitter":162,"reduce":163}],162:[function(require,module,exports){
-arguments[4][121][0].apply(exports,arguments)
-},{"dup":121}],163:[function(require,module,exports){
+},{"emitter":156,"reduce":157}],156:[function(require,module,exports){
+arguments[4][113][0].apply(exports,arguments)
+},{"dup":113}],157:[function(require,module,exports){
 
 /**
  * Reduce `arr` with `fn`.
