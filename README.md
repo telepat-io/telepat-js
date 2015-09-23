@@ -1,4 +1,4 @@
-![Bower](https://img.shields.io/npm/v/telepat-js.svg) ![Bower](https://img.shields.io/bower/v/telepat-js.svg) ![Dependencies](https://img.shields.io/david/telepat-io/telepat-js.svg)
+[![NPM](https://img.shields.io/npm/v/telepat-js.svg)](https://www.npmjs.com/package/telepat-js) ![Bower](https://img.shields.io/bower/v/telepat-js.svg) [![David](https://img.shields.io/david/telepat-io/telepat-api.svg)](https://david-dm.org/telepat-io/telepat-api)
 
 # Telepat Javascript Client
 
