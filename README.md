@@ -1,3 +1,5 @@
+![Bower](https://img.shields.io/npm/v/telepat-js.svg) ![Bower](https://img.shields.io/bower/v/telepat-js.svg)
+
 # Telepat Javascript Client
 
 UMD client for Telepat, using [Browserify](http://browserify.org) to run in browsers.
