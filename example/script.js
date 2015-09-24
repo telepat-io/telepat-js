@@ -1,7 +1,7 @@
 var eventChannel;
 var model = 'events';
 var connectOptions = {
-    apiKey: 'APIKEY',
+    apiKey: 'testApiKey',
     appId: 'APPID',
     apiEndpoint: 'http://localhost:3000',
     socketEndpoint: 'http://localhost',
@@ -39,7 +39,7 @@ function statusChangeCallback(response) {
     Telepat.user.loginWithFacebook(response.authResponse.accessToken);
     Telepat.on('login_error', function () {
       Telepat.user.register({access_token: response.authResponse.accessToken}, function() {
-        Telepat.user.loginWithFacebook(response.authResponse.accessToken);
+        //Telepat.user.loginWithFacebook(response.authResponse.accessToken);
       });
     });
 

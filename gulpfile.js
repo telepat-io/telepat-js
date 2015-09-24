@@ -25,7 +25,7 @@ gulp.task('serve', function() {
     browserSync.init({
         port: 3002,
         server: {
-            baseDir: "./"
+            baseDir: ["./example", "./"]
         }
     });
 
