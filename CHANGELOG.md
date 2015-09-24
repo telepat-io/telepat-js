@@ -2,6 +2,16 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.2.2] - 2015-09-24
+### Changed
+- When logging in with Facebook, the client will first register a new user, if needed
+- Fixed example app
+
+## [0.2.1] - 2015-09-22
+### Changed
+- Fixed an issue that was preventing proper admin login
+- Changed pouchdb dir location
+
 ## [0.2.0] - 2015-09-08
 ### Added
 - This change log
