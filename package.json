@@ -1,7 +1,7 @@
 {
   "name": "telepat-js",
   "version": "0.2.2",
-  "license": "MIT",
+  "license": "Apache 2.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/telepat-io/telepat-js.git"
