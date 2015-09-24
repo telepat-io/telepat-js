@@ -28,9 +28,11 @@ Read on about working with the library:
 
 Clone this repo, then run `npm install`. After that, you can build the project using `gulp build`.
 
+
+
 ## License
 
-Released under the [MIT License](http://www.opensource.org/licenses/mit-license.php).
+Released under the [Apache 2 License](http://www.apache.org/licenses/LICENSE-2.0).
 
 ## Credits
 
