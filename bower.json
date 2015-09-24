@@ -1,9 +1,9 @@
 {
   "name": "telepat-js",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "license": "MIT",
   "authors": [
-    "Gabi Dobocan", "Gabi Dobocan <gabi@telepat.io>"
+    "Telepat.io", "Telepat.io <dev@telepat.io>"
   ],
   "homepage": "http://telepat.io",
   "repository": {
