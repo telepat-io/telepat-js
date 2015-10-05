@@ -289,7 +289,7 @@ var Channel = function (tapi, tlog, terror, tmonitor, toptions) {
         model: options.channel.model,
         context: options.channel.context,
         id: id,
-        patch: patch
+        patches: patch
       },
       function (err) {
         if (err) {
