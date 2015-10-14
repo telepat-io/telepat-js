@@ -102,6 +102,8 @@ API.call = function (endpoint, data, callback, method) {
 
   if (method === 'get') {
     req = request.get(this.apiEndpoint + endpoint);
+  } else if (method === 'delete') {
+    req = request.del(this.apiEndpoint + endpoint);
   } else {
     req = request.post(this.apiEndpoint + endpoint);
   }
@@ -128,6 +130,10 @@ API.call = function (endpoint, data, callback, method) {
 
 API.get = function (endpoint, data, callback) {
   return this.call(endpoint, data, callback, 'get');
+};
+
+API.del = function (endpoint, data, callback) {
+  return this.call(endpoint, data, callback, 'delete');
 };
 
 module.exports = API;
@@ -254,7 +260,7 @@ var Channel = function (tapi, tlog, terror, tmonitor, toptions) {
  *
  */
   this.remove = function(id) {
-    api.call('object/delete',
+    api.del('object/delete',
       {
         model: options.channel.model,
         context: options.channel.context,
@@ -507,7 +513,6 @@ var Monitor = function (tlog, terror, interval) {
   //     });
   this.processMessage = function (message) {
     function process(operation) {
-      console.log(Object.keys(self.objects), operation);
       var oldValue;
       if (self.objects.hasOwnProperty(operation.subscription)) { 
         var root = self.objects[operation.subscription];
