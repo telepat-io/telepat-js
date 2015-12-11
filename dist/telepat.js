@@ -89,7 +89,8 @@ var API = {
   apiKey: null,
   appId: null,
   UDID: null,
-  authenticationToken: null
+  authenticationToken: null,
+  User: null
 };
 
 API.call = function (endpoint, data, callback, method) {
@@ -118,7 +119,13 @@ API.call = function (endpoint, data, callback, method) {
 
   req.end(function (err, res) {
       if (self.authenticationToken && res.status === 401) {
-
+        User.reauthenticate(function(err, res) {
+          if (err) {
+            callback(err, null);
+          } else {
+            self.call(endpoint, data, callback, method);
+          }
+        });
       }
       else {
         callback(err, res);
@@ -847,17 +854,48 @@ var User = function (tapi, tlog, terror, tevent, tmonitor, tsetAdmin) {
   var userChannel = null;
   var self = this;
 
-  function _login(endpoint, options, isAdmin) {
+  var lastEmail = null;
+  var lastPassword = null;
+  var lastFacebookToken = null;
+
+  function _login(endpoint, options, isAdmin, callback) {
+    function success(res) {
+      for(var k in res.body.content.user) {
+        self[k] = res.body.content.user[k];
+      }
+      if (isAdmin) {
+        self.isAdmin = true;
+        setAdmin(new Admin(api, log, error));
+      }
+      //userChannel = new Channel(api, log, error, monitor, { channel: { model: 'users', id: self.id } });
+      //userChannel.subscribe();
+      api.authenticationToken = res.body.content.token;
+      callback(null, self);
+      event.emit('login');
+    }
     api.call(endpoint, options, function (err, res) {
       if (err) {
-        event.emit('login_error', error('Login failed with error: ' + err));
-      } else {
-        for(var k in res.body.content.user) {
-          self[k] = res.body.content.user[k];
+        if (err.status == 404 && options.hasOwnProperty('access_token')) {
+          log.info('Got 404 on Facebook login, registering user first');
+          api.call('user/register', options, function (err, res) {
+            if (err) {
+              callback(log.error('Failed to login with Facebook. Could not register or login user.'), null);
+              event.emit('login_error', error('Login failed with error: ' + err));
+            } else {
+              api.call(endpoint, options, function (err, res) {
+                if (err) {
+                  callback(log.error('Failed to login with Facebook. User registration was successful, but login failed.'), null);
+                  event.emit('login_error', error('Login failed with error: ' + err));
+                } else {
+                  success(res);
+                }
+              });
+            }
+          });
         }
-        if (isAdmin) {
-          self.isAdmin = true;
-          setAdmin(new Admin(api, log, error));
+        else {
+          event.emit('login_error', error('Login failed with error: ' + err));
+          callback(err, null);
         }
         //userChannel = new Channel(api, log, error, monitor, { channel: { model: 'users', id: self.id } });
         //userChannel.subscribe();
@@ -909,8 +947,13 @@ var User = function (tapi, tlog, terror, tevent, tmonitor, tsetAdmin) {
    *
    * @param {string} facebookToken The user token obtained from Facebook after login
    */
-  this.loginWithFacebook = function (facebookToken) {
-    return _login('user/login', { 'access_token': facebookToken });
+  this.loginWithFacebook = function (facebookToken, callback) {
+    if (facebookToken) {
+      lastFacebookToken = facebookToken;
+      return _login('user/login', { 'access_token': facebookToken }, false, callback);
+    } else {
+      event.emit('login_error', error('Invalid token for FB login.'));
+    }
   };
 
   /**
@@ -926,8 +969,14 @@ var User = function (tapi, tlog, terror, tevent, tmonitor, tsetAdmin) {
    * @param {string} email The user's email address
    * @param {string} password The user's password
    */
-  this.login = function (email, password) {
-    return _login('user/login_password', { email: email, password: password });
+  this.login = function (email, password, callback) {
+    if (email && password) {
+      lastEmail = email;
+      lastPassword = password;
+      return _login('user/login_password', { email: email, password: password }, false, callback);
+    } else {
+      event.emit('login_error', error('Invalid email or password parameters.'));
+    }
   };
 
   /**
@@ -943,8 +992,14 @@ var User = function (tapi, tlog, terror, tevent, tmonitor, tsetAdmin) {
    * @param {string} email The admin email address
    * @param {string} password The admin password
    */
-  this.loginAdmin = function (email, password) {
-    return _login('admin/login', { email: email, password: password }, true);
+  this.loginAdmin = function (email, password, callback) {
+    if (email && password) {
+      lastEmail = email;
+      lastPassword = password;
+      return _login('admin/login', { email: email, password: password }, true, callback);
+    } else {
+      event.emit('login_error', error('Invalid email or password parameters.'));
+    }
   };
 
   /**
@@ -961,12 +1016,29 @@ var User = function (tapi, tlog, terror, tevent, tmonitor, tsetAdmin) {
       if (err) {
         event.emit('logout_error', error('Logout failed with error: ' + err));
       } else {
+        lastEmail = null;
+        lastPassword = null;
+        lastFacebookToken = null;
         api.authenticationToken = null;
         setAdmin(null);
         event.emit('logout');
       }
     });
   };
+
+  this.reauthenticate = function (callback) {
+    if (lastEmail) {
+      if (self.isAdmin) {
+        self.loginAdmin(lastEmail, lastPassword, callback);
+      } else {
+        self.login(lastEmail, lastPassword, callback);
+      }
+    } else if (lastFacebookToken) {
+      self.loginWithFacebook(lastFacebookToken, callback);
+    } else {
+      callback(error('No previous credentials found.'), null);
+    }
+  }
 };
 
 module.exports = User;
