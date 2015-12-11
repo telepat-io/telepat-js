@@ -90,7 +90,7 @@ var API = {
   appId: null,
   UDID: null,
   authenticationToken: null,
-  User: null
+  user: null
 };
 
 API.call = function (endpoint, data, callback, method) {
@@ -119,7 +119,7 @@ API.call = function (endpoint, data, callback, method) {
 
   req.end(function (err, res) {
       if (self.authenticationToken && res.status === 401) {
-        User.reauthenticate(function(err, res) {
+        user.reauthenticate(function(err, res) {
           if (err) {
             callback(err, null);
           } else {
@@ -623,6 +623,7 @@ var Telepat = function () {
   this.subscriptions = {};
   this.admin = null;
   this.user = new User(API, log, error, Event, monitor, function (newAdmin) { self.admin = newAdmin; });
+  API.user = this.user;
 
   /**
    * ## Telepat.connect
@@ -870,7 +871,9 @@ var User = function (tapi, tlog, terror, tevent, tmonitor, tsetAdmin) {
       //userChannel = new Channel(api, log, error, monitor, { channel: { model: 'users', id: self.id } });
       //userChannel.subscribe();
       api.authenticationToken = res.body.content.token;
-      callback(null, self);
+      if (callback) {
+        callback(null, self);
+      }
       event.emit('login');
     }
     api.call(endpoint, options, function (err, res) {
@@ -879,12 +882,16 @@ var User = function (tapi, tlog, terror, tevent, tmonitor, tsetAdmin) {
           log.info('Got 404 on Facebook login, registering user first');
           api.call('user/register', options, function (err, res) {
             if (err) {
-              callback(log.error('Failed to login with Facebook. Could not register or login user.'), null);
+              if (callback) {
+                callback(log.error('Failed to login with Facebook. Could not register or login user.'), null);
+              }
               event.emit('login_error', error('Login failed with error: ' + err));
             } else {
               api.call(endpoint, options, function (err, res) {
                 if (err) {
-                  callback(log.error('Failed to login with Facebook. User registration was successful, but login failed.'), null);
+                  if (callback) {
+                    callback(log.error('Failed to login with Facebook. User registration was successful, but login failed.'), null);
+                  }
                   event.emit('login_error', error('Login failed with error: ' + err));
                 } else {
                   success(res);
@@ -895,8 +902,11 @@ var User = function (tapi, tlog, terror, tevent, tmonitor, tsetAdmin) {
         }
         else {
           event.emit('login_error', error('Login failed with error: ' + err));
-          callback(err, null);
+          if (callback) {
+            callback(err, null);
+          }
         }
+      } else {
         //userChannel = new Channel(api, log, error, monitor, { channel: { model: 'users', id: self.id } });
         //userChannel.subscribe();
         api.authenticationToken = res.body.content.token;
