@@ -910,7 +910,7 @@ var User = function (tapi, tlog, terror, tevent, tmonitor, tsetAdmin) {
         //userChannel = new Channel(api, log, error, monitor, { channel: { model: 'users', id: self.id } });
         //userChannel.subscribe();
         api.authenticationToken = res.body.content.token;
-        event.emit('login');
+        success(res);
       }
     });
   }
