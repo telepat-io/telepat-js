@@ -2,9 +2,9 @@ var eventChannel;
 var model = 'events';
 var connectOptions = {
     apiKey: 'testApiKey',
-    appId: 'APPID',
-    apiEndpoint: 'http://localhost:3000',
-    socketEndpoint: 'http://localhost',
+    appId: '4b41049a-156f-41b4-bb83-18c236528cd7',
+    apiEndpoint: 'http://telepat-services.cloudapp.net:3000',
+    socketEndpoint: 'http://telepat-services.cloudapp.net',
     timerInterval: 150
   };
 
@@ -22,8 +22,9 @@ Telepat.on('logout', function () {
   $('.list-group').empty();
 });
 
-Telepat.on('connect', function () {
-  checkLoginState();
+Telepat.on('contexts-update', function () {
+  //checkLoginState();
+  subscribe();
 });
 
 Telepat.on('contexts-update', function () {
@@ -73,6 +74,7 @@ function appendToList(key, value) {
 function subscribe() {
   eventChannel = Telepat.subscribe({ channel: { context: Telepat.contexts[0].id, model: model }}, function () {
     $('#message').empty();
+    //eventChannel.objects["70b7f899-1f06-4461-8dcf-fd595a053f9d"].tid = "0";
     $.each(eventChannel.objects, function (key, value) {
       appendToList(key, value);
     });
@@ -90,4 +92,7 @@ function subscribe() {
   eventChannel.on('unsubscribe', function () {
     $('.list-group').empty();
   });
+  // setInterval(function() {
+  //   eventChannel.objects["70b7f899-1f06-4461-8dcf-fd595a053f9d"].text = parseInt(eventChannel.objects["70b7f899-1f06-4461-8dcf-fd595a053f9d"].text) + 1;
+  // }, 10);
 }

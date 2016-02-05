@@ -513,6 +513,7 @@ var Monitor = function (tlog, terror, interval) {
   //     });
   this.processMessage = function (message) {
     function process(operation) {
+      console.log(Object.keys(self.objects), operation);
       var oldValue;
       if (self.objects.hasOwnProperty(operation.subscription)) { 
         var root = self.objects[operation.subscription];
