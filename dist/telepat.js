@@ -380,7 +380,7 @@ var jsondiffpatch = require('jsondiffpatch').create({
   }
 });
 
-var Monitor = function (tlog, terror, interval) {
+var Monitor = function (tlog, terror, tAPI, interval) {
   var updateRunning = false;
   var error = terror;
   var log = tlog;
@@ -388,6 +388,7 @@ var Monitor = function (tlog, terror, interval) {
   var timer = null;
   var lastObjects;
   var self = this;
+  var API = tAPI;
   var events = {};
 
   function trimObject(obj) {
@@ -417,9 +418,23 @@ var Monitor = function (tlog, terror, interval) {
   this.timerInterval = interval || 150;
 
   this.subscriptionKeyForOptions = function(options) {
-    var key = 'blg';
+    /*
+    4:  "blg:{appId}:{model}",                                 //channel
+    used for built-in models (users, contexts)
+    5:  "blg:{appId}:context:{context}:{model}",
+    //the Channel of all objects from a context
+    7:  "blg:{appId}:context:{context}:users:{user_id}:{model}",
+    //the Channel of all objects from a context from an user
+    12: "blg:{appId}:{parent_model}:{parent_id}:{model}",            //the
+    Channel of all objects belong to a parent
+    14: "blg:{appId}:users:{user_id}:{parent_model}:{parent_id}:{model}",//the
+    Channel of all comments from event 1 from user 16
+    20: "blg:{appId}:{model}:{id}",                            //the
+    Channel of one item
+    */
+    var key = 'blg:'+API.appId;
     if (!options.channel.id && options.channel.context) {
-      key += ':'+options.channel.context;
+      key += ':context:'+options.channel.context;
     }
     if (options.channel.user) {
       key += ':users:'+options.channel.user;
@@ -513,7 +528,6 @@ var Monitor = function (tlog, terror, interval) {
   //     });
   this.processMessage = function (message) {
     function process(operation) {
-      console.log(Object.keys(self.objects), operation);
       var oldValue;
       if (self.objects.hasOwnProperty(operation.subscription)) { 
         var root = self.objects[operation.subscription];
@@ -558,8 +572,6 @@ var Monitor = function (tlog, terror, interval) {
             event.emit('error', error('Invalid add operation ' + operation));
           }
         }
-        lastObjects = JSON.parse(JSON.stringify(self.objects));
-        processingPatch = false;
       }
     }
 
@@ -578,6 +590,8 @@ var Monitor = function (tlog, terror, interval) {
       operation = message.data.deleted[i];
       process(operation);
     }
+    lastObjects = JSON.parse(JSON.stringify(self.objects));
+    processingPatch = false;
   };
 };
 
@@ -613,7 +627,7 @@ var Telepat = function () {
    if (!fs.existsSync(dir)) {
      fs.mkdirSync(dir,744);
    }
-   return getUserHome()+'/.telepat-cli';
+   return dir;
   }
   var db = new PouchDB((typeof window!=="undefined")?'/_telepat':getTelepatDir());
   var Event = new EventObject(log);
@@ -621,6 +635,7 @@ var Telepat = function () {
   var socketEndpoint = null;
   var socket = null;
   var ioSessionId = null;
+  var ioServerName = null;
   var self = this;
 
   function error(string) {
@@ -629,13 +644,13 @@ var Telepat = function () {
   }
 
   function updateContexts() {
-    API.get('context/all', {}, function(err, res) {
+    API.call('context/all', {}, function(err, res) {
         self.contexts = res.body.content;
         Event.emit('contexts-update');
       });
   }
 
-  var monitor = new Monitor(log, error);
+  var monitor = new Monitor(log, error, API);
 
   this.contexts = null;
   this.subscriptions = {};
@@ -671,6 +686,11 @@ var Telepat = function () {
           });
         });
       }
+      socket.emit('bind_device', {
+        'device_id': API.UDID,
+        'application_id': API.appId
+      });
+
       log.info('Connection established');
       // On a successful connection, the `connect` event is emitted by the Telepat object. To listen for a connection, use:
       //
@@ -696,11 +716,11 @@ var Telepat = function () {
       var request = {
         'info':{
           'os': 'web',
-          'userAgent': ((typeof navigator !== 'undefined')?navigator.userAgent:'node'),
-          'udid': Date.now().toString()
+          'userAgent': ((typeof navigator !== 'undefined')?navigator.userAgent:'node')
         },
         'volatile': {
           'type': 'sockets',
+          'server_name': ioServerName,
           'token': ioSessionId,
           'active': 1
         }
@@ -763,7 +783,8 @@ var Telepat = function () {
     log.info('Connecting to socket service ' + socketEndpoint);
 
     socket.on('welcome', function(data) {
-      ioSessionId = data.sessionId;
+      ioSessionId = data.session_id;
+      ioServerName = data.server_name;
       log.info('Got session ID ' + this.ioSessionId);
       db.get(':deviceId').then(function(doc) {
         API.UDID = doc.value;
@@ -890,7 +911,7 @@ var User = function (tapi, tlog, terror, tevent, tmonitor, tsetAdmin) {
       if (err) {
         if (err.status == 404 && options.hasOwnProperty('access_token')) {
           log.info('Got 404 on Facebook login, registering user first');
-          api.call('user/register', options, function (err, res) {
+          api.call('user/register_facebook', options, function (err, res) {
             if (err) {
               log.error('Failed to login with Facebook. Could not register or login user.');
               event.emit('login_error', error('Login failed with error: ' + err));
@@ -958,7 +979,7 @@ var User = function (tapi, tlog, terror, tevent, tmonitor, tsetAdmin) {
    * @param {string} facebookToken The user token obtained from Facebook after login
    */
   this.loginWithFacebook = function (facebookToken) {
-    return _login('user/login', { 'access_token': facebookToken });
+    return _login('user/login_facebook', { 'access_token': facebookToken });
   };
 
   /**

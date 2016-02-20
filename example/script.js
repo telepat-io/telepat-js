@@ -1,10 +1,10 @@
 var eventChannel;
 var model = 'events';
 var connectOptions = {
-    apiKey: 'testApiKey',
-    appId: '4b41049a-156f-41b4-bb83-18c236528cd7',
-    apiEndpoint: 'http://telepat-services.cloudapp.net:3000',
-    socketEndpoint: 'http://telepat-services.cloudapp.net',
+    apiKey: 'TEST',
+    appId: 'eff09d53-e681-4fe8-a1a2-6b91b4c311e3',
+    apiEndpoint: 'http://localhost:3000',
+    socketEndpoint: 'http://localhost',
     timerInterval: 150
   };
 
@@ -40,10 +40,10 @@ function statusChangeCallback(response) {
     Telepat.user.loginWithFacebook(response.authResponse.accessToken);
   } else if (response.status === 'not_authorized') {
     $('#message').html('Please log into this app.');
-    Telepat.logout();
+    Telepat.user.logout();
   } else {
     $('#message').html('Please log into Facebook.');
-    Telepat.logout();
+    Telepat.user.logout();
   }
 }
 
