@@ -6,7 +6,7 @@
   <link rel="stylesheet" media="all" href="../doc-style.css" />
   <script src="../doc-filelist.js"></script>
   <script>
-    var relativeDir = "../", thisFile = "projects/Telepat/javascript-sdk/lib/channeljs", defaultSidebar = true;
+    var relativeDir = "../", thisFile = "projects/Telepat/telepat-js/lib/channeljs", defaultSidebar = true;
   </script>
   <script src="../doc-script.js"></script>
   <link rel="stylesheet" href="../custom.css" />
@@ -326,7 +326,7 @@
         </td>
         <td class="code highlight"><div class="highlight"><pre>
   <span class="k">this</span><span class="p">.</span><span class="nx">remove</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">id</span><span class="p">)</span> <span class="p">{</span>
-    <span class="nx">api</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="s1">&#39;object/delete&#39;</span><span class="p">,</span>
+    <span class="nx">api</span><span class="p">.</span><span class="nx">del</span><span class="p">(</span><span class="s1">&#39;object/delete&#39;</span><span class="p">,</span>
       <span class="p">{</span>
         <span class="nx">model</span><span class="o">:</span> <span class="nx">options</span><span class="p">.</span><span class="nx">channel</span><span class="p">.</span><span class="nx">model</span><span class="p">,</span>
         <span class="nx">context</span><span class="o">:</span> <span class="nx">options</span><span class="p">.</span><span class="nx">channel</span><span class="p">.</span><span class="nx">context</span><span class="p">,</span>
@@ -385,7 +385,7 @@
         <span class="nx">model</span><span class="o">:</span> <span class="nx">options</span><span class="p">.</span><span class="nx">channel</span><span class="p">.</span><span class="nx">model</span><span class="p">,</span>
         <span class="nx">context</span><span class="o">:</span> <span class="nx">options</span><span class="p">.</span><span class="nx">channel</span><span class="p">.</span><span class="nx">context</span><span class="p">,</span>
         <span class="nx">id</span><span class="o">:</span> <span class="nx">id</span><span class="p">,</span>
-        <span class="nx">patch</span><span class="o">:</span> <span class="nx">patch</span>
+        <span class="nx">patches</span><span class="o">:</span> <span class="nx">patch</span>
       <span class="p">},</span>
       <span class="kd">function</span> <span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="p">{</span>
         <span class="k">if</span> <span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="p">{</span>
