@@ -2,6 +2,11 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.2.5] - 2016-02-29
+### Changed
+- Updated API endpoint URLs for Telepat v0.2.9
+- Fixed authentication methods
+
 ## [0.2.2] - 2015-09-24
 ### Changed
 - When logging in with Facebook, the client will first register a new user, if needed
