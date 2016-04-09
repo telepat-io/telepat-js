@@ -1,8 +1,8 @@
 var eventChannel;
 var model = 'events';
 var connectOptions = {
-    apiKey: 'testApiKey',
-    appId: 'APPID',
+    apiKey: 'TEST',
+    appId: 'eff09d53-e681-4fe8-a1a2-6b91b4c311e3',
     apiEndpoint: 'http://localhost:3000',
     socketEndpoint: 'http://localhost',
     timerInterval: 150
@@ -22,8 +22,9 @@ Telepat.on('logout', function () {
   $('.list-group').empty();
 });
 
-Telepat.on('connect', function () {
-  checkLoginState();
+Telepat.on('contexts-update', function () {
+  //checkLoginState();
+  subscribe();
 });
 
 Telepat.on('contexts-update', function () {
@@ -39,10 +40,10 @@ function statusChangeCallback(response) {
     Telepat.user.loginWithFacebook(response.authResponse.accessToken);
   } else if (response.status === 'not_authorized') {
     $('#message').html('Please log into this app.');
-    Telepat.logout();
+    Telepat.user.logout();
   } else {
     $('#message').html('Please log into Facebook.');
-    Telepat.logout();
+    Telepat.user.logout();
   }
 }
 
@@ -73,6 +74,7 @@ function appendToList(key, value) {
 function subscribe() {
   eventChannel = Telepat.subscribe({ channel: { context: Telepat.contexts[0].id, model: model }}, function () {
     $('#message').empty();
+    //eventChannel.objects["70b7f899-1f06-4461-8dcf-fd595a053f9d"].tid = "0";
     $.each(eventChannel.objects, function (key, value) {
       appendToList(key, value);
     });
@@ -90,4 +92,7 @@ function subscribe() {
   eventChannel.on('unsubscribe', function () {
     $('.list-group').empty();
   });
+  // setInterval(function() {
+  //   eventChannel.objects["70b7f899-1f06-4461-8dcf-fd595a053f9d"].text = parseInt(eventChannel.objects["70b7f899-1f06-4461-8dcf-fd595a053f9d"].text) + 1;
+  // }, 10);
 }
