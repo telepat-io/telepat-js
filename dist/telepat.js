@@ -177,6 +177,7 @@ var Channel = function (monitor, options) {
   // ## Channel.objects
   // You can access a hash of all the objects on the current channel using this property. Each object is stored on a key named after the object id.
   this.objects = {};
+  this.objectsArray = [];
 
 /**
  * ## Channel.subscribe
@@ -200,6 +201,7 @@ var Channel = function (monitor, options) {
         for (i=0; i<res.body.content.length; i++) {
           self.objects[res.body.content[i].id] = res.body.content[i];
         }
+        self.objectsArray = res.body.content;
         var objectKeys = Object.keys(self.objects);
         for (i=0; i<objectKeys.length; i++) {
           self.objects[objectKeys[i]].$$event = new EventObject(log);
@@ -229,6 +231,7 @@ var Channel = function (monitor, options) {
           event.emit('error', error('Unsubscribe failed with error: ' + err));
         } else {
           self.objects = {};
+          self.objectsArray = [];
           monitor.remove(options);
           event.emit('unsubscribe');
           event.emit('_unsubscribe');
