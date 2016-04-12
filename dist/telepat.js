@@ -674,6 +674,7 @@ var Telepat = function () {
   var socket = null;
   var ioSessionId = null;
   var ioServerName = null;
+  var persistentConnectionOptions = null;
   var self = this;
 
   this.contexts = null;
@@ -768,6 +769,12 @@ var Telepat = function () {
           'active': 1
         }
       };
+      if (persistentConnectionOptions) {
+        request.persistent = persistentConnectionOptions;
+        if (request.persistent.active == 1) {
+          request.volatile.active = 0;
+        }
+      }
       API.call('device/register', request, function (err, res) {
           if (err) {
             API.UDID = null;
@@ -821,6 +828,7 @@ var Telepat = function () {
     }
     
     API.apiEndpoint = apiEndpoint + '/';
+    persistentConnectionOptions = options.persistentConnection || null;
 
     socket = require('socket.io-client')(socketEndpoint, options.ioOptions || {});
     log.info('Connecting to socket service ' + socketEndpoint);
