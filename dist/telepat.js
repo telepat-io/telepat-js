@@ -865,6 +865,17 @@ var Telepat = function () {
   };
 
   /**
+   * ## Telepat.processMessage
+   *
+   * Forwards messages reveived via external channels to the processing unit.
+   *
+   * @param {string} message The delta update notification received from Telepat
+   */
+  this.processMessage = function(message) {
+    monitor.processMessage(message);
+  }
+
+  /**
    * ## Telepat.setLogLevel
    *
    * You can tweak the logger verbosity using this function.
