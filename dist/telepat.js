@@ -409,7 +409,7 @@ var Monitor = function (interval) {
   var updateRunning = false;
   var processingPatch = false;
   var timer = null;
-  var lastObjects;
+  var lastObjects = {};
   var self = this;
   var events = {};
 
@@ -482,7 +482,7 @@ var Monitor = function (interval) {
     delete self.options[subscriptionKey];
     delete self.callbacks[subscriptionKey];
     delete events[subscriptionKey];
-    lastObjects = JSON.parse(JSON.stringify(self.objects));
+    delete lastObjects[subscriptionKey];
   }
 
   this.add = function (subscriptionOptions, objects, event, addCallback, removeCallback, updateCallback) {
@@ -554,8 +554,8 @@ var Monitor = function (interval) {
       update: updateCallback
     }
     events[subscriptionKey] = event;
-    //lastObjects = JSON.parse(JSON.stringify(self.objects));
-    timerFunction();
+    lastObjects[subscriptionKey] = JSON.parse(JSON.stringify(self.objects[subscriptionKey]));
+
 
     if (timer === null) {
       timer = setInterval(timerFunction, self.timerInterval);
