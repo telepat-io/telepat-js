@@ -2,6 +2,11 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.3] - 2016-05-30
+### Changed
+- Updated API endpoint URLs for Telepat v0.3
+- Fixed subscription event issues
+
 ## [0.2.5] - 2016-02-29
 ### Changed
 - Updated API endpoint URLs for Telepat v0.2.9
