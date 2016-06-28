@@ -1,7 +1,5 @@
-'use strict';
-
-var request = require('superagent');
-var SHA256 = require('crypto-js/sha256');
+import request from 'superagent';
+import SHA256 from 'crypto-js/sha256';
 
 var API = {
   apiEndpoint: null,
@@ -15,20 +13,18 @@ API.call = function (endpoint, data, callback, method) {
   if (!this.apiEndpoint || !this.apiKey || !this.appId) {
     return callback(null, null);
   }
-
   var req;
-  var self = this;
 
   if (method === 'get') {
-    req = request.get(this.apiEndpoint + endpoint+'?'+data);
+    req = request.get(this.apiEndpoint + endpoint + '?' + data);
   } else if (method === 'delete') {
     req = request.del(this.apiEndpoint + endpoint);
   } else {
     req = request.post(this.apiEndpoint + endpoint);
   }
 
-  if(method != 'get') {
-    req.send(data)
+  if (method !== 'get') {
+    req.send(data);
   }
 
   req.set('Content-Type', 'application/json')
@@ -40,14 +36,14 @@ API.call = function (endpoint, data, callback, method) {
     req.set('Authorization', 'Bearer ' + this.authenticationToken);
   }
 
-  req.end(function (err, res) {
-      if (self.authenticationToken && res.status === 401) {
-
-      }
-      else {
-        callback(err, res);
-      }
-    });
+  req.end((err, res) => {
+    if (this.authenticationToken && res.status === 401) {
+      // TODO: Handle auth timeout
+      callback(err, res);
+    } else {
+      callback(err, res);
+    }
+  });
 };
 
 API.get = function (endpoint, data, callback) {
@@ -58,4 +54,4 @@ API.del = function (endpoint, data, callback) {
   return this.call(endpoint, data, callback, 'delete');
 };
 
-module.exports = API;
+export default API;

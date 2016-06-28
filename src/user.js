@@ -1,13 +1,9 @@
-'use strict';
 // # Telepat User Class
 
-var EventObject = require('./event');
-var API = require('./api');
-var log = require('./logger');
-var error = require('./error');
-
-var Admin = require('./admin');
-var Channel = require('./channel');
+import API from './api';
+import log from './logger';
+import error from './error';
+import Admin from './admin';
 
 /**
  * ## User Constructor
@@ -20,46 +16,53 @@ var Channel = require('./channel');
  * @param {Object} monitor The monitoring object. This is injected by Telepat.
  * @param {function} setAdmin Method to allow this class to set administrators. This is injected by Telepat.
  */
-var User = function (event, monitor, setAdmin) {
-  var userChannel = null;
-  var self = this;
+export default class User {
+  constructor(event, monitor, setAdmin) {
+    this._event = event;
+    this._monitor = monitor;
+    this._setAdmin = setAdmin;
+    this.isAdmin = false;
+  }
 
-  function _login(endpoint, options, isAdmin) {
+  _login(endpoint, options, isAdmin) {
+    var self = this;
+
     function success(res) {
-      for(var k in res.body.content.user) {
+      for (var k in res.body.content.user) {
         self[k] = res.body.content.user[k];
       }
       if (isAdmin) {
         self.isAdmin = true;
-        setAdmin(new Admin(monitor, self));
+        self._setAdmin(new Admin(self._monitor, self));
       }
-      //userChannel = new Channel(api, log, error, monitor, { channel: { model: 'users', id: self.id } });
-      //userChannel.subscribe();
+
+      // userChannel = new Channel(api, log, error, monitor, { channel: { model: 'users', id: self.id } });
+      // userChannel.subscribe();
       API.authenticationToken = res.body.content.token;
-      event.emit('login');
+      self._event.emit('login');
     }
-    API.call(endpoint, options, function (err, res) {
+
+    API.call(endpoint, options, (err, res) => {
       if (err) {
-        if (err.status == 404 && options.hasOwnProperty('access_token')) {
+        if (err.status === 404 && options.hasOwnProperty('access_token')) {
           log.info('Got 404 on Facebook login, registering user first');
-          API.call('user/register_facebook', options, function (err, res) {
+          API.call('user/register_facebook', options, (err, res) => {
             if (err) {
               log.error('Failed to login with Facebook. Could not register or login user.');
-              event.emit('login_error', error('Login failed with error: ' + err));
+              self._event.emit('login_error', error('Login failed with error: ' + err));
             } else {
               API.call(endpoint, options, function (err, res) {
                 if (err) {
                   log.error('Failed to login with Facebook. User registration was successful, but login failed.');
-                  event.emit('login_error', error('Login failed with error: ' + err));
+                  self._event.emit('login_error', error('Login failed with error: ' + err));
                 } else {
                   success(res);
                 }
               });
             }
           });
-        }
-        else {
-          event.emit('login_error', error('Login failed with error: ' + err));
+        } else {
+          self._event.emit('login_error', error('Login failed with error: ' + err));
         }
       } else {
         success(res);
@@ -67,8 +70,9 @@ var User = function (event, monitor, setAdmin) {
     });
   }
 
-  this.update = function(callback) {
+  update(callback) {
     var result = {};
+
     for (var key in self) {
       if (self.hasOwnProperty(key)) {
         result[key] = self[key];
@@ -76,7 +80,7 @@ var User = function (event, monitor, setAdmin) {
     }
     API.call('user/update_immediate',
     { user: result },
-    function (err, res) {
+    (err, res) => {
       if (err) {
         callback(error('Updating user failed with error: ' + err), null);
       } else {
@@ -91,16 +95,18 @@ var User = function (event, monitor, setAdmin) {
    * This function creates a new user profile.
    *
    * @param {Object} user The object representing the user profile
-   * @param {function} callback The callback function to be invoked when operation is done. The function receives 2 parameters, an error object and the user array.
+   * @param {function} callback The callback function to be invoked when operation is done.
+    The function receives 2 parameters, an error object and the user array.
    */
-  this.register = function (user, callback) {
+  register(user, callback) {
     API.call('user/register-username', user, callback);
   };
 
   /**
    * ## User.loginWithFacebook
    *
-   * This function associates the current anonymous device to a Telepat user profile, using a Facebook account for authentication.
+   * This function associates the current anonymous device to a Telepat user profile, using a Facebook
+    account for authentication.
    *
    * Two events can be asynchronously triggered by this function:
    *
@@ -109,14 +115,15 @@ var User = function (event, monitor, setAdmin) {
    *
    * @param {string} facebookToken The user token obtained from Facebook after login
    */
-  this.loginWithFacebook = function (facebookToken) {
-    return _login('user/login-facebook', { 'access_token': facebookToken });
+  loginWithFacebook(facebookToken) {
+    return this._login('user/login-facebook', { 'access_token': facebookToken });
   };
 
   /**
    * ## User.login
    *
-   * This function associates the current anonymous device to a Telepat user profile, using a password for authentication.
+   * This function associates the current anonymous device to a Telepat user profile,
+    using a password for authentication.
    *
    * Two events can be asynchronously triggered by this function:
    *
@@ -126,14 +133,15 @@ var User = function (event, monitor, setAdmin) {
    * @param {string} email The user's email address
    * @param {string} password The user's password
    */
-  this.login = function (email, password) {
-    return _login('user/login_password', { username: email, password: password });
+  login(email, password) {
+    return this._login('user/login_password', { username: email, password: password });
   };
 
   /**
    * ## User.loginAdmin
    *
-   * This function associates the current anonymous device to a Telepat administrator profile, using a password for authentication.
+   * This function associates the current anonymous device to a Telepat administrator profile,
+    using a password for authentication.
    *
    * Two events can be asynchronously triggered by this function:
    *
@@ -143,8 +151,8 @@ var User = function (event, monitor, setAdmin) {
    * @param {string} email The admin email address
    * @param {string} password The admin password
    */
-  this.loginAdmin = function (email, password) {
-    return _login('admin/login', { email: email, password: password }, true);
+  loginAdmin(email, password) {
+    return this._login('admin/login', { email: email, password: password }, true);
   };
 
   /**
@@ -153,12 +161,13 @@ var User = function (event, monitor, setAdmin) {
    * This function retrieves a Telepat user's information, based on id
    *
    * @param {Object} user The user's Telepat ID
-   * @param {function} callback The callback function to be invoked when operation is done. The function receives 2 parameters, an error object and the user array.
+   * @param {function} callback The callback function to be invoked when operation is done.
+    The function receives 2 parameters, an error object and the user array.
    */
-  this.get = function (userId, callback) {
-    API.get('user/get', "user_id="+encodeURIComponent(userId), function(err, res) {
-      if(err) {
-        callback(console.error('Request failed with error: '+ err), null);
+  get(userId, callback) {
+    API.get('user/get', 'user_id=' + encodeURIComponent(userId), (err, res) => {
+      if (err) {
+        callback(console.error('Request failed with error: ' + err), null);
       } else {
         callback(null, JSON.parse(res.text).content);
       }
@@ -170,12 +179,13 @@ var User = function (event, monitor, setAdmin) {
    *
    * This function retrieves the currently logged in user's information
    *
-   * @param {function} callback The callback function to be invoked when operation is done. The function receives 2 parameters, an error object and the user array.
+   * @param {function} callback The callback function to be invoked when operation is done.
+    The function receives 2 parameters, an error object and the user array.
    */
-  this.me = function (callback) {
-    API.get('user/me', "", function(err, res) {
-      if(err) {
-        callback(console.error('Request failed with error: '+ err), null);
+  me(callback) {
+    API.get('user/me', '', (err, res) => {
+      if (err) {
+        callback(console.error('Request failed with error: ' + err), null);
       } else {
         callback(null, JSON.parse(res.text).content);
       }
@@ -191,17 +201,15 @@ var User = function (event, monitor, setAdmin) {
    * - `logout`, on success
    * - `logout_error`, on error
    */
-  this.logout = function () {
-    API.get('user/logout', {}, function (err) {
+  logout() {
+    API.get('user/logout', {}, err => {
       if (err) {
-        event.emit('logout_error', error('Logout failed with error: ' + err));
+        this._event.emit('logout_error', error('Logout failed with error: ' + err));
       } else {
         API.authenticationToken = null;
-        setAdmin(null);
-        event.emit('logout');
+        this._setAdmin(null);
+        this._event.emit('logout');
       }
     });
   };
 };
-
-module.exports = User;
