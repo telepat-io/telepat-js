@@ -103,6 +103,19 @@ export default class User {
   };
 
   /**
+   * ## User.registerAdmin
+   *
+   * This function creates a new admin profile.
+   *
+   * @param {Object} admin The object representing the admin profile
+   * @param {function} callback The callback function to be invoked when operation is done.
+    The function receives 2 parameters, an error object and the user array.
+   */
+  registerAdmin(admin, callback) {
+    API.call('admin/add', admin, callback);
+  };
+
+  /**
    * ## User.loginWithFacebook
    *
    * This function associates the current anonymous device to a Telepat user profile, using a Facebook
