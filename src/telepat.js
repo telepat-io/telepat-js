@@ -98,21 +98,21 @@ export default class Telepat {
 
     function completeRegistration(res) {
       if (res.body.content.identifier !== undefined) {
-        var newObject = {
-          _id: ':deviceId',
-          value: res.body.content.identifier
-        };
-
         API.UDID = res.body.content.identifier;
         log.info('Received new UDID: ' + API.UDID);
 
         self._db.get(':deviceId').then(doc => {
-          newObject._rev = doc._rev;
+          doc[API.appId] = API.UDID;
           log.warn('Replacing existing UDID');
-          self._db.put(newObject).catch(err => {
+          self._db.put(doc).catch(err => {
             log.warn('Could not persist UDID. Error: ' + err);
           });
         }).catch(() => {
+          let newObject = {
+            _id: ':deviceId'
+          };
+
+          newObject[API.appId] = API.UDID;
           self._db.put(newObject).catch(err => {
             log.warn('Could not persist UDID. Error: ' + err);
           });
@@ -132,7 +132,7 @@ export default class Telepat {
       //     });
       self._updateContexts();
       if (!self.user) {
-        self.user = new User(this._db, this._event, this._monitor, newAdmin => { this.admin = newAdmin; });
+        self.user = new User(self._db, self._event, self._monitor, newAdmin => { self.admin = newAdmin; });
       }
       self._event.emit('connect');
       self._connected = true;
@@ -219,16 +219,39 @@ export default class Telepat {
     this._socket = require('socket.io-client')(this._socketEndpoint, options.ioOptions || {});
     log.info('Connecting to socket service ' + this._socketEndpoint);
 
-    this._socket.on('welcome', data => {
-      this._sessionId = data.sessionId;
-      this._db.get(':deviceId').then(doc => {
-        API.UDID = doc.value;
-        log.info('Retrieved saved UDID: ' + API.UDID);
-        registerDevice();
-      }).catch(function () {
-        registerDevice();
+    if (__0_3__) { // eslint-disable-line no-undef
+      this._socket.on('welcome', data => {
+        this._sessionId = data.sessionId;
+
+        if (options.updateUDID) {
+          registerDevice();
+        } else {
+          this._db.get(':deviceId').then(doc => {
+            if (doc[API.appId]) {
+              API.UDID = doc[API.appId];
+              log.info('Retrieved saved UDID: ' + API.UDID);
+            }
+            registerDevice();
+          }).catch(function () {
+            registerDevice();
+          });
+        }
       });
-    });
+    } else {
+      if (options.updateUDID) {
+        registerDevice();
+      } else {
+        this._db.get(':deviceId').then(doc => {
+          if (doc[API.appId]) {
+            API.UDID = doc[API.appId];
+            log.info('Retrieved saved UDID: ' + API.UDID);
+          }
+          registerDevice();
+        }).catch(function () {
+          registerDevice();
+        });
+      }
+    }
 
     this._socket.on('message', message => {
       this._monitor.processMessage(message);
@@ -270,6 +293,7 @@ export default class Telepat {
 
     API.apiKey = null;
     API.appId = null;
+    API.UDID = null;
 
     this._event.emit('disconnect');
     self._connected = false;
