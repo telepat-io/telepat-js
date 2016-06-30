@@ -37,9 +37,15 @@ API.call = function (endpoint, data, callback, method) {
   }
 
   req.end((err, res) => {
-    if (this.authenticationToken && res.status === 401) {
-      // TODO: Handle auth timeout
-      callback(err, res);
+    if (this.authenticationToken && (res.status === 401 || (res.status === 400 && res.body.code === '040') || (res.status === 500 && res.body.code === '002'))) {
+      this.get('user/refresh_token', '', function (err, res) {
+        if (err) {
+          callback(err, null);
+        } else {
+          this.authenticationToken = res.body.content;
+          this.call(endpoint, data, callback, method);
+        }
+      });
     } else {
       callback(err, res);
     }
