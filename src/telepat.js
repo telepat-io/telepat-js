@@ -38,16 +38,16 @@ export default class Telepat {
     this._db = new PouchDB((typeof window !== 'undefined') ? '/_telepat' : getTelepatDir());
     this._event = new EventObject(log);
     this._monitor = new Monitor();
-    this._apiEndpoint = null;
     this._socketEndpoint = null;
     this._socket = null;
     this._persistentConnectionOptions = null;
     this._sessionId = null;
+    this._connected = false;
 
     this.contexts = null;
     this.subscriptions = {};
     this.admin = null;
-    this.user = new User(this._db, this._event, this._monitor, newAdmin => { this.admin = newAdmin; });
+    this.user = null;
   }
 
   _updateContexts() {
@@ -62,14 +62,29 @@ export default class Telepat {
   }
 
   /**
-   * ## Telepat.disconnect
+   * ## Telepat.configure
    *
-   * You can use this function to disconnect the socket.io transport from the Telepat endpoint.
+   * Call this to configure Telepat server endpoints without connecting to a specific app.
    *
+   * @param {object} options Object containing all configuration options for connection
    */
-  disconnect() {
-    this._socket.close();
-  };
+  configure(options = {}) {
+    if (typeof options.apiEndpoint !== 'undefined') {
+      API.apiEndpoint = options.apiEndpoint + '/';
+    } else {
+      return error('Configure options must provide an apiEndpoint property');
+    }
+    // - `socketEndpoint`: the host and port number for the socket service
+    if (typeof options.socketEndpoint !== 'undefined') {
+      this._socketEndpoint = options.socketEndpoint;
+    } else {
+      return error('Configure options must provide an socketEndpoint property');
+    }
+
+    if (!this.user) {
+      this.user = new User(this._db, this._event, this._monitor, newAdmin => { this.admin = newAdmin; });
+    }
+  }
 
   /**
    * ## Telepat.connect
@@ -115,8 +130,12 @@ export default class Telepat {
       //     Telepat.on('connect', function () {
       //       // Connected
       //     });
-      self._event.emit('connect');
       self._updateContexts();
+      if (!self.user) {
+        self.user = new User(this._db, this._event, this._monitor, newAdmin => { this.admin = newAdmin; });
+      }
+      self._event.emit('connect');
+      self._connected = true;
       return true;
     }
 
@@ -172,15 +191,15 @@ export default class Telepat {
       }
       // - `apiEndpoint`: the host and port number for the API service
       if (typeof options.apiEndpoint !== 'undefined') {
-        this._apiEndpoint = options.apiEndpoint;
-      } else {
-        return error('Connect options must provide an apiEndpoint property');
+        API.apiEndpoint = options.apiEndpoint + '/';
+      } else if (!API.apiEndpoint) {
+        return error('Connect options must provide an apiEndpoint property, or you must run `configure` first');
       }
       // - `socketEndpoint`: the host and port number for the socket service
       if (typeof options.socketEndpoint !== 'undefined') {
         this._socketEndpoint = options.socketEndpoint;
-      } else {
-        return error('Connect options must provide an socketEndpoint property');
+      } else if (!this._socketEndpoint) {
+        return error('Connect options must provide an socketEndpoint property, or you must run `configure` first');
       }
       // - `timerInterval`: the time interval in miliseconds between two object-monitoring jobs
       // on channels - defaults to 150
@@ -191,8 +210,11 @@ export default class Telepat {
       return error('Options object not provided to the connect function');
     }
 
-    API.apiEndpoint = this._apiEndpoint + '/';
-    this._persistentConnectionOptions = options.persistentConnection || null;
+    if (this._connected) {
+      this.disconnect();
+    }
+
+    this._persistentConnectionOptions = options.persistentConnection || this._persistentConnectionOptions;
 
     this._socket = require('socket.io-client')(this._socketEndpoint, options.ioOptions || {});
     log.info('Connecting to socket service ' + this._socketEndpoint);
@@ -217,11 +239,41 @@ export default class Telepat {
     });
 
     this._socket.on('disconnect', () => {
-      this._event.emit('disconnect');
     });
 
     return this;
   }
+
+  /**
+   * ## Telepat.disconnect
+   *
+   * You can use this function to disconnect the socket.io transport from the Telepat endpoint.
+   *
+   */
+  disconnect() {
+    this._socket.close();
+    this._socket = null;
+    this._sessionId = null;
+    this.contexts = null;
+
+    for (var key in this.subscriptions) {
+      this.subscriptions[key].unsubscribe();
+    }
+    this.subscriptions = {};
+
+    if (!this.user.isAdmin) {
+      this.user.logout(() => {
+        this.admin = null;
+        this.user = null;
+      });
+    }
+
+    API.apiKey = null;
+    API.appId = null;
+
+    this._event.emit('disconnect');
+    self._connected = false;
+  };
 
   /**
    * ## Telepat.processMessage

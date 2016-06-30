@@ -83,19 +83,21 @@ export default class Admin {
     API.call('admin/context/add',
       context,
       (err, res) => {
-        if (err)
+        if (err) {
           return callback(error('Creating context failed with error: ' + err));
+        }
 
         callback(null, res);
-      })
+      });
   }
 
   updateContext(id, patches, callback = () => {}) {
     API.call('admin/context/update',
       {id: id, patches: patches},
       (err, res) => {
-        if (err)
+        if (err) {
           return callback(error('Updating context failed with error: ' + err));
+        }
 
         callback();
       });
@@ -105,11 +107,12 @@ export default class Admin {
     API.call('admin/context/delete',
       {id: id},
       (err, res) => {
-        if (err)
+        if (err) {
           return callback(error('Deleting context failed with error: ' + err));
+        }
 
         callback();
-      })
+      });
   }
 
   addUser(user, callback = function () {}) {
