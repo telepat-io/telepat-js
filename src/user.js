@@ -17,14 +17,38 @@ import Admin from './admin';
  * @param {function} setAdmin Method to allow this class to set administrators. This is injected by Telepat.
  */
 export default class User {
-  constructor(event, monitor, setAdmin) {
+  constructor(db, event, monitor, setAdmin) {
     this._event = event;
     this._monitor = monitor;
     this._setAdmin = setAdmin;
+    this._db = db;
     this.isAdmin = false;
+
+    this._db.get(':userToken').then(doc => {
+      log.info('Retrieved saved authentication token');
+      API.authenticationToken = doc.value.token;
+      API.get((doc.value.admin ? 'admin/me' : 'user/me'), '', function (err, res) {
+        if (err) {
+          API.authenticationToken = null;
+          this._setAdmin(null);
+          this._db.remove(doc._id, doc._rev);
+          this._event.emit('logout');
+        } else {
+          for (var k in res.body.content) {
+            this[k] = res.body.content[k];
+          }
+          if (doc.value.admin) {
+            this.isAdmin = true;
+            this._setAdmin(new Admin(this._monitor, this));
+          }
+          this._event.emit('login');
+        }
+      }.bind(this));
+    }).catch(function () {
+    });
   }
 
-  _login(endpoint, options, isAdmin) {
+  _login(endpoint, options, isAdmin, callback = () => {}) {
     var self = this;
 
     function success(res) {
@@ -39,7 +63,29 @@ export default class User {
       // userChannel = new Channel(api, log, error, monitor, { channel: { model: 'users', id: self.id } });
       // userChannel.subscribe();
       API.authenticationToken = res.body.content.token;
+
+      var newObject = {
+        _id: ':userToken',
+        value: {
+          token: res.body.content.token,
+          admin: isAdmin
+        }
+      };
+
+      self._db.get(':userToken').then(doc => {
+        newObject._rev = doc._rev;
+        log.warn('Replacing existing authentication token');
+        self._db.put(newObject).catch(err => {
+          log.warn('Could not persist authentication token. Error: ' + err);
+        });
+      }).catch(() => {
+        self._db.put(newObject).catch(err => {
+          log.warn('Could not persist authentication token. Error: ' + err);
+        });
+      });
+
       self._event.emit('login');
+      callback(null, self);
     }
 
     API.call(endpoint, options, (err, res) => {
@@ -63,6 +109,7 @@ export default class User {
           });
         } else {
           self._event.emit('login_error', error('Login failed with error: ' + err));
+          callback(err, null);
         }
       } else {
         success(res);
@@ -128,8 +175,8 @@ export default class User {
    *
    * @param {string} facebookToken The user token obtained from Facebook after login
    */
-  loginWithFacebook(facebookToken) {
-    return this._login('user/login-facebook', { 'access_token': facebookToken });
+  loginWithFacebook(facebookToken, callback) {
+    return this._login('user/login-facebook', { 'access_token': facebookToken }, false, callback);
   };
 
   /**
@@ -146,8 +193,8 @@ export default class User {
    * @param {string} email The user's email address
    * @param {string} password The user's password
    */
-  login(email, password) {
-    return this._login('user/login_password', { username: email, password: password });
+  login(email, password, callback) {
+    return this._login('user/login_password', { username: email, password: password }, false, callback);
   };
 
   /**
@@ -164,8 +211,8 @@ export default class User {
    * @param {string} email The admin email address
    * @param {string} password The admin password
    */
-  loginAdmin(email, password) {
-    return this._login('admin/login', { email: email, password: password }, true);
+  loginAdmin(email, password, callback) {
+    return this._login('admin/login', { email: email, password: password }, true, callback);
   };
 
   /**
@@ -196,7 +243,7 @@ export default class User {
     The function receives 2 parameters, an error object and the user array.
    */
   me(callback) {
-    API.get('user/me', '', (err, res) => {
+    API.get((this.isAdmin ? 'admin/me' : 'user/me'), '', (err, res) => {
       if (err) {
         callback(console.error('Request failed with error: ' + err), null);
       } else {
@@ -214,14 +261,16 @@ export default class User {
    * - `logout`, on success
    * - `logout_error`, on error
    */
-  logout() {
+  logout(callback = () => {}) {
     API.get('user/logout', {}, err => {
       if (err) {
         this._event.emit('logout_error', error('Logout failed with error: ' + err));
+        callback(err);
       } else {
         API.authenticationToken = null;
         this._setAdmin(null);
         this._event.emit('logout');
+        callback();
       }
     });
   };

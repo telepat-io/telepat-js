@@ -47,11 +47,11 @@ export default class Telepat {
     this.contexts = null;
     this.subscriptions = {};
     this.admin = null;
-    this.user = new User(this._event, this._monitor, newAdmin => { this.admin = newAdmin; });
+    this.user = new User(this._db, this._event, this._monitor, newAdmin => { this.admin = newAdmin; });
   }
 
   _updateContexts() {
-    API.get('context/all', {}, (err, res) => {
+    API.get('context/all', '', (err, res) => {
       if (err) {
         this._event.emit('error', error('Error retrieving contexts ' + err));
       } else {

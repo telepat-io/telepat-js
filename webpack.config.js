@@ -15,11 +15,11 @@ var outputFile = 'telepat';
 if (version) {
   outputFile += version;
 }
-if (env === 'build') {
+if (env === 'dev') {
+  outputFile += '.js';
+} else {
   plugins.push(new UglifyJsPlugin({ minimize: true }));
   outputFile += '.min.js';
-} else {
-  outputFile += '.js';
 }
 
 var config = {

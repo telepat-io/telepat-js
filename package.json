@@ -4,8 +4,12 @@
   "description": "Javascript Client for Telepat",
   "main": "lib/telepat.js",
   "scripts": {
-    "build": "webpack --mode=build",
+    "build-latest": "webpack --progress --colors",
+    "build-latest-min": "webpack --progress --colors --mode=dev",
+    "build-0.3": "webpack --progress --colors --version=0.3",
+    "build-0.3-min": "webpack --progress --colors --version=0.3 --mode=dev",
     "dev": "webpack --progress --colors --watch --mode=dev",
+    "build-all": "npm run build-latest && npm run build-latest-min && npm run build-0.3 && npm run build-0.3-min",
     "test": "mocha --compilers js:babel-core/register --colors -w ./test/*.spec.js"
   },
   "devDependencies": {
