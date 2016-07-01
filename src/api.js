@@ -42,7 +42,7 @@ API.call = function (endpoint, data, callback, method) {
         if (err) {
           callback(err, null);
         } else {
-          this.authenticationToken = res.body.content;
+          this.authenticationToken = res.body.content.token;
           this.call(endpoint, data, callback, method);
         }
       });
