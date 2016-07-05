@@ -23,29 +23,6 @@ export default class User {
     this._setAdmin = setAdmin;
     this._db = db;
     this.isAdmin = false;
-
-    this._db.get(':userToken').then(doc => {
-      log.info('Retrieved saved authentication token');
-      API.authenticationToken = doc.value.token;
-      API.get((doc.value.admin ? 'admin/me' : 'user/me'), '', function (err, res) {
-        if (err) {
-          API.authenticationToken = null;
-          this._setAdmin(null);
-          this._db.remove(doc._id, doc._rev);
-          this._event.emit('logout');
-        } else {
-          for (var k in res.body.content) {
-            this[k] = res.body.content[k];
-          }
-          if (doc.value.admin) {
-            this.isAdmin = true;
-            this._setAdmin(new Admin(this._monitor, this));
-          }
-          this._event.emit('login');
-        }
-      }.bind(this));
-    }).catch(function () {
-    });
   }
 
   _login(endpoint, options, isAdmin, callback = () => {}) {
@@ -114,6 +91,31 @@ export default class User {
       } else {
         success(res);
       }
+    });
+  }
+
+  reauth() {
+    this._db.get(':userToken').then(doc => {
+      log.info('Retrieved saved authentication token');
+      API.authenticationToken = doc.value.token;
+      API.get((doc.value.admin ? 'admin/me' : 'user/me'), '', function (err, res) {
+        if (err) {
+          API.authenticationToken = null;
+          this._setAdmin(null);
+          this._db.remove(doc._id, doc._rev);
+          this._event.emit('logout');
+        } else {
+          for (var k in res.body.content) {
+            this[k] = res.body.content[k];
+          }
+          if (doc.value.admin) {
+            this.isAdmin = true;
+            this._setAdmin(new Admin(this._monitor, this));
+          }
+          this._event.emit('login');
+        }
+      }.bind(this));
+    }).catch(function () {
     });
   }
 

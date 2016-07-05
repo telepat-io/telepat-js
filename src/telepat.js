@@ -83,6 +83,9 @@ export default class Telepat {
 
     if (!this.user) {
       this.user = new User(this._db, this._event, this._monitor, newAdmin => { this.admin = newAdmin; });
+      if (options.reauth) {
+        this.user.reauth();
+      }
     }
   }
 
@@ -133,6 +136,9 @@ export default class Telepat {
       self._updateContexts();
       if (!self.user) {
         self.user = new User(self._db, self._event, self._monitor, newAdmin => { self.admin = newAdmin; });
+        if (options.reauth) {
+          self.user.reauth();
+        }
       }
       self._event.emit('connect');
       self._connected = true;
