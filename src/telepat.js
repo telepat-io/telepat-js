@@ -141,7 +141,7 @@ export default class Telepat {
       //       // Connected
       //     });
       self._updateContexts();
-      this._updateUser(options.reauth, () => {
+      self._updateUser(options.reauth, () => {
         self._event.emit('connect');
         self._connected = true;
       });
