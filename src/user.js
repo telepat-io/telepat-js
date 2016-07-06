@@ -22,10 +22,11 @@ export default class User {
     this._monitor = monitor;
     this._setAdmin = setAdmin;
     this._db = db;
+    this._customProperties = [];
     this.isAdmin = false;
     this.canReauth = null;
 
-    self._db.get(':userToken').then(doc => {
+    this._db.get(':userToken').then(doc => {
       this.canReauth = true;
       callback();
     }).catch(() => {
@@ -40,6 +41,7 @@ export default class User {
     function success(res) {
       for (var k in res.body.content.user) {
         self[k] = res.body.content.user[k];
+        self._customProperties.push(k);
       }
       if (isAdmin) {
         self.isAdmin = true;
@@ -276,13 +278,23 @@ export default class User {
    * - `logout_error`, on error
    */
   logout(callback = () => {}) {
+    this._db.get(':userToken').then(doc => {
+      this._db.remove(doc._id, doc._rev);
+    }).catch(function () {
+    });
+    this._setAdmin(null);
+    while (this._customProperties.length) {
+      let prop = this._customProperties.pop();
+
+      delete this[prop];
+    }
+
     API.get('user/logout', {}, err => {
+      API.authenticationToken = null;
       if (err) {
         this._event.emit('logout_error', error('Logout failed with error: ' + err));
         callback(err);
       } else {
-        API.authenticationToken = null;
-        this._setAdmin(null);
         this._event.emit('logout');
         callback();
       }
