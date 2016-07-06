@@ -17,12 +17,21 @@ import Admin from './admin';
  * @param {function} setAdmin Method to allow this class to set administrators. This is injected by Telepat.
  */
 export default class User {
-  constructor(db, event, monitor, setAdmin) {
+  constructor(db, event, monitor, setAdmin, callback = () => {}) {
     this._event = event;
     this._monitor = monitor;
     this._setAdmin = setAdmin;
     this._db = db;
     this.isAdmin = false;
+    this.canReauth = null;
+
+    self._db.get(':userToken').then(doc => {
+      this.canReauth = true;
+      callback();
+    }).catch(() => {
+      this.canReauth = false;
+      callback();
+    });
   }
 
   _login(endpoint, options, isAdmin, callback = () => {}) {
@@ -51,7 +60,7 @@ export default class User {
 
       self._db.get(':userToken').then(doc => {
         newObject._rev = doc._rev;
-        log.warn('Replacing existing authentication token');
+        log.info('Replacing existing authentication token');
         self._db.put(newObject).catch(err => {
           log.warn('Could not persist authentication token. Error: ' + err);
         });
@@ -94,7 +103,7 @@ export default class User {
     });
   }
 
-  reauth() {
+  reauth(callback) {
     this._db.get(':userToken').then(doc => {
       log.info('Retrieved saved authentication token');
       API.authenticationToken = doc.value.token;
@@ -103,6 +112,7 @@ export default class User {
           API.authenticationToken = null;
           this._setAdmin(null);
           this._db.remove(doc._id, doc._rev);
+          callback(error('Saved authentication token expired'), null);
           this._event.emit('logout');
         } else {
           for (var k in res.body.content) {
@@ -112,10 +122,12 @@ export default class User {
             this.isAdmin = true;
             this._setAdmin(new Admin(this._monitor, this));
           }
+          callback(null, res);
           this._event.emit('login');
         }
       }.bind(this));
     }).catch(function () {
+      callback(error('No authentication tokens saved'), null);
     });
   }
 

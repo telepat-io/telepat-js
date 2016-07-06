@@ -61,6 +61,18 @@ export default class Telepat {
     });
   }
 
+  _updateUser(reauth = false, callback = () => {}) {
+    if (!this.user) {
+      this.user = new User(this._db, this._event, this._monitor, newAdmin => { this.admin = newAdmin; }, () => {
+        if (reauth) {
+          this.user.reauth(callback);
+        } else {
+          callback(null);
+        }
+      });
+    }
+  }
+
   /**
    * ## Telepat.configure
    *
@@ -81,12 +93,7 @@ export default class Telepat {
       return error('Configure options must provide an socketEndpoint property');
     }
 
-    if (!this.user) {
-      this.user = new User(this._db, this._event, this._monitor, newAdmin => { this.admin = newAdmin; });
-      if (options.reauth) {
-        this.user.reauth();
-      }
-    }
+    this._updateUser(options.reauth);
   }
 
   /**
@@ -134,14 +141,10 @@ export default class Telepat {
       //       // Connected
       //     });
       self._updateContexts();
-      if (!self.user) {
-        self.user = new User(self._db, self._event, self._monitor, newAdmin => { self.admin = newAdmin; });
-        if (options.reauth) {
-          self.user.reauth();
-        }
-      }
-      self._event.emit('connect');
-      self._connected = true;
+      this._updateUser(options.reauth, () => {
+        self._event.emit('connect');
+        self._connected = true;
+      });
       return true;
     }
 
