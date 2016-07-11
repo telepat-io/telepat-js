@@ -63,11 +63,15 @@ export default class User {
       self._db.get(':userToken').then(doc => {
         newObject._rev = doc._rev;
         log.info('Replacing existing authentication token');
-        self._db.put(newObject).catch(err => {
+        self._db.put(newObject).then(doc => {
+          self.canReauth = true;
+        }).catch(err => {
           log.warn('Could not persist authentication token. Error: ' + err);
         });
       }).catch(() => {
-        self._db.put(newObject).catch(err => {
+        self._db.put(newObject).then(doc => {
+          self.canReauth = true;
+        }).catch(err => {
           log.warn('Could not persist authentication token. Error: ' + err);
         });
       });
@@ -105,7 +109,7 @@ export default class User {
     });
   }
 
-  reauth(callback) {
+  reauth(callback = () => {}) {
     this._db.get(':userToken').then(doc => {
       log.info('Retrieved saved authentication token');
       API.authenticationToken = doc.value.token;
@@ -133,7 +137,7 @@ export default class User {
     });
   }
 
-  update(callback) {
+  update(callback = () => {}) {
     var result = {};
 
     for (var key in self) {
@@ -240,7 +244,7 @@ export default class User {
    * @param {function} callback The callback function to be invoked when operation is done.
     The function receives 2 parameters, an error object and the user array.
    */
-  get(userId, callback) {
+  get(userId, callback = () => {}) {
     API.get('user/get', 'user_id=' + encodeURIComponent(userId), (err, res) => {
       if (err) {
         callback(console.error('Request failed with error: ' + err), null);
@@ -258,7 +262,7 @@ export default class User {
    * @param {function} callback The callback function to be invoked when operation is done.
     The function receives 2 parameters, an error object and the user array.
    */
-  me(callback) {
+  me(callback = () => {}) {
     API.get((this.isAdmin ? 'admin/me' : 'user/me'), '', (err, res) => {
       if (err) {
         callback(console.error('Request failed with error: ' + err), null);
@@ -283,6 +287,8 @@ export default class User {
     }).catch(function () {
     });
     this._setAdmin(null);
+    this.isAdmin = false;
+    this.canReauth = false;
     while (this._customProperties.length) {
       let prop = this._customProperties.pop();
 

@@ -9,7 +9,7 @@ var API = {
   authenticationToken: null
 };
 
-API.call = function (endpoint, data, callback, method) {
+API.call = function (endpoint, data, callback = () => {}, method) {
   if (!this.apiEndpoint || !this.apiKey || !this.appId) {
     return callback(null, null);
   }
@@ -37,17 +37,31 @@ API.call = function (endpoint, data, callback, method) {
   }
 
   req.end((err, res) => {
-    if (this.authenticationToken && (res.status === 401 || (res.status === 400 && res.body.code === '040') || (res.status === 500 && res.body.code === '002'))) {
-      this.get('user/refresh_token', '', (err, res) => {
-        if (err) {
-          callback(err, null);
+    if (this.needsTokenUpdate(res)) {
+      this.updateToken((error, result) => {
+        if (error) {
+          callback(error, null);
         } else {
-          this.authenticationToken = res.body.content.token;
           this.call(endpoint, data, callback, method);
         }
       });
     } else {
       callback(err, res);
+    }
+  });
+};
+
+API.needsTokenUpdate = function (response) {
+  return (this.authenticationToken && (response.status === 401 || (response.status === 400 && response.body.code === '040') || (response.status === 500 && response.body.code === '002')));
+};
+
+API.updateToken = function (callback) {
+  this.get('user/refresh_token', '', (err, res) => {
+    if (err) {
+      callback(err, null);
+    } else {
+      this.authenticationToken = res.body.content.token;
+      callback(null, res);
     }
   });
 };
