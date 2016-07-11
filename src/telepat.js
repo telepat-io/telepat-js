@@ -372,6 +372,22 @@ export default class Telepat {
     return channel;
   };
 
+  sendEmail(from, fromName, to, subject, body, callback) {
+    API.call('/email', {
+      'recipients': to,
+      'from': from,
+      'from_name': fromName,
+      'subject': subject,
+      'body': body
+    }, (err, res) => {
+      if (err) {
+        callback(error('Send email failed with error: ' + err), null);
+      } else {
+        callback(null, res.body.content);
+      }
+    });
+  };
+
   get(options, callback) {
     options['no_subscribe'] = true;
     API.call('object/subscribe',
@@ -379,6 +395,7 @@ export default class Telepat {
     (err, res) => {
       if (err) {
         this._event.emit('error', error('Get objects failed with error: ' + err));
+        callback(error('Get objects failed with error: ' + err), null);
       } else {
         callback(null, res.body.content);
       }
