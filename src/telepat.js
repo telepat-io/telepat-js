@@ -371,4 +371,17 @@ export default class Telepat {
     });
     return channel;
   };
+
+  get(options, callback) {
+    options['no_subscribe'] = true;
+    API.call('object/subscribe',
+    options,
+    (err, res) => {
+      if (err) {
+        this._event.emit('error', error('Get objects failed with error: ' + err));
+      } else {
+        callback(null, res.body.content);
+      }
+    });
+  }
 };
