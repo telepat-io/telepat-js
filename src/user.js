@@ -119,10 +119,16 @@ export default class User {
           this._setAdmin(null);
           this._db.remove(doc._id, doc._rev);
           callback(error('Saved authentication token expired'), null);
+          while (this._customProperties.length) {
+            let prop = this._customProperties.pop();
+
+            delete this[prop];
+          }
           this._event.emit('logout');
         } else {
           for (var k in res.body.content) {
             this[k] = res.body.content[k];
+            self._customProperties.push(k);
           }
           if (doc.value.admin) {
             this.isAdmin = true;
@@ -150,6 +156,52 @@ export default class User {
     (err, res) => {
       if (err) {
         callback(error('Updating user failed with error: ' + err), null);
+      } else {
+        callback(null, res.body.content);
+      }
+    });
+  };
+
+  requestPasswordReset(email, callbackURL = null, callback = () => {}) {
+    if (!email) {
+      if (this.email) {
+        email = this.email;
+      } else {
+        callback(error('You must provide a valid email address for the account that needs the password reset'), null);
+        return;
+      }
+    }
+
+    API.call('user/request_password_reset',
+      {
+        'type': 'app',
+        'username': email,
+        'callbackUrl': callbackURL
+      },
+    (err, res) => {
+      if (err) {
+        callback(error('Password reset request failed with error: ' + err), null);
+      } else {
+        callback(null, res.body.content);
+      }
+    });
+  };
+
+  resetPassword(id, token, newPassword, callback = () => {}) {
+    if (!id || !token || !newPassword) {
+      callback(error('You must provide a valid user-id, pass reset token and new password for the account that needs the password reset'), null);
+      return;
+    }
+
+    API.call('user/request_password_reset',
+      {
+        'token': token,
+        'user_id': id,
+        'password': newPassword
+      },
+    (err, res) => {
+      if (err) {
+        callback(error('Password reset request failed with error: ' + err), null);
       } else {
         callback(null, res.body.content);
       }
