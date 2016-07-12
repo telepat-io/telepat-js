@@ -58,9 +58,9 @@ export default class Telepat {
         this.callback(error, null);
         this._event.emit('error', error);
       } else {
-        this._monitor.remove({channel: {model: 'contexts'}});
+        this._monitor.remove({channel: {model: 'context'}});
         this.contexts = res.body.content;
-        this._monitor.add({channel: {model: '_contexts'}}, this.contexts, null, this._addContext, this._deleteContext, this._updateContext);
+        this._monitor.add({channel: {model: 'context'}}, this.contexts, null, this._addContext, this._deleteContext, this._updateContext);
         callback(null, this.contexts);
         this._event.emit('contexts-update');
       }
@@ -317,7 +317,7 @@ export default class Telepat {
     this._socket = null;
     this._sessionId = null;
     this.contexts = null;
-    this._monitor.remove({channel: {model: '_contexts'}});
+    this._monitor.remove({channel: {model: 'context'}});
 
     for (var key in this.subscriptions) {
       this.subscriptions[key].unsubscribe();
