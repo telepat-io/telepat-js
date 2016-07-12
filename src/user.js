@@ -25,6 +25,7 @@ export default class User {
     this._customProperties = [];
     this.isAdmin = false;
     this.canReauth = null;
+    this.data = {};
 
     this._db.get(':userToken').then(doc => {
       this.canReauth = true;
@@ -40,7 +41,7 @@ export default class User {
 
     function success(res) {
       for (var k in res.body.content.user) {
-        self[k] = res.body.content.user[k];
+        self.data[k] = res.body.content.user[k];
         self._customProperties.push(k);
       }
       if (isAdmin) {
@@ -119,15 +120,12 @@ export default class User {
           this._setAdmin(null);
           this._db.remove(doc._id, doc._rev);
           callback(error('Saved authentication token expired'), null);
-          while (this._customProperties.length) {
-            let prop = this._customProperties.pop();
-
-            delete this[prop];
-          }
+          this._customProperties = [];
+          this.data = {};
           this._event.emit('logout');
         } else {
           for (var k in res.body.content) {
-            this[k] = res.body.content[k];
+            this.data[k] = res.body.content[k];
             self._customProperties.push(k);
           }
           if (doc.value.admin) {
@@ -341,11 +339,8 @@ export default class User {
     this._setAdmin(null);
     this.isAdmin = false;
     this.canReauth = false;
-    while (this._customProperties.length) {
-      let prop = this._customProperties.pop();
-
-      delete this[prop];
-    }
+    this._customProperties = [];
+    this.data = {};
 
     API.get('user/logout', {}, err => {
       API.authenticationToken = null;

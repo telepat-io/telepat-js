@@ -19,6 +19,8 @@ export default class Admin {
     this.users = null;
     this._monitor = monitor;
     this._user = user;
+    this.apps = null;
+    this.app = null;
   }
 
 /**
@@ -37,7 +39,7 @@ export default class Admin {
         callback(error('Retrieving users failed with error: ' + err), null);
       } else {
         this.users = res.body.content;
-        this._monitor.add({channel: {model: 'users'}}, this.users, null, this.addUser, this.deleteUser, this.updateUser);
+        this._monitor.add({channel: {model: 'user'}}, this.users, null, this.addUser, this.deleteUser, this.updateUser);
         callback(null, this.users);
       }
     });
@@ -50,7 +52,10 @@ export default class Admin {
         if (err) {
           callback(error('Retrieving apps failed with error: ' + err), null);
         } else {
-          callback(null, res.body.content);
+          this.apps = res.body.content;
+          this.app = this.apps[API.appId];
+          this._monitor.add({channel: {model: 'application'}}, this.apps, null, this.addApp, this.deleteApp, this.updateApp);
+          callback(null, this.apps);
         }
       }, 'get');
   }
@@ -64,6 +69,21 @@ export default class Admin {
         } else {
           callback(null, res.body.content);
         }
+      });
+  }
+
+  updateApp(id, patches, callback = () => {}) {
+    if (id !== API.appId) {
+      return callback(error('Cannot update an app that is not active. Please reconnect to that specific app id to make updates.'));
+    }
+    API.call('admin/app/update',
+      {id: id, patches: patches},
+      (err, res) => {
+        if (err) {
+          return callback(error('Updating application failed with error: ' + err));
+        }
+
+        callback();
       });
   }
 
@@ -115,6 +135,18 @@ export default class Admin {
       });
   }
 
+  deleteModel(type, callback) {
+    API.del('admin/schema/remove_model', {
+      'model_name': type
+    }, (err, res) => {
+      if (err) {
+        return callback(error('Deleting model failed with error: ' + err));
+      }
+
+      callback();
+    });
+  }
+
   addUser(user, callback = function () {}) {
     this._user.register(user, callback);
   };
@@ -128,9 +160,9 @@ export default class Admin {
  *  @param {function} callback The callback function to be invoked when operation is done.
   The function receives 2 parameters, an error object and the user array.
  */
-  deleteUser(user, callback = function () {}) {
+  deleteUser(username, callback = function () {}) {
     API.del('admin/user/delete',
-    { username: user },
+    { username: username },
     (err, res) => {
       if (err) {
         callback(error('Removing user failed with error: ' + err), null);
@@ -162,5 +194,34 @@ export default class Admin {
         callback();
       }
     });
+  };
+
+  authorize(user, callback) {
+    API.call('/admin/app/authorize', {
+      email: user
+    }, (err, res) => {
+      if (err) {
+        return callback(error('Authorizing admin failed with error: ' + err), null);
+      }
+
+      callback();
+    });
+  };
+
+  deauthorize(user, callback) {
+    API.call('/admin/app/deauthorize', {
+      email: user
+    }, (err, res) => {
+      if (err) {
+        return callback(error('Deauthorizing admin failed with error: ' + err), null);
+      }
+
+      callback();
+    });
+  };
+
+  unhook() {
+    this._monitor.remove({channel: {model: 'user'}});
+    this._monitor.remove({channel: {model: 'application'}});
   };
 };

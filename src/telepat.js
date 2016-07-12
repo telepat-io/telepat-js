@@ -50,15 +50,45 @@ export default class Telepat {
     this.user = null;
   }
 
-  _updateContexts() {
+  getContexts(callback = () => {}) {
     API.get('context/all', '', (err, res) => {
       if (err) {
-        this._event.emit('error', error('Error retrieving contexts ' + err));
+        let error = error('Error retrieving contexts ' + err);
+
+        this.callback(error, null);
+        this._event.emit('error', error);
       } else {
+        this._monitor.remove({channel: {model: 'contexts'}});
         this.contexts = res.body.content;
+        this._monitor.add({channel: {model: '_contexts'}}, this.contexts, null, this._addContext, this._deleteContext, this._updateContext);
+        callback(null, this.contexts);
         this._event.emit('contexts-update');
       }
     });
+  }
+
+  _addContext(context, callback = () => {}) {
+    if (this.admin) {
+      this.admin.addContext(context, callback);
+    } else {
+      log.warn('Editing context data as non-admin user. Changes will not be remotely persisted.');
+    }
+  }
+
+  _updateContext(id, patches, callback = () => {}) {
+    if (this.admin) {
+      this.admin.updateContext(id, patches, callback);
+    } else {
+      log.warn('Editing context data as non-admin user. Changes will not be remotely persisted.');
+    }
+  }
+
+  _deleteContext(id, callback = () => {}) {
+    if (this.admin) {
+      this.admin.deleteContext(id, callback);
+    } else {
+      log.warn('Editing context data as non-admin user. Changes will not be remotely persisted.');
+    }
   }
 
   _updateUser(reauth = false, callback = () => {}) {
@@ -140,7 +170,7 @@ export default class Telepat {
       //     Telepat.on('connect', function () {
       //       // Connected
       //     });
-      self._updateContexts();
+      self.getContexts();
       self._updateUser(options.reauth, () => {
         self._event.emit('connect');
         self._connected = true;
@@ -267,7 +297,7 @@ export default class Telepat {
     });
 
     this._socket.on('context-update', () => {
-      this._updateContexts();
+      this.getContexts();
     });
 
     this._socket.on('disconnect', () => {
@@ -287,6 +317,7 @@ export default class Telepat {
     this._socket = null;
     this._sessionId = null;
     this.contexts = null;
+    this._monitor.remove({channel: {model: '_contexts'}});
 
     for (var key in this.subscriptions) {
       this.subscriptions[key].unsubscribe();
@@ -295,6 +326,7 @@ export default class Telepat {
 
     if (!this.user.isAdmin) {
       this.user.logout(() => {
+        this.admin.unhook();
         this.admin = null;
         this.user = null;
       });
