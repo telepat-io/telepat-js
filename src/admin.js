@@ -52,10 +52,15 @@ export default class Admin {
         if (err) {
           callback(error('Retrieving apps failed with error: ' + err), null);
         } else {
-          this.apps = res.body.content;
+          this.apps = {};
+          for (var index in res.body.content) {
+            var app = res.body.content[index];
+
+            this.apps[app.id] = app;
+          }
           this.app = this.apps[API.appId];
           this._monitor.add({channel: {model: 'application'}}, this.apps, null, this.addApp, this.deleteApp, this.updateApp);
-          callback(null, this.apps);
+          callback(null, res.body.content);
         }
       }, 'get');
   }
