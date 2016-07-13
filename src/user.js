@@ -126,7 +126,7 @@ export default class User {
         } else {
           for (var k in res.body.content) {
             this.data[k] = res.body.content[k];
-            self._customProperties.push(k);
+            this._customProperties.push(k);
           }
           if (doc.value.admin) {
             this.isAdmin = true;
