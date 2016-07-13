@@ -42,8 +42,8 @@ export default class Telepat {
     this._socket = null;
     this._persistentConnectionOptions = null;
     this._sessionId = null;
-    this._connected = false;
 
+    this.connected = false;
     this.contexts = null;
     this.subscriptions = {};
     this.admin = null;
@@ -173,7 +173,7 @@ export default class Telepat {
       self.getContexts();
       self._updateUser(options.reauth, () => {
         self._event.emit('connect');
-        self._connected = true;
+        self.connected = true;
       });
       return true;
     }
@@ -204,6 +204,7 @@ export default class Telepat {
             if (err) {
               self._socket.disconnect();
               self._event.emit('disconnect', err);
+              self.connected = false;
               return error('Device registration failed with error: ' + err);
             }
             return completeRegistration(res);
@@ -249,7 +250,7 @@ export default class Telepat {
       return error('Options object not provided to the connect function');
     }
 
-    if (this._connected) {
+    if (this.connected) {
       this.disconnect();
     }
 
@@ -337,7 +338,7 @@ export default class Telepat {
     API.UDID = null;
 
     this._event.emit('disconnect');
-    self._connected = false;
+    self.connected = false;
   };
 
   /**
