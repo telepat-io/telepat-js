@@ -26,6 +26,9 @@ export default class User {
     this.isAdmin = false;
     this.canReauth = null;
     this.data = {};
+    API.tokenUpdateCallback = (newToken) => {
+      this._saveToken(newToken);
+    };
 
     this._db.get(':userToken').then(doc => {
       this.canReauth = true;
@@ -33,6 +36,32 @@ export default class User {
     }).catch(() => {
       this.canReauth = false;
       callback();
+    });
+  }
+
+  _saveToken(token) {
+    var newObject = {
+      _id: ':userToken',
+      value: {
+        token: token,
+        admin: this.isAdmin
+      }
+    };
+
+    this._db.get(':userToken').then(doc => {
+      newObject._rev = doc._rev;
+      log.info('Replacing existing authentication token');
+      this._db.put(newObject).then(doc => {
+        this.canReauth = true;
+      }).catch(err => {
+        log.warn('Could not persist authentication token. Error: ' + err);
+      });
+    }).catch(() => {
+      this._db.put(newObject).then(doc => {
+        this.canReauth = true;
+      }).catch(err => {
+        log.warn('Could not persist authentication token. Error: ' + err);
+      });
     });
   }
 
@@ -52,31 +81,7 @@ export default class User {
       // userChannel = new Channel(api, log, error, monitor, { channel: { model: 'users', id: self.id } });
       // userChannel.subscribe();
       API.authenticationToken = res.body.content.token;
-
-      var newObject = {
-        _id: ':userToken',
-        value: {
-          token: res.body.content.token,
-          admin: isAdmin
-        }
-      };
-
-      self._db.get(':userToken').then(doc => {
-        newObject._rev = doc._rev;
-        log.info('Replacing existing authentication token');
-        self._db.put(newObject).then(doc => {
-          self.canReauth = true;
-        }).catch(err => {
-          log.warn('Could not persist authentication token. Error: ' + err);
-        });
-      }).catch(() => {
-        self._db.put(newObject).then(doc => {
-          self.canReauth = true;
-        }).catch(err => {
-          log.warn('Could not persist authentication token. Error: ' + err);
-        });
-      });
-
+      self._saveToken(API.authenticationToken);
       self._event.emit('login');
       callback(null, self);
     }

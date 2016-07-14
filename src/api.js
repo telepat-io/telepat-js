@@ -6,7 +6,8 @@ var API = {
   apiKey: null,
   appId: null,
   UDID: null,
-  authenticationToken: null
+  authenticationToken: null,
+  tokenUpdateCallback: (newToken) => {}
 };
 
 API.call = function (endpoint, data, callback = () => {}, method) {
@@ -61,6 +62,7 @@ API.updateToken = function (callback) {
       callback(err, null);
     } else {
       this.authenticationToken = res.body.content.token;
+      this.tokenUpdateCallback(this.authenticationToken);
       callback(null, res);
     }
   });
