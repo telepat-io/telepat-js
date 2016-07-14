@@ -47,7 +47,7 @@ export default class Admin {
 
   getApps(callback = function () {}) {
     API.call('admin/apps',
-      null,
+      {},
       (err, res) => {
         if (err) {
           callback(error('Retrieving apps failed with error: ' + err), null);
