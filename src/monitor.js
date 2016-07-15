@@ -98,6 +98,21 @@ export default class Monitor {
   add(subscriptionOptions, objects, event, addCallback, removeCallback, updateCallback) {
     var self = this;
 
+    function processDeltaObject(object) {
+      if (object['_t'] === 'a') {
+        return true;
+      }
+      for (var key in object) {
+        if (typeof object[key] === 'object' && processDeltaObject(object[key])) {
+          delete object[key];
+        }
+      }
+      if (Object.keys(object).length === 0) {
+        return true;
+      }
+      return false;
+    }
+
     function timerFunction() {
       if (self._processingPatch || self._updateRunning) {
         return;
@@ -138,23 +153,27 @@ export default class Monitor {
                   var objKey = objKeys[j];
                   var delta = obj[objKey];
 
-                  if (typeof delta === 'object') {
-                    patch.push({'op': 'replace', 'path': options.channel.model + '/' + key + '/' + objKey, 'value': self.objects[subKey][key][objKey]});
-                    log.debug('Modified ' + objKey + ' property on object ' + key + ', ' + options.channel.model + ' channel');
-                  } else if (delta.length === 1) {
-                    patch.push({'op': 'replace', 'path': options.channel.model + '/' + key + '/' + objKey, 'value': delta[0]});
-                    log.debug('Added ' + objKey + ' property to object ' + key + ', ' + options.channel.model + ' channel');
-                  } else if (delta.length === 2) {
-                    patch.push({'op': 'replace', 'path': options.channel.model + '/' + key + '/' + objKey, 'value': delta[1]});
-                    log.debug('Modified ' + objKey + ' property on object ' + key + ', ' + options.channel.model + ' channel');
-                  } else if (delta.length === 3) {
-                    log.info('Removing object properties is not supported in this version. Try setting to an empty value instead.');
+                  if (!processDeltaObject(delta)) {
+                    if (typeof delta === 'object') {
+                      patch.push({'op': 'replace', 'path': options.channel.model + '/' + key + '/' + objKey, 'value': self.objects[subKey][key][objKey]});
+                      log.debug('Modified ' + objKey + ' property on object ' + key + ', ' + options.channel.model + ' channel');
+                    } else if (delta.length === 1) {
+                      patch.push({'op': 'replace', 'path': options.channel.model + '/' + key + '/' + objKey, 'value': delta[0]});
+                      log.debug('Added ' + objKey + ' property to object ' + key + ', ' + options.channel.model + ' channel');
+                    } else if (delta.length === 2) {
+                      patch.push({'op': 'replace', 'path': options.channel.model + '/' + key + '/' + objKey, 'value': delta[1]});
+                      log.debug('Modified ' + objKey + ' property on object ' + key + ', ' + options.channel.model + ' channel');
+                    } else if (delta.length === 3) {
+                      log.info('Removing object properties is not supported in this version. Try setting to an empty value instead.');
+                    }
                   }
 
                   root[key][objKey] = self.objects[subKey][key][objKey];
                 }
 
-                callbacks.update(key, patch);
+                if (patch.length) {
+                  callbacks.update(key, patch);
+                }
                 log.debug('Sending patch to object ' + key + ' on ' + options.channel.model + ' channel: ' + JSON.stringify(patch));
               }
             }
