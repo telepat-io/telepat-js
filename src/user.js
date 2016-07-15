@@ -133,7 +133,7 @@ export default class User {
             this.data[k] = res.body.content[k];
             this._customProperties.push(k);
           }
-          if (res.content.type === 'admin') {
+          if (res.body.content.type === 'admin') {
             this.isAdmin = true;
             this._saveToken(API.authenticationToken);
             this._setAdmin(new Admin(this._monitor, this));
