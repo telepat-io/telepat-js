@@ -237,7 +237,7 @@ export default class User {
   registerAdmin(admin, callback) {
     API.call('admin/add', admin, (err, res) => {
       if (err) {
-        callback(error('Password reset request failed with error: ' + err), null);
+        callback(error('Password reset request failed with error: ' + (res.body.message) || ''), null);
       } else {
         callback(null, res.body.content);
       }
