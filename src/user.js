@@ -235,7 +235,13 @@ export default class User {
     The function receives 2 parameters, an error object and the user array.
    */
   registerAdmin(admin, callback) {
-    API.call('admin/add', admin, callback);
+    API.call('admin/add', admin, (err, res) => {
+      if (err) {
+        callback(error('Password reset request failed with error: ' + err), null);
+      } else {
+        callback(null, res.body.content);
+      }
+    });
   };
 
   /**
