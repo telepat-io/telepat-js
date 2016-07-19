@@ -44,6 +44,9 @@ export default class Telepat {
     this._sessionId = null;
 
     this.connected = false;
+    this.connecting = false;
+    this.configured = false;
+    this.currentAppId = null;
     this.contexts = null;
     this.subscriptions = {};
     this.admin = null;
@@ -100,6 +103,8 @@ export default class Telepat {
           callback(null);
         }
       });
+    } else {
+      callback(null);
     }
   }
 
@@ -110,20 +115,24 @@ export default class Telepat {
    *
    * @param {object} options Object containing all configuration options for connection
    */
-  configure(options = {}) {
+  configure(options = {}, callback = () => {}) {
     if (typeof options.apiEndpoint !== 'undefined') {
       API.apiEndpoint = options.apiEndpoint + '/';
     } else {
-      return error('Configure options must provide an apiEndpoint property');
+      callback(error('Configure options must provide an apiEndpoint property'));
     }
     // - `socketEndpoint`: the host and port number for the socket service
     if (typeof options.socketEndpoint !== 'undefined') {
       this._socketEndpoint = options.socketEndpoint;
     } else {
-      return error('Configure options must provide an socketEndpoint property');
+      callback(error('Configure options must provide an socketEndpoint property'));
     }
 
-    this._updateUser(options.reauth);
+    this._updateUser(options.reauth, () => {
+      this._event.emit('configure');
+      this.configured = true;
+      callback(null, this);
+    });
   }
 
   /**
@@ -133,7 +142,7 @@ export default class Telepat {
    *
    * @param {object} options Object containing all configuration options for connection
    */
-  connect(options) {
+  connect(options, callback = () => {}) {
     var self = this;
 
     function completeRegistration(res) {
@@ -170,10 +179,14 @@ export default class Telepat {
       //     Telepat.on('connect', function () {
       //       // Connected
       //     });
-      self.getContexts();
-      self._updateUser(options.reauth, () => {
-        self._event.emit('connect');
-        self.connected = true;
+      self.getContexts(() => {
+        self._updateUser(options.reauth, () => {
+          self._event.emit('connect');
+          self.currentAppId = API.appId;
+          self.connected = true;
+          self.connecting = false;
+          callback(null, self);
+        });
       });
       return true;
     }
@@ -204,8 +217,10 @@ export default class Telepat {
             if (err) {
               self._socket.disconnect();
               self._event.emit('disconnect', err);
+              self.currentAppId = null;
               self.connected = false;
-              return error('Device registration failed with error: ' + err);
+              self.connecting = false;
+              return callback(error('Device registration failed with error: ' + err));
             }
             return completeRegistration(res);
           });
@@ -218,28 +233,24 @@ export default class Telepat {
     // Required configuration options:
     if (typeof options !== 'undefined') {
       // - `apiKey`: the API key for the application to connect to
-      if (typeof options.apiKey !== 'undefined') {
-        API.apiKey = options.apiKey;
-      } else {
-        return error('Connect options must provide an apiKey property');
+      if (typeof options.apiKey === 'undefined') {
+        return callback(error('Connect options must provide an apiKey property'));
       }
       // - `appId`: the id of the application to connect to
-      if (typeof options.appId !== 'undefined') {
-        API.appId = options.appId;
-      } else {
-        return error('Connect options must provide an appId property');
+      if (typeof options.appId === 'undefined') {
+        return callback(error('Connect options must provide an appId property'));
       }
       // - `apiEndpoint`: the host and port number for the API service
       if (typeof options.apiEndpoint !== 'undefined') {
         API.apiEndpoint = options.apiEndpoint + '/';
       } else if (!API.apiEndpoint) {
-        return error('Connect options must provide an apiEndpoint property, or you must run `configure` first');
+        return callback(error('Connect options must provide an apiEndpoint property, or you must run `configure` first'));
       }
       // - `socketEndpoint`: the host and port number for the socket service
       if (typeof options.socketEndpoint !== 'undefined') {
         this._socketEndpoint = options.socketEndpoint;
       } else if (!this._socketEndpoint) {
-        return error('Connect options must provide an socketEndpoint property, or you must run `configure` first');
+        return callback(error('Connect options must provide an socketEndpoint property, or you must run `configure` first'));
       }
       // - `timerInterval`: the time interval in miliseconds between two object-monitoring jobs
       // on channels - defaults to 150
@@ -247,12 +258,17 @@ export default class Telepat {
         this._monitor.timerInterval = options.timerInterval;
       }
     } else {
-      return error('Options object not provided to the connect function');
+      return callback(error('Options object not provided to the connect function'));
     }
+
+    this.connecting = true;
 
     if (this.connected) {
       this.disconnect();
     }
+
+    API.apiKey = options.apiKey;
+    API.appId = options.appId;
 
     this._persistentConnectionOptions = options.persistentConnection || this._persistentConnectionOptions;
 
@@ -338,7 +354,8 @@ export default class Telepat {
     API.UDID = null;
 
     this._event.emit('disconnect');
-    self.connected = false;
+    this.currentAppId = null;
+    this.connected = false;
   };
 
   /**

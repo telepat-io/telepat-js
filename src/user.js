@@ -142,8 +142,8 @@ export default class User {
           this._event.emit('login');
         }
       }.bind(this));
-    }).catch(function () {
-      callback(error('No authentication tokens saved'), null);
+    }).catch(function (err) {
+      callback(error('Error retrieving authentication token: ' + err), null);
     });
   }
 
