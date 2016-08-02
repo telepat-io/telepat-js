@@ -45,7 +45,7 @@ export default class Admin {
     });
   }
 
-  getAppUser(id, callback = function() {}) {
+  getAppUser(id, callback = function () {}) {
     API.call('user/get',
     {},
     (err, res) => {
@@ -55,7 +55,6 @@ export default class Admin {
         callback(null, res.body.content);
       }
     });
-    
   }
 
   getApps(callback = function () {}) {
@@ -166,9 +165,9 @@ export default class Admin {
   }
 
   updateAdmin(patches, callback) {
-    API.call('admin/update', {patches: patches}, function(err, res) {
+    API.call('admin/update', {patches: patches}, (err, res) => {
       if (err) {
-        return callback(error('Failed updating admin: '+res.body.message));
+        return callback(error('Failed updating admin: ' + res.body.message));
       }
 
       callback();
