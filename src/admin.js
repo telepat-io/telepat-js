@@ -47,14 +47,14 @@ export default class Admin {
 
   getAppUser(id, callback = function () {}) {
     API.call('user/get',
-    {},
+    'user_id=' + id,
     (err, res) => {
       if (err) {
         callback(error('Retrieving user failed with error: ' + err), null);
       } else {
         callback(null, res.body.content);
       }
-    });
+    }, 'get');
   }
 
   getApps(callback = function () {}) {
