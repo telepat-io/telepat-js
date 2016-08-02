@@ -45,6 +45,19 @@ export default class Admin {
     });
   }
 
+  getAppUser(id, callback = function() {}) {
+    API.call('user/get',
+    {},
+    (err, res) => {
+      if (err) {
+        callback(error('Retrieving user failed with error: ' + err), null);
+      } else {
+        callback(null, res.body.content);
+      }
+    });
+    
+  }
+
   getApps(callback = function () {}) {
     API.call('admin/apps',
       '',
@@ -146,6 +159,16 @@ export default class Admin {
     }, (err, res) => {
       if (err) {
         return callback(error('Deleting model failed with error: ' + err));
+      }
+
+      callback();
+    });
+  }
+
+  updateAdmin(patches, callback) {
+    API.call('admin/update', {patches: patches}, function(err, res) {
+      if (err) {
+        return callback(error('Failed updating admin: '+res.body.message));
       }
 
       callback();
