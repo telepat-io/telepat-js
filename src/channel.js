@@ -189,4 +189,8 @@ export default class Channel {
   on(name, callback) {
     return this._event.on(name, callback);
   }
+
+  removeCallback(name, index) {
+    return this._event.removeCallback(name, index);
+  };
 };

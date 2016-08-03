@@ -11,6 +11,14 @@ export default class Event {
     } else {
       this.eventFunctions[name] = [callback];
     }
+
+    return this.eventFunctions[name].length;
+  }
+
+  removeCallback(name, index) {
+    if (Array.isArray(this.eventFunctions[name]) && this.eventFunctions[name].length > index) {
+      this.eventFunctions[name].splice(index, 1);
+    }
   }
 
   emit(args) {
