@@ -45,6 +45,18 @@ export default class Admin {
     });
   }
 
+  getAppUser(id, callback = function () {}) {
+    API.call('user/get',
+    'user_id=' + id,
+    (err, res) => {
+      if (err) {
+        callback(error('Retrieving user failed with error: ' + err), null);
+      } else {
+        callback(null, res.body.content);
+      }
+    }, 'get');
+  }
+
   getApps(callback = function () {}) {
     API.call('admin/apps',
       '',
@@ -152,6 +164,16 @@ export default class Admin {
     });
   }
 
+  updateAdmin(patches, callback) {
+    API.call('admin/update', {patches: patches}, (err, res) => {
+      if (err) {
+        return callback(error('Failed updating admin: ' + res.body.message));
+      }
+
+      callback();
+    });
+  }
+
   addUser(user, callback = function () {}) {
     this._user.register(user, callback);
   };
@@ -187,9 +209,8 @@ export default class Admin {
  *  @param {function} callback The callback function to be invoked when operation is done.
   The function receives 2 parameters, an error object and the user array.
  */
-  updateUser(user, patch, callback = function () {}) {
+  updateUser(patch, callback = function () {}) {
     API.call('admin/user/update', {
-      username: this.users[parseInt(user, 10)].username,
       patches: patch
     },
     (err, res) => {
