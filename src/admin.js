@@ -209,9 +209,8 @@ export default class Admin {
  *  @param {function} callback The callback function to be invoked when operation is done.
   The function receives 2 parameters, an error object and the user array.
  */
-  updateUser(user, patch, callback = function () {}) {
+  updateUser(patch, callback = function () {}) {
     API.call('admin/user/update', {
-      username: this.users[parseInt(user, 10)].username,
       patches: patch
     },
     (err, res) => {
