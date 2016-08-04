@@ -17,7 +17,7 @@ export default class Event {
 
   removeCallback(name, index) {
     if (Array.isArray(this.eventFunctions[name]) && this.eventFunctions[name].length > index) {
-      this.eventFunctions[name].splice(index, 1);
+      this.eventFunctions[name].splice((index - 1), 1);
     }
   }
 
