@@ -7,9 +7,10 @@ import JDP from 'jsondiffpatch';
 var jsondiffpatch = JDP.create({
   objectHash: function (obj) {
     return obj._id || obj.id;
-  },
-  textDiff: {
+  }, textDiff: {
     minLength: 10000
+  }, arrays: {
+    detectMove: false
   }
 });
 
@@ -20,7 +21,7 @@ export default class Monitor {
         var trimmedObject = {};
 
         for (var name in obj) {
-          if (name.slice(0, 2) !== '$$' && typeof obj[name] !== 'function') {
+          if (name.slice(0, 2) !== '$$' && typeof obj[name] !== 'function' && !Array.isArray(obj[name])) {
             trimmedObject[name] = obj[name];
           }
         }
@@ -168,7 +169,7 @@ export default class Monitor {
                     }
                   }
 
-                  root[key][objKey] = self.objects[subKey][key][objKey];
+                  root[key][objKey] = JSON.parse(JSON.stringify(self.objects[subKey][key][objKey]));
                 }
 
                 if (patch.length) {

@@ -270,6 +270,10 @@ export default class Telepat {
     API.apiKey = options.apiKey;
     API.appId = options.appId;
 
+    if (this.admin.apps) {
+      this.admin.app = this.admin.apps[API.appId];
+    }
+
     this._persistentConnectionOptions = options.persistentConnection || this._persistentConnectionOptions;
 
     this._socket = require('socket.io-client')(this._socketEndpoint, options.ioOptions || {});
