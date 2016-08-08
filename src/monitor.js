@@ -6,11 +6,12 @@ import JDP from 'jsondiffpatch';
 
 var jsondiffpatch = JDP.create({
   objectHash: function (obj) {
-    return obj._id || obj.id;
+    if (obj.id) {
+      return obj.id;
+    }
+    return JSON.stringify(obj);
   }, textDiff: {
     minLength: 10000
-  }, arrays: {
-    detectMove: false
   }
 });
 
@@ -21,7 +22,7 @@ export default class Monitor {
         var trimmedObject = {};
 
         for (var name in obj) {
-          if (name.slice(0, 2) !== '$$' && typeof obj[name] !== 'function' && !Array.isArray(obj[name])) {
+          if (name.slice(0, 2) !== '$$' && typeof obj[name] !== 'function') {
             trimmedObject[name] = obj[name];
           }
         }
@@ -167,6 +168,9 @@ export default class Monitor {
                     } else if (delta.length === 3) {
                       log.info('Removing object properties is not supported in this version. Try setting to an empty value instead.');
                     }
+                  } else {
+                    patch.push({'op': 'replace', 'path': options.channel.model + '/' + key + '/' + objKey, 'value': self.objects[subKey][key][objKey]});
+                    log.debug('Modified ' + objKey + ' property on object ' + key + ', ' + options.channel.model + ' channel');
                   }
 
                   root[key][objKey] = JSON.parse(JSON.stringify(self.objects[subKey][key][objKey]));
