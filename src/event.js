@@ -6,31 +6,30 @@ export default class Event {
   }
 
   on(name, callback) {
-    if (Array.isArray(this.eventFunctions[name])) {
-      this.eventFunctions[name].push(callback);
-    } else {
-      this.eventFunctions[name] = [callback];
+    let index = Date.now();
+
+    if (typeof this.eventFunctions[name] !== 'object') {
+      this.eventFunctions[name] = {};
     }
 
-    return this.eventFunctions[name].length;
+    this.eventFunctions[name][index] = callback;
+    return index;
   }
 
   removeCallback(name, index) {
-    if (Array.isArray(this.eventFunctions[name]) && this.eventFunctions[name].length > index) {
-      this.eventFunctions[name].splice((index - 1), 1);
-    }
+    delete this.eventFunctions[name][index];
   }
 
   emit(args) {
     log.debug('Emitting ' + arguments[0] + ' event');
-    var params = Array.prototype.slice.call(arguments);
+    let params = Array.prototype.slice.call(arguments);
 
     params.shift();
     if (typeof this.eventFunctions[arguments[0]] !== 'undefined') {
-      var callbackArray = this.eventFunctions[arguments[0]];
+      let callbacks = this.eventFunctions[arguments[0]];
 
-      for (var i = 0; i < callbackArray.length; i++) {
-        callbackArray[i].apply(this, params);
+      for (let index in callbacks) {
+        callbacks[index].apply(this, params);
       }
     }
   };
