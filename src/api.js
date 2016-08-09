@@ -53,7 +53,7 @@ API.call = function (endpoint, data, callback = () => {}, method) {
 };
 
 API.needsTokenUpdate = function (response) {
-  return (this.authenticationToken && (response.status === 401 || (response.status === 400 && response.body.code === '010') || (response.status === 500 && response.body.code === '002')));
+  return (this.authenticationToken && (response.status === 401 || (response.status === 500 && response.body.code === '002')));
 };
 
 API.updateToken = function (callback) {

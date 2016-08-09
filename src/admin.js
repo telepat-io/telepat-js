@@ -141,7 +141,7 @@ export default class Admin {
   }
 
   deleteContext(id, callback = () => {}) {
-    API.call('admin/context/delete',
+    API.del('admin/context/remove',
       {id: id},
       (err, res) => {
         if (err) {
