@@ -268,6 +268,14 @@ export default class Monitor {
       } else {
         for (var i = 0; i < operation.subscriptions.length; i++) {
           subscription = operation.subscriptions[i];
+
+          let subscriptionComponents = subscription.split(':');
+
+          if (subscriptionComponents[2] === 'context' && subscriptionComponents.length === 4) {
+            subscriptionComponents.pop();
+            subscription = subscriptionComponents.join(':');
+          }
+
           root = self.objects[subscription];
           lastRoot = self._lastObjects[subscription];
           event = self._events[subscription];

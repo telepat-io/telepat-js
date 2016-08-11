@@ -51,6 +51,7 @@ export default class Telepat {
     this.subscriptions = {};
     this.admin = null;
     this.user = null;
+    this.contextEvent = new EventObject(log);
   }
 
   getContexts(callback = () => {}) {
@@ -62,8 +63,15 @@ export default class Telepat {
         this._event.emit('error', error);
       } else {
         this._monitor.remove({channel: {model: 'context'}});
-        this.contexts = res.body.content;
-        this._monitor.add({channel: {model: 'context'}}, this.contexts, null, this._addContext.bind(this), this._deleteContext.bind(this), this._updateContext.bind(this));
+        this.contexts = {};
+        for (let index in res.body.content) {
+          this.contexts[res.body.content[index].id] = res.body.content[index];
+        }
+
+        this._monitor.add({channel: {model: 'context'}}, this.contexts, this.contextEvent, this._addContext.bind(this), this._deleteContext.bind(this), this._updateContext.bind(this));
+        this.contextEvent.on('update', (operation, parentId, parentObject, delta) => {
+          this._event.emit('contexts-update');
+        });
         callback(null, this.contexts);
         this._event.emit('contexts-update');
       }

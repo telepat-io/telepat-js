@@ -75,7 +75,7 @@ export default class User {
       }
       if (isAdmin) {
         self.isAdmin = true;
-        self._setAdmin(new Admin(self._monitor, self));
+        self._setAdmin(new Admin(self));
       }
 
       // userChannel = new Channel(api, log, error, monitor, { channel: { model: 'users', id: self.id } });
@@ -136,7 +136,7 @@ export default class User {
           if (res.body.content.type === 'admin') {
             this.isAdmin = true;
             this._saveToken(API.authenticationToken);
-            this._setAdmin(new Admin(this._monitor, this));
+            this._setAdmin(new Admin(this));
           }
           callback(null, res);
           this._event.emit('login');

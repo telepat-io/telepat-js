@@ -15,10 +15,11 @@ import error from './error';
  */
 
 export default class Admin {
-  constructor(monitor, user) {
+  constructor(user) {
     this.users = null;
-    this._monitor = monitor;
     this._user = user;
+    this._monitor = user._monitor;
+    this._event = user._event;
     this.apps = null;
     this.app = null;
   }
