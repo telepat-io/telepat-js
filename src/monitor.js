@@ -51,21 +51,6 @@ export default class Monitor {
   }
 
   static subscriptionKeyForOptions(options) {
-    /*
-    4:  "blg:{appId}:{model}",                                 //channel
-    used for built-in models (users, contexts)
-    5:  "blg:{appId}:context:{context}:{model}",
-    //the Channel of all objects from a context
-    7:  "blg:{appId}:context:{context}:users:{user_id}:{model}",
-    //the Channel of all objects from a context from an user
-    12: "blg:{appId}:{parent_model}:{parent_id}:{model}",            //the
-    Channel of all objects belong to a parent
-    14: "blg:{appId}:users:{user_id}:{parent_model}:{parent_id}:{model}",//the
-    Channel of all comments from event 1 from user 16
-    20: "blg:{appId}:{model}:{id}",                            //the
-    Channel of one item
-    */
-
     var key = 'blg:' + API.appId;
 
     if (!options.channel.id && options.channel.context) {
@@ -322,7 +307,7 @@ export default class Monitor {
               log.debug('Removed object id ' + operation.object_id);
             }
           } else {
-            event.emit('error', error('Subscription not found ' + subscription));
+            error('Subscription not found ' + subscription);
           }
         }
       }
