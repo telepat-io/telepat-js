@@ -308,11 +308,11 @@ export default class Monitor {
                 event.emit('error', error('Invalid operation ' + operation));
               }
             } else {
-              oldValue = root[operation.object_id];
-              delete root[operation.object_id];
-              delete lastRoot[operation.object_id];
-              event.emit('update', 'delete', operation.object_id, oldValue);
-              log.debug('Removed object id ' + operation.object_id);
+              oldValue = root[operation.object.id];
+              delete root[operation.object.id];
+              delete lastRoot[operation.object.id];
+              event.emit('update', 'delete', operation.object.id, oldValue);
+              log.debug('Removed object id ' + operation.object.id);
             }
           } else {
             error('Subscription not found ' + subscription);
