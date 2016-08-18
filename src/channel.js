@@ -82,18 +82,20 @@ export default class Channel {
  * - `error`
  *
  */
-  unsubscribe() {
+  unsubscribe(callback = () => {}) {
     API.call('object/unsubscribe',
       this._options,
       err => {
         if (err) {
           this._event.emit('error', error('Unsubscribe failed with error: ' + err));
+          callback(err);
         } else {
           this.objects = {};
           this.objectsArray = [];
           this._monitor.remove(this._options);
           this._event.emit('unsubscribe');
           this._event.emit('_unsubscribe');
+          callback();
         }
       });
   }

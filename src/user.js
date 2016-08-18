@@ -354,7 +354,7 @@ export default class User {
     this._customProperties = [];
     this.data = {};
 
-    API.get('user/logout', {}, err => {
+    API.get('user/logout', '', err => {
       API.authenticationToken = null;
       if (err) {
         this._event.emit('logout_error', error('Logout failed with error: ' + err));
