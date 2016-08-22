@@ -86,7 +86,7 @@ export default class Monitor {
     var self = this;
 
     function processDeltaObject(object) {
-      if (object['_t'] === 'a') {
+      if (Array.isArray(object) || object['_t'] === 'a') {
         return true;
       }
       for (var key in object) {
