@@ -2,6 +2,7 @@
 
 import API from './api';
 import error from './error';
+import Channel from './channel';
 
 /**
  * ## Admin Constructor
@@ -22,6 +23,7 @@ export default class Admin {
     this._event = user._event;
     this.apps = null;
     this.app = null;
+    this._userSubscription = null;
   }
 
 /**
@@ -33,17 +35,25 @@ export default class Admin {
   The function receives 2 parameters, an error object and the user array.
  */
   getAppUsers(callback = function () {}) {
-    API.call('admin/users',
-    {},
-    (err, res) => {
-      if (err) {
-        callback(error('Retrieving users failed with error: ' + err), null);
-      } else {
-        this.users = res.body.content;
-        this._monitor.add({channel: {model: 'user'}}, this.users, null, this.addUser, this.deleteUser, this.updateUser);
-        callback(null, this.users);
-      }
+    this._userSubscription = new Channel(this._monitor, {channel: {model: 'user'}});
+    this._userSubscription.on('subscribe', () => {
+      this.users = this._userSubscription.objects;
+      this._monitor.add({channel: {model: 'user'}}, this.users, null, this.addUser, this.deleteUser, this.updateUser);
+      callback(null, this._userSubscription.objects);
     });
+    this._userSubscription.subscribe();
+
+    // API.call('admin/users',
+    // {},
+    // (err, res) => {
+    //   if (err) {
+    //     callback(error('Retrieving users failed with error: ' + err), null);
+    //   } else {
+    //     this.users = res.body.content;
+    //     this._monitor.add({channel: {model: 'user'}}, this.users, null, this.addUser, this.deleteUser, this.updateUser);
+    //     callback(null, this.users);
+    //   }
+    // });
   }
 
   getAppUser(id, callback = function () {}) {
@@ -248,6 +258,9 @@ export default class Admin {
   };
 
   unhook() {
+    if (this._userSubscription) {
+      this._userSubscription.unsubscribe();
+    }
     this._monitor.remove({channel: {model: 'user'}});
     this._monitor.remove({channel: {model: 'application'}});
   };

@@ -33,6 +33,40 @@ export default class Channel {
     //  on a key named after the object id.
     this.objects = {};
     this.objectsArray = [];
+    this.objectsCount = null;
+  }
+
+  _sortObjectArray() {
+    if (this._options.sort) {
+      this.objectsArray.sort((a, b) => {
+        let result = null;
+
+        Object.keys(this._options.sort).map(key => {
+          let order = this._options.sort[key];
+          let factor = (order === 'asc') ? 1 : -1;
+
+          if (a[key] && !b[key]) {
+            result = factor;
+          }
+          if (!a[key] && b[key]) {
+            result = -factor;
+          }
+          if (a[key] && b[key]) {
+            if (a[key] < b[key]) {
+              result = -factor;
+            }
+            if (a[key] > b[key]) {
+              result = factor;
+            }
+          }
+        });
+
+        if (!result) {
+          return 0;
+        }
+        return result;
+      });
+    }
   }
 
 /**
@@ -60,12 +94,30 @@ export default class Channel {
           this.objects[res.body.content[i].id] = res.body.content[i];
         }
         this.objectsArray = res.body.content;
+        this._sortObjectArray();
         var objectKeys = Object.keys(this.objects);
 
         for (i = 0; i < objectKeys.length; i++) {
           this.objects[objectKeys[i]].$$event = new EventObject(log);
         }
         this._monitor.add(this._options, this.objects, this._event, this.add.bind(this), this.remove.bind(this), this.update.bind(this));
+        this._event.on('update', (operation, parentId, parentObject, delta) => {
+          if (operation === 'add') {
+            this.objectsArray.push(parentObject);
+            this._sortObjectArray();
+            if (this.objectsCount) {
+              this.objectsCount++;
+            }
+          } else if (operation === 'delete') {
+            this.objectsArray = this.objectsArray.filter(object => {
+              return object.id !== parentId;
+            });
+            this._sortObjectArray();
+            if (this.objectsCount) {
+              this.objectsCount--;
+            }
+          }
+        });
         this._event.emit('subscribe');
       }
     });
@@ -92,10 +144,25 @@ export default class Channel {
         } else {
           this.objects = {};
           this.objectsArray = [];
+          this.objectsCount = null;
           this._monitor.remove(this._options);
           this._event.emit('unsubscribe');
           this._event.emit('_unsubscribe');
           callback();
+        }
+      });
+  }
+
+  getCount(callback = () => {}) {
+    API.call('object/count',
+      this._options,
+      (err, res) => {
+        if (err) {
+          this._event.emit('error', error('Get object count failed with error: ' + err));
+          callback(err, null);
+        } else {
+          this.objectsCount = res.body.content.count;
+          callback(null, this.objectsCount);
         }
       });
   }

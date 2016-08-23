@@ -6,11 +6,11 @@ export default class Event {
   }
 
   on(name, callback) {
-    let index = Date.now();
-
     if (typeof this.eventFunctions[name] !== 'object') {
       this.eventFunctions[name] = {};
     }
+
+    let index = Date.now() + Object.keys(this.eventFunctions[name]).length;
 
     this.eventFunctions[name][index] = callback;
     return index;

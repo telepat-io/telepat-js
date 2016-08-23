@@ -189,10 +189,10 @@ export default class Telepat {
       //     });
       self.getContexts(() => {
         self._updateUser(options.reauth, () => {
-          self._event.emit('connect');
           self.currentAppId = API.appId;
           self.connected = true;
           self.connecting = false;
+          self._event.emit('connect');
           callback(null, self);
         });
       });
@@ -424,8 +424,8 @@ export default class Telepat {
    * @return {Channel} The new [Channel](http://docs.telepat.io/telepat-js/lib/channel.js.html) object
    */
   subscribe(options, onSubscribe) {
-    var channel = new Channel(this._monitor, options);
-    var key = Monitor.subscriptionKeyForOptions(options);
+    let channel = new Channel(this._monitor, options);
+    let key = Monitor.subscriptionKeyForOptions(options);
 
     this.subscriptions[key] = channel;
     channel.subscribe();
@@ -437,6 +437,15 @@ export default class Telepat {
     });
     return channel;
   };
+
+  getChannel(options) {
+    let key = Monitor.subscriptionKeyForOptions(options);
+
+    if (this.subscriptions[key]) {
+      return this.subscriptions[key];
+    }
+    return new Channel(this._monitor, options);
+  }
 
   sendEmail(from, fromName, to, subject, body, callback) {
     API.call('/email', {
