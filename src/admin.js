@@ -127,36 +127,36 @@ export default class Admin {
       });
   }
 
-  addContext(context, callback = () => {}) {
+  addCollection(collection, callback = () => {}) {
     API.call('admin/context/add',
-      context,
+      collection,
       (err, res) => {
         if (err) {
-          return callback(error('Creating context failed with error: ' + err));
+          return callback(error('Creating collection failed with error: ' + err));
         }
 
         callback(null, res);
       });
   }
 
-  updateContext(id, patches, callback = () => {}) {
+  updateCollection(id, patches, callback = () => {}) {
     API.call('admin/context/update',
       {id: id, patches: patches},
       (err, res) => {
         if (err) {
-          return callback(error('Updating context failed with error: ' + err));
+          return callback(error('Updating collection failed with error: ' + err));
         }
 
         callback();
       });
   }
 
-  deleteContext(id, callback = () => {}) {
+  deleteCollection(id, callback = () => {}) {
     API.del('admin/context/remove',
       {id: id},
       (err, res) => {
         if (err) {
-          return callback(error('Deleting context failed with error: ' + err));
+          return callback(error('Deleting collection failed with error: ' + err));
         }
 
         callback();

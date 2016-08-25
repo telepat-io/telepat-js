@@ -16,7 +16,7 @@ import User from './user';
 // You use the Telepat class to connect to the backend, login, subscribe and unsubscribe to channels.
 // The object has properties you can access:
 //
-// * `contexts`, an array of all the available contexts represented as JSON objects
+// * `collections`, an object containing of all the available collections, represented as JSON objects
 // * `subscriptions`, an object that holds references to
 // [Channel](http://docs.telepat.io/telepat-js/lib/channel.js.html) objects, on keys named after the respective channel
 
@@ -47,58 +47,58 @@ export default class Telepat {
     this.connecting = false;
     this.configured = false;
     this.currentAppId = null;
-    this.contexts = null;
+    this.collections = null;
     this.subscriptions = {};
     this.admin = null;
     this.user = null;
-    this.contextEvent = new EventObject(log);
+    this.collectionEvent = new EventObject(log);
   }
 
-  getContexts(callback = () => {}) {
+  getCollections(callback = () => {}) {
     API.get('context/all', '', (err, res) => {
       if (err) {
-        let error = error('Error retrieving contexts ' + err);
+        let error = error('Error retrieving collections ' + err);
 
         this.callback(error, null);
         this._event.emit('error', error);
       } else {
         this._monitor.remove({channel: {model: 'context'}});
-        this.contexts = {};
+        this.collections = {};
         for (let index in res.body.content) {
-          this.contexts[res.body.content[index].id] = res.body.content[index];
+          this.collections[res.body.content[index].id] = res.body.content[index];
         }
 
-        this._monitor.add({channel: {model: 'context'}}, this.contexts, this.contextEvent, this._addContext.bind(this), this._deleteContext.bind(this), this._updateContext.bind(this));
-        this.contextEvent.on('update', (operation, parentId, parentObject, delta) => {
-          this._event.emit('contexts-update');
+        this._monitor.add({channel: {model: 'context'}}, this.collections, this.collectionEvent, this._addCollection.bind(this), this._deleteCollection.bind(this), this._updateCollection.bind(this));
+        this.collectionEvent.on('update', (operation, parentId, parentObject, delta) => {
+          this._event.emit('collections-update');
         });
-        callback(null, this.contexts);
-        this._event.emit('contexts-update');
+        callback(null, this.collections);
+        this._event.emit('collections-update');
       }
     });
   }
 
-  _addContext(context, callback = () => {}) {
+  _addCollection(collection, callback = () => {}) {
     if (this.admin) {
-      this.admin.addContext(context, callback);
+      this.admin.addCollection(collection, callback);
     } else {
-      log.warn('Editing context data as non-admin user. Changes will not be remotely persisted.');
+      log.warn('Editing collection data as non-admin user. Changes will not be remotely persisted.');
     }
   }
 
-  _updateContext(id, patches, callback = () => {}) {
+  _updateCollection(id, patches, callback = () => {}) {
     if (this.admin) {
-      this.admin.updateContext(id, patches, callback);
+      this.admin.updateCollection(id, patches, callback);
     } else {
-      log.warn('Editing context data as non-admin user. Changes will not be remotely persisted.');
+      log.warn('Editing collection data as non-admin user. Changes will not be remotely persisted.');
     }
   }
 
-  _deleteContext(id, callback = () => {}) {
+  _deleteCollection(id, callback = () => {}) {
     if (this.admin) {
-      this.admin.deleteContext(id, callback);
+      this.admin.deleteCollection(id, callback);
     } else {
-      log.warn('Editing context data as non-admin user. Changes will not be remotely persisted.');
+      log.warn('Editing collection data as non-admin user. Changes will not be remotely persisted.');
     }
   }
 
@@ -187,7 +187,7 @@ export default class Telepat {
       //     Telepat.on('connect', function () {
       //       // Connected
       //     });
-      self.getContexts(() => {
+      self.getCollections(() => {
         self._updateUser(options.reauth, () => {
           self.currentAppId = API.appId;
           self.connected = true;
@@ -278,7 +278,7 @@ export default class Telepat {
     API.apiKey = options.apiKey;
     API.appId = options.appId;
 
-    if (this.admin.apps) {
+    if (this.admin && this.admin.apps) {
       this.admin.app = this.admin.apps[API.appId];
     }
 
@@ -326,7 +326,7 @@ export default class Telepat {
     });
 
     this._socket.on('context-update', () => {
-      this.getContexts();
+      this.getCollections();
     });
 
     this._socket.on('disconnect', () => {
@@ -345,7 +345,7 @@ export default class Telepat {
     this._socket.close();
     this._socket = null;
     this._sessionId = null;
-    this.contexts = null;
+    this.collections = null;
     this._monitor.remove({channel: {model: 'context'}});
 
     for (var key in this.subscriptions) {
@@ -418,7 +418,7 @@ export default class Telepat {
    * You can pass a callback to be invoked on channel subscription. This is equivalent to calling
     `.on('subscribe' ...)` directly on the returned Channel.
    *
-   * @param {Object} options The object describing the required subscription (context, channel, filters)
+   * @param {Object} options The object describing the required subscription (collection, channel, filters)
    * @param {function, optional} onSubscribe Callback to be executed on a successful subscribe
    *
    * @return {Channel} The new [Channel](http://docs.telepat.io/telepat-js/lib/channel.js.html) object
