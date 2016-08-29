@@ -315,7 +315,7 @@ export default class Monitor {
               log.debug('Removed object id ' + operation.object.id);
             }
           } else {
-            error('Subscription not found ' + subscription);
+            log.warn('Subscription not found ' + subscription);
           }
         }
       }

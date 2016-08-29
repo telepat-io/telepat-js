@@ -90,7 +90,7 @@ export default class User {
       if (err) {
         if (err.status === 404 && options.hasOwnProperty('access_token')) {
           log.info('Got 404 on Facebook login, registering user first');
-          API.call('user/register_facebook', options, (err, res) => {
+          API.call('user/register-facebook', options, (err, res) => {
             if (err) {
               log.error('Failed to login with Facebook. Could not register or login user.');
               self._event.emit('login_error', error('Login failed with error: ' + err));
