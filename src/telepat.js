@@ -1,7 +1,3 @@
-// # Telepat Javascript Client
-// **Telepat** is an open-source backend stack, designed to deliver information
-// and information updates in real-time to clients, while allowing for flexible deployment and simple scaling.
-
 import fs from 'fs';
 import PouchDB from 'pouchdb';
 import API from './api';
@@ -12,14 +8,15 @@ import Monitor from './monitor';
 import Channel from './channel';
 import User from './user';
 
-// ## Telepat Class
-// You use the Telepat class to connect to the backend, login, subscribe and unsubscribe to channels.
-// The object has properties you can access:
-//
-// * `collections`, an object containing of all the available collections, represented as JSON objects
-// * `subscriptions`, an object that holds references to
-// [Channel](http://docs.telepat.io/telepat-js/lib/channel.js.html) objects, on keys named after the respective channel
-
+/**
+ * The `Telepat` object is the first object you want to instantiate while working with the Telepat SDK.
+ * It exposes methods and properties that enable you to register, login, subscribe to objects and to users.
+ *
+ * @class Telepat
+ *
+ * @example
+ * let telepat = new Telepat();
+ */
 export default class Telepat {
   constructor() {
     function getUserHome() {
@@ -43,13 +40,86 @@ export default class Telepat {
     this._persistentConnectionOptions = null;
     this._sessionId = null;
 
+    /**
+     * Indicates whether the current instance is connected to the backend
+     * @type {boolean}
+     * @memberof Telepat
+     */
     this.connected = false;
+    /**
+     * Indicates whether the current instance is in the process of connecting to the backend.
+     * If true, the `connect` event will be fired as soon as connection is established.
+     * @type {boolean}
+     * @memberof Telepat
+     */
     this.connecting = false;
+    /**
+     * Indicates whether the current instance is properly configured and ready for connection.
+     * @type {boolean}
+     * @memberof Telepat
+     */
     this.configured = false;
+    /**
+     * If connected, this property reflects the current app id.
+     * @type {string}
+     * @memberof Telepat
+     */
     this.currentAppId = null;
-    this.collections = null;
+    /**
+     * This object contains details about all the collections available for the currently connected application.
+     * You can read this after the `connect` event is emitted, or if the `connected` property is true.
+     * Each available collection is stored as an Object, using a key whose name is equal to the collection's id.
+     * Modifications to collection objects stored within will be automatically synchronized with the Telepat backend.
+     * @type {Object}
+     * @memberof Telepat
+     */
+    this.collections = {};
+    /**
+     * This object contains references to all of the {@link Channel}s that are actively subscribed.
+     * Each channel is stored using a key equal to the channel's unique identifier.
+     * @type {Object}
+     * @memberof Telepat
+     */
     this.subscriptions = {};
+    /**
+     * This property becomes available after successfully logging in as an administrator.
+     * It gives you access to a instance of the {@link Admin} class, allowing you access to administrator functionality.
+     * @type {Admin}
+     * @memberof Telepat
+     *
+     * @example
+     * telepat.user.loginAdmin('admin@email.com', 'password', (err) => {
+     *  if (err) {
+     *    // Treat login error
+     *  } else {
+     *    telepat.admin.getAppUsers((err) => {
+     *      if (err) {
+     *        // Treat error
+     *      } else {
+     *        // Treat success
+     *        console.log(telepat.admin.users);
+     *      }
+     *    })
+     *  }
+     * });
+     */
     this.admin = null;
+    /**
+     * An instance of the {@link User} class, this allows you to access user functionality like logging in,
+     * accessing and modifying current user data or registering new user accounts.
+     * @type {User}
+     * @memberof Telepat
+     *
+     * @example
+     * telepat.user.login('email', 'password', (err) => {
+     *  if (err) {
+     *    // Treat login error
+     *  } else {
+     *    // Treat successful login
+     *    console.log(telepat.user.data);
+     *  }
+     * });
+     */
     this.user = null;
     this.collectionEvent = new EventObject(log);
   }
@@ -117,11 +187,23 @@ export default class Telepat {
   }
 
   /**
-   * ## Telepat.configure
-   *
    * Call this to configure Telepat server endpoints without connecting to a specific app.
    *
-   * @param {object} options Object containing all configuration options for connection
+   * @param {Object} options Object containing all configuration options for connection
+   * @param {string} options.apiEndpoint The Telepat API endpoint URL
+   * @param {string} options.socketEndpoint The Telepat socket endpoint URL
+   * @param {boolean} [options.reauth=false] Should reauth previously logged in user on connection
+   * @param {TelepatCallback} callback Callback invoked after configuration is finished
+   * @fires Telepat.event:configure
+   *
+   * @example
+   * let telepat = new Telepat();
+   * telepat.configure({
+   *  apiEndpoint: 'TELEPAT-API-ENDPOINT',
+   *  socketEndpoint: 'TELEPAT-SOCKET-ENDPOINT'
+   * }, (err, res) => {
+   *  // Handle configuration
+   * });
    */
   configure(options = {}, callback = () => {}) {
     if (typeof options.apiEndpoint !== 'undefined') {
@@ -144,13 +226,68 @@ export default class Telepat {
   }
 
   /**
-   * ## Telepat.connect
+   * Call this to connect to a specific Telepat app.
+   * This is usually the first thing you need to do after instantiating the Telepat object.
    *
-   * This is the first function you should call to connect to the Telepat backend.
+   * @param {Object} options Object containing all configuration options for connection
+   * @param {string} options.apiKey Your app API key
+   * @param {string} options.appId Your app id
+   * @param {string} [options.apiEndpoint] The Telepat API endpoint URL. If this is absent from the connect options, it must have been previously set by calling {@link #Telepat#configure configure}.
+   * @param {string} [options.socketEndpoint] The Telepat socket endpoint URL.
+   *  If this is absent from the connect options, it must have been previously set by calling {@link #Telepat#configure configure}.
+   * @param {boolean} [options.reauth=false] Should reauth previously logged in user on connection
+   * @param {Object} [options.persistentConnection=null] Set this to configure receiving updates via persistent channels, like push notifications.
+   * @param {Object} [options.ioOptions={}] Configuration options for socket.io
+   * @param {boolean} [options.updateUDID=false] Set this to true to force the client to update the saved device identifier.
+   * @param {number} [options.timerInterval=150] Frequency of running diff (in miliseconds) to check for object updates.
+   * @param {TelepatCallback} callback Callback invoked after configuration is finished
+   * @fires Telepat.event:connect
+   * @fires Telepat.event:disconnect
    *
-   * @param {object} options Object containing all configuration options for connection
+   * @example
+   * // Simple connection to backend
+   *
+   * let telepat = new Telepat();
+   * telepat.connect({
+   *  apiEndpoint: 'TELEPAT-API-ENDPOINT',
+   *  socketEndpoint: 'TELEPAT-SOCKET-ENDPOINT',
+   *  apiKey: 'APP-API-KEY',
+   *  appId: 'APP-ID'
+   * }, (err, res) => {
+   *  // Handle connection
+   * });
+   *
+   * @example
+   * // Using connection event
+   *
+   * let telepat = new Telepat();
+   * telepat.connect({
+   *  apiEndpoint: 'TELEPAT-API-ENDPOINT',
+   *  socketEndpoint: 'TELEPAT-SOCKET-ENDPOINT',
+   *  apiKey: 'APP-API-KEY',
+   *  appId: 'APP-ID'
+   * });
+   * let connectCallbackId = telepat.on('connect', {
+   *  telepat.removeCallback(connectCallbackId);
+   *  // Handle connection
+   * });
+   *
+   * @example
+   * // Activating the push notifications transport.
+   * // Do this when running inside a mobile OS, for example.
+   * telepat.connect({
+   *  apiEndpoint: 'TELEPAT-API-ENDPOINT',
+   *  socketEndpoint: 'TELEPAT-SOCKET-ENDPOINT',
+   *  apiKey: 'APP-API-KEY',
+   *  appId: 'APP-ID',
+   *  persistentConnection: {
+   *    type: 'ios',
+   *    token: 'DEVICE-NOTIFICATION-TOKEN',
+   *    active: 1
+   *  }
+   * });
    */
-  connect(options, callback = () => {}) {
+  connect(options = {}, callback = () => {}) {
     var self = this;
 
     function completeRegistration(res) {
@@ -181,12 +318,7 @@ export default class Telepat {
       });
 
       log.info('Connection established');
-      // On a successful connection, the `connect` event is emitted by the Telepat object.
-      // To listen for a connection, use:
-      //
-      //     Telepat.on('connect', function () {
-      //       // Connected
-      //     });
+
       self.getCollections(() => {
         self._updateUser(options.reauth, () => {
           self.currentAppId = API.appId;
@@ -238,30 +370,23 @@ export default class Telepat {
       });
     }
 
-    // Required configuration options:
     if (typeof options !== 'undefined') {
-      // - `apiKey`: the API key for the application to connect to
       if (typeof options.apiKey === 'undefined') {
         return callback(error('Connect options must provide an apiKey property'));
       }
-      // - `appId`: the id of the application to connect to
       if (typeof options.appId === 'undefined') {
         return callback(error('Connect options must provide an appId property'));
       }
-      // - `apiEndpoint`: the host and port number for the API service
       if (typeof options.apiEndpoint !== 'undefined') {
         API.apiEndpoint = options.apiEndpoint + '/';
       } else if (!API.apiEndpoint) {
         return callback(error('Connect options must provide an apiEndpoint property, or you must run `configure` first'));
       }
-      // - `socketEndpoint`: the host and port number for the socket service
       if (typeof options.socketEndpoint !== 'undefined') {
         this._socketEndpoint = options.socketEndpoint;
       } else if (!this._socketEndpoint) {
         return callback(error('Connect options must provide an socketEndpoint property, or you must run `configure` first'));
       }
-      // - `timerInterval`: the time interval in miliseconds between two object-monitoring jobs
-      // on channels - defaults to 150
       if (typeof options.timerInterval !== 'undefined') {
         this._monitor.timerInterval = options.timerInterval;
       }
@@ -336,10 +461,8 @@ export default class Telepat {
   }
 
   /**
-   * ## Telepat.disconnect
-   *
-   * You can use this function to disconnect the socket.io transport from the Telepat endpoint.
-   *
+   * Call this function to disconnect the client from the Telepat backend.
+   * @fires Telepat.event:disconnect
    */
   disconnect() {
     this._socket.close();
@@ -371,9 +494,9 @@ export default class Telepat {
   };
 
   /**
-   * ## Telepat.processMessage
-   *
    * Forwards messages reveived via external channels to the processing unit.
+   * Use this if you've configured external transports (like push notifications), and you need to pass received payloads
+   * to the processing engine.
    *
    * @param {string} message The delta update notification received from Telepat
    */
@@ -382,8 +505,6 @@ export default class Telepat {
   }
 
   /**
-   * ## Telepat.setLogLevel
-   *
    * You can tweak the logger verbosity using this function.
    *
    * @param {string} level One of `'debug'`, `'info'`, `'warn'` or `'error'`
@@ -394,34 +515,191 @@ export default class Telepat {
   }
 
   /**
-   * ## Telepat.on
+   * Invoked when client has connected to the backend.
    *
+   * @event connect
+   */
+  /**
+   * Invoked when client has disconnected from the backend.
+   *
+   * @event disconnect
+   * @type {Error}
+   */
+  /**
+   * Invoked when client configuration has completed.
+   *
+   * @event configure
+   */
+  /**
+   * Invoked on any operation error.
+   *
+   * @event error
+   * @type {Error}
+   */
+  /**
+   * Invoked when the available collections have updated.
+   *
+   * @event collections-update
+   */
+  /**
+   * Invoked when client has successfully logged in.
+   *
+   * @event login
+   */
+  /**
+   * Invoked when there was an error with logging in.
+   *
+   * @event login-error
+   * @type {Error}
+   */
+  /**
+   * Invoked when client has successfully logged out.
+   *
+   * @event logout
+   */
+  /**
+   * Invoked when there was an error with logging out.
+   *
+   * @event logout-error
+   * @type {Error}
+   */
+
+  /**
    * Call this function to add callbacks to be invoked on event triggers.
+   * Available callbacks:
+   *
+   * | Name                                                         | Description           |
+   * | ------------------------------------------------------------ | --------------------- |
+   * | {@link #Telepat.event:connect connect}                       | Invoked when client has connected to the backend |
+   * | {@link #Telepat.event:disconnect disconnect}                 | Invoked when client has disconnected from the backend |
+   * | {@link #Telepat.event:configure configure}                   | Invoked when client configuration has completed |
+   * | {@link #Telepat.event:error error}                           | Invoked on any operation error |
+   * | {@link #Telepat.event:collections-update collections-update} | Invoked when the available collections have updated |
+   * | {@link #Telepat.event:login login}                           | Invoked when client has successfully logged in |
+   * | {@link #Telepat.event:login-error login-error}               | Invoked when there was an error with logging in |
+   * | {@link #Telepat.event:logout logout}                         | Invoked when client has successfully logged out |
+   * | {@link #Telepat.event:logout-error logout-error}             | Invoked when there was an error with logging out |
    *
    * @param {string} name The name of the event to associate the callback with
    * @param {function} callback The callback to be executed
+   * @return {number} A callback id. Save this in order to later remove the callback from the event (using {@link #Telepat#removeCallback removeCallback})
+   *
+   * @example
+   * telepat.on('connect', () => {
+   *  console.log('connected');
+   * });
    */
   on(name, callback) {
     return this._event.on(name, callback);
   };
 
+  /**
+   * Call this function to remove callbacks that have been set using {@link #Telepat#on on}.
+   *
+   * @param {string} name The name of the event the callback was associated with
+   * @param {number} callbackId The callback id returned by calling {@link #Telepat#on on}
+   *
+   * @example
+   * let connectCallbackId = telepat.on('connect', () => {
+   *  // Remove the callback after the first connection event
+   *  telepat.removeCallback(connectCallbackId);
+   * });
+   */
   removeCallback(name, index) {
     return this._event.removeCallback(name, index);
   };
 
   /**
-   * ## Telepat.subscribe
+   * Use this function to create a new {@link Channel} object and retrieve its objects.
    *
-   * Use this function to create a new [Channel](http://docs.telepat.io/telepat-js/lib/channel.js.html)
-     object and connect it to the backend.
+   * @param {Object} options The object describing the required subscription
+   * @param {function} onSubscribe Callback invoked when subscription is ready
+   * @param {Object} [options.channel] Describes the basic properties of the objects requested
+   * @param {string} [options.channel.context] The id of the collection in which you're searching for objects
+   * @param {string} [options.channel.model] The model of the objects you're searching for (needs to be defined in the schema first)
+   * @param {string} [options.channel.id] If set, specifies the id of the unique object that you're querying for
+   * @param {Object} [options.channel.parent] If set, specifies the parent id and parent model of the objects you're querying for.
+   * @param {string} [options.channel.parent.model] The model of the parent object
+   * @param {string} [options.channel.parent.id] The id of the parent object
+   * @param {string} [options.channel.user] If set, specifies the user id of the creator of the objects you're querying for.
+   * @param {Object} [options.sort] An object that defines how returned objects should be sorted. Each object key is a property name, and each value can be either `asc` or `desc`.
+   * @param {Object} [options.filters] An object describing how returned objects should be filtered.
+   * @param {number} [options.offset] The offset that should be applied for the returned objects (for pagination)
+   * @param {number} [options.limit] The maximum number of objects to be returned in this batch (for pagination)
+   * @return {Channel} The new {@link Channel} object
    *
-   * You can pass a callback to be invoked on channel subscription. This is equivalent to calling
-    `.on('subscribe' ...)` directly on the returned Channel.
+   * @example
+   * // A simple subscription to all objects of type `article`
+   * // in a specific collection
    *
-   * @param {Object} options The object describing the required subscription (collection, channel, filters)
-   * @param {function, optional} onSubscribe Callback to be executed on a successful subscribe
+   * let articleChannel = telepat.subscribe({
+   *  channel: {
+   *    context: 'context-unique-identifier',
+   *    model: 'article'
+   *  }
+   * }, () => {
+   *  console.log(articleChannel.objectsArray);
+   * });
    *
-   * @return {Channel} The new [Channel](http://docs.telepat.io/telepat-js/lib/channel.js.html) object
+   * @example
+   * // A filtered subscription to all objects of type `article`
+   * // in a specific collection, that have one of two specific tag values
+   *
+   * let articleChannel = telepat.subscribe({
+   *  channel: {
+   *    context: 'context-unique-identifier',
+   *    model: 'article'
+   *  },
+   *  filters: {
+   *    or: [
+   *      {
+   *        is: {
+   *          tag: 'specific-tag-value'
+   *        }
+   *      },
+   *      {
+   *        is: {
+   *          tag: 'another-tag-value'
+   *        }
+   *      }
+   *    ]
+   *  }
+   * }, () => {
+   *  console.log(articleChannel.objectsArray);
+   * });
+   *
+   * @example
+   * // A simple subscription to all objects of type `article`
+   * // in a specific collection, sorted by created date descending
+   *
+   * let articleChannel = telepat.subscribe({
+   *  channel: {
+   *    context: 'context-unique-identifier',
+   *    model: 'article'
+   *  },
+   *  sort: {
+   *    created: 'desc'
+   *  }
+   * }, () => {
+   *  console.log(articleChannel.objectsArray);
+   * });
+   *
+   * @example
+   * // A simple subscription to all objects of type `comment`
+   * // in a specific collection, that belong to a specific article parent
+   *
+   * let articleChannel = telepat.subscribe({
+   *  channel: {
+   *    context: 'context-unique-identifier',
+   *    model: 'comment',
+   *    parent: {
+   *      model: 'article',
+   *      id: 'article-parent-unique-identifier'
+   *    }
+   *  }
+   * }, () => {
+   *  console.log(articleChannel.objectsArray);
+   * });
    */
   subscribe(options, onSubscribe) {
     let channel = new Channel(this._monitor, options);
@@ -438,6 +716,12 @@ export default class Telepat {
     return channel;
   };
 
+  /**
+   * Same as {@link #Telepat#subscribe subscribe} method, but returns the new {@link Channel} object without calling subscribe on it.
+   *
+   * @param  {Object} options Same as {@link #Telepat#subscribe subscribe} Options
+   * @return {Channel} The new {@link Channel} object
+   */
   getChannel(options) {
     let key = Monitor.subscriptionKeyForOptions(options);
 
@@ -477,3 +761,10 @@ export default class Telepat {
     });
   }
 };
+
+/**
+ * This callback is displayed as part of the Requester class.
+ * @callback TelepatCallback
+ * @param {Error} err If there was an error processing the requested operation, this will reference the error object resulted
+ * @param {*} res The operation response
+ */

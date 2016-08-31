@@ -1,20 +1,22 @@
-// # Telepat User Class
-
 import API from './api';
 import log from './logger';
 import error from './error';
 import Admin from './admin';
 
 /**
- * ## User Constructor
+ * You can access an instance of this class using the {@link #Telepatuser user} property of the Telepat object.
  *
- * This is generally invoked by the main [Telepat](http://docs.telepat.io/javascript-sdk/lib/telepat.js.html) object.
+ * @class User
  *
- * @param {Object} api The API connection object. This is injected by Telepat.
- * @param {Object} log The logging-handling object. This is injected by Telepat.
- * @param {Object} error The error-handling object. This is injected by Telepat.
- * @param {Object} monitor The monitoring object. This is injected by Telepat.
- * @param {function} setAdmin Method to allow this class to set administrators. This is injected by Telepat.
+ * @example
+ * telepat.user.login('email', 'password', (err) => {
+ *  if (err) {
+ *    // Treat login error
+ *  } else {
+ *    // Treat successful login
+ *    console.log(telepat.user.data);
+ *  }
+ * });
  */
 export default class User {
   constructor(db, event, monitor, setAdmin, callback = () => {}) {
@@ -23,8 +25,25 @@ export default class User {
     this._setAdmin = setAdmin;
     this._db = db;
     this._customProperties = [];
+    this._userChannel = null;
+
+    /**
+     * Indicates if the currently logged in user is an admin
+     * @type {boolean}
+     * @memberof User
+     */
     this.isAdmin = false;
+    /**
+     * Indicates if there's a saved authentication token that can be used to re-login
+     * @type {boolean}
+     * @memberof User
+     */
     this.canReauth = null;
+    /**
+     * Object that holds all key-value data about the currently logged in user
+     * @type {Object}
+     * @memberof User
+     */
     this.data = {};
     API.tokenUpdateCallback = (newToken) => {
       this._saveToken(newToken);
@@ -69,7 +88,9 @@ export default class User {
     var self = this;
 
     function success(res) {
-      for (var k in res.body.content.user) {
+      let userContainer = {};
+
+      for (let k in res.body.content.user) {
         self.data[k] = res.body.content.user[k];
         self._customProperties.push(k);
       }
@@ -78,8 +99,16 @@ export default class User {
         self._setAdmin(new Admin(self));
       }
 
-      // userChannel = new Channel(api, log, error, monitor, { channel: { model: 'users', id: self.id } });
-      // userChannel.subscribe();
+      userContainer[self.data.id] = self.data;
+      self._monitor.add(
+        {channel: {model: (self.isAdmin ? 'admin' : 'user')}},
+        userContainer,
+        null,
+        () => {},
+        () => {},
+        self.update.bind(self)
+      );
+
       API.authenticationToken = res.body.content.token;
       self._saveToken(API.authenticationToken);
       self._event.emit('login');
@@ -115,6 +144,12 @@ export default class User {
     });
   }
 
+  /**
+   * If there is a saved authentication token from previous connections, try to use it to login again.
+   * You can call this method if the {@link #UsercanReauth canReauth} property is true.
+   *
+   * @param  {TelepatCallback} callback Callback invoked after reauth operation is finished
+   */
   reauth(callback = () => {}) {
     this._db.get(':userToken').then(doc => {
       log.info('Retrieved saved authentication token');
@@ -147,25 +182,37 @@ export default class User {
     });
   }
 
-  update(callback = () => {}) {
-    var result = {};
-
-    for (var key in self) {
-      if (self.hasOwnProperty(key)) {
-        result[key] = self[key];
-      }
-    }
-    API.call('user/update_immediate',
-    { user: result },
-    (err, res) => {
+  /**
+   * Call this to update your profile.
+   *
+   * To call this method, you need to create an  array containing 'patch' objects, representing the
+   * modifications that need to be persisted. The structure of a patch object is:
+   *
+   * `{'op': 'replace', 'path': user or admin + '/' + user_id + '/' + property, 'value': modified_value}`
+   *
+   * Instead of using this function, you can also update the user directly from {@link #Userdata User.data}.
+   *
+   * @param  {Array<Object>} patches The array of patches representing the modifications that need to be persisted
+   * @param {TelepatCallback} callback Callback invoked after operation is finished
+   */
+  update(patches, callback = () => {}) {
+    API.call(this.isAdmin ? 'admin/update' : 'user/update', {patches: patches}, (err, res) => {
       if (err) {
-        callback(error('Updating user failed with error: ' + err), null);
-      } else {
-        callback(null, res.body.content);
+        return callback(error('Failed updating user: ' + res.body.message));
       }
+      callback();
     });
-  };
+  }
 
+  /**
+   * Call this to request a password reset for the logged in user.
+   * The process involves a confirmation email, with a link that needs to be clicked on in order to get a unique pass reset token.
+   * You then use that token to call the {@link #User#resetPassword resetPassword} method that finishes the process by setting a new password.
+   *
+   * @param  {string} email The email/username of the user to reset the pass for
+   * @param  {string} callbackURL The URL the user will be pointed to after verifying the request by clicking the link in the sent email
+   * @param  {TelepatCallback} callback Callback invoked after the operation is finished
+   */
   requestPasswordReset(email, callbackURL = null, callback = () => {}) {
     if (!email) {
       if (this.email) {
@@ -191,6 +238,12 @@ export default class User {
     });
   };
 
+  /**
+   * @param  {string} userId The id of the user that needs the password reset
+   * @param  {string} token The token obtained from the redirect generated by calling {@link #User#requestPasswordReset requestPasswordReset}.
+   * @param  {string} newPassword The new password
+   * @param  {TelepatCallback} callback Callback invoked after the operation is finished
+   */
   resetPassword(id, token, newPassword, callback = () => {}) {
     if (!id || !token || !newPassword) {
       callback(error('You must provide a valid user-id, pass reset token and new password for the account that needs the password reset'), null);
@@ -213,28 +266,22 @@ export default class User {
   };
 
   /**
-   * ## User.register
-   *
    * This function creates a new user profile.
    *
-   * @param {Object} user The object representing the user profile
-   * @param {function} callback The callback function to be invoked when operation is done.
-    The function receives 2 parameters, an error object and the user array.
+   * @param {Object} user The object representing the new user profile
+   * @param {TelepatCallback} callback Callback invoked after the operation is finished
    */
-  register(user, callback) {
+  register(user, callback = () => {}) {
     API.call('user/register-username', user, callback);
   };
 
   /**
-   * ## User.registerAdmin
-   *
    * This function creates a new admin profile.
    *
-   * @param {Object} admin The object representing the admin profile
-   * @param {function} callback The callback function to be invoked when operation is done.
-    The function receives 2 parameters, an error object and the user array.
+   * @param {Object} admin The object representing the new admin profile
+   * @param {TelepatCallback} callback Callback invoked after the operation is finished
    */
-  registerAdmin(admin, callback) {
+  registerAdmin(admin, callback = () => {}) {
     API.call('admin/add', admin, (err, res) => {
       if (err) {
         callback(error('Register failed with error: ' + (res.body.message) || ''), null);
@@ -245,66 +292,67 @@ export default class User {
   };
 
   /**
-   * ## User.loginWithFacebook
-   *
    * This function associates the current anonymous device to a Telepat user profile, using a Facebook
     account for authentication.
    *
-   * Two events can be asynchronously triggered by this function:
-   *
-   * - `login`, on success
-   * - `login_error`, on error
-   *
    * @param {string} facebookToken The user token obtained from Facebook after login
+   * @param {TelepatCallback} callback Callback invoked after the operation is finished
    */
-  loginWithFacebook(facebookToken, callback) {
+  loginWithFacebook(facebookToken, callback = () => {}) {
     return this._login('user/login-facebook', { 'access_token': facebookToken }, false, callback);
   };
 
   /**
-   * ## User.login
-   *
-   * This function associates the current anonymous device to a Telepat user profile,
-    using a password for authentication.
-   *
-   * Two events can be asynchronously triggered by this function:
-   *
-   * - `login`, on success
-   * - `login_error`, on error
+   * This function associates the current anonymous device to a Telepat user profile, using a password for authentication.
    *
    * @param {string} email The user's email address
    * @param {string} password The user's password
+   * @param {TelepatCallback} callback Callback invoked after the operation is finished
+   * @example
+   * telepat.user.login('email', 'password', (err) => {
+   *  if (err) {
+   *    // Treat login error
+   *  } else {
+   *    // Treat successful login
+   *    console.log(telepat.user.data);
+   *  }
+   * });
    */
-  login(email, password, callback) {
+  login(email, password, callback = () => {}) {
     return this._login('user/login_password', { username: email, password: password }, false, callback);
   };
 
   /**
-   * ## User.loginAdmin
-   *
-   * This function associates the current anonymous device to a Telepat administrator profile,
-    using a password for authentication.
-   *
-   * Two events can be asynchronously triggered by this function:
-   *
-   * - `login`, on success
-   * - `login_error`, on error
+   * This function associates the current anonymous device to a Telepat administrator profile, using a password for authentication.
    *
    * @param {string} email The admin email address
    * @param {string} password The admin password
+   * @param {TelepatCallback} callback Callback invoked after the operation is finished
+   * @example
+   * telepat.user.loginAdmin('admin@email.com', 'password', (err) => {
+   *  if (err) {
+   *    // Treat login error
+   *  } else {
+   *    telepat.admin.getAppUsers((err) => {
+   *      if (err) {
+   *        // Treat error
+   *      } else {
+   *        // Treat success
+   *        console.log(telepat.admin.users);
+   *      }
+   *    })
+   *  }
+   * });
    */
-  loginAdmin(email, password, callback) {
+  loginAdmin(email, password, callback = () => {}) {
     return this._login('admin/login', { email: email, password: password }, true, callback);
   };
 
   /**
-   * ## User.get
+   * This function retrieves a Telepat user's information, based on a user id.
    *
-   * This function retrieves a Telepat user's information, based on id
-   *
-   * @param {Object} user The user's Telepat ID
-   * @param {function} callback The callback function to be invoked when operation is done.
-    The function receives 2 parameters, an error object and the user array.
+   * @param {string} user The user's Telepat ID
+   * @param {TelepatCallback} callback Callback invoked after the operation is finished
    */
   get(userId, callback = () => {}) {
     API.get('user/get', 'user_id=' + encodeURIComponent(userId), (err, res) => {
@@ -317,12 +365,9 @@ export default class User {
   };
 
   /**
-   * ## User.me
+   * This function retrieves the currently logged in user's information.
    *
-   * This function retrieves the currently logged in user's information
-   *
-   * @param {function} callback The callback function to be invoked when operation is done.
-    The function receives 2 parameters, an error object and the user array.
+   * @param {TelepatCallback} callback Callback invoked after the operation is finished
    */
   me(callback = () => {}) {
     API.get((this.isAdmin ? 'admin/me' : 'user/me'), '', (err, res) => {
@@ -335,13 +380,9 @@ export default class User {
   };
 
   /**
-   * ## User.logout
+   * Logs the current user out.
    *
-   * Logs a user out.
-   * Two events can be asynchronously triggered by this function:
-   *
-   * - `logout`, on success
-   * - `logout_error`, on error
+   * @param {TelepatCallback} callback Callback invoked after the operation is finished
    */
   logout(callback = () => {}) {
     this._db.get(':userToken').then(doc => {

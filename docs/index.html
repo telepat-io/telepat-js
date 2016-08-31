@@ -1,0 +1,6236 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset='utf-8' />
+  <title>  | Documentation</title>
+  <meta name='viewport' content='width=device-width,initial-scale=1'>
+  <link href='assets/bass.css' type='text/css' rel='stylesheet' />
+  <link href='assets/style.css' type='text/css' rel='stylesheet' />
+  <link href='assets/github.css' type='text/css' rel='stylesheet' />
+</head>
+<body class='documentation'>
+  <div class='max-width-4 mx-auto'>
+    <div class='clearfix md-mxn2'>
+      <div class='fixed xs-hide fix-3 overflow-auto max-height-100'>
+        <div class='py1 px2'>
+          <h3 class='mb0 no-anchor'></h3>
+          <div class='mb1'><code></code></div>
+          <input
+            placeholder='Filter'
+            id='filter-input'
+            class='col12 block input'
+            type='text' />
+          <div id='toc'>
+            <ul class='list-reset h5 py1-ul'>
+              
+                
+                <li><a
+                  href='#telepat'
+                  class=" toggle-sibling">
+                  Telepat
+                  <span class='icon'>▸</span>
+                </a>
+                
+                <div class='toggle-target display-none'>
+                  
+                  <ul class='list-reset py1-ul pl1'>
+                    <li class='h5'><span>Static members</span></li>
+                    
+                      <li><a
+                        href='#Telepatconnected'
+                        class='regular pre-open'>
+                        .connected
+                      </a></li>
+                    
+                      <li><a
+                        href='#Telepatconnecting'
+                        class='regular pre-open'>
+                        .connecting
+                      </a></li>
+                    
+                      <li><a
+                        href='#Telepatconfigured'
+                        class='regular pre-open'>
+                        .configured
+                      </a></li>
+                    
+                      <li><a
+                        href='#TelepatcurrentAppId'
+                        class='regular pre-open'>
+                        .currentAppId
+                      </a></li>
+                    
+                      <li><a
+                        href='#Telepatcollections'
+                        class='regular pre-open'>
+                        .collections
+                      </a></li>
+                    
+                      <li><a
+                        href='#Telepatsubscriptions'
+                        class='regular pre-open'>
+                        .subscriptions
+                      </a></li>
+                    
+                      <li><a
+                        href='#Telepatadmin'
+                        class='regular pre-open'>
+                        .admin
+                      </a></li>
+                    
+                      <li><a
+                        href='#Telepatuser'
+                        class='regular pre-open'>
+                        .user
+                      </a></li>
+                    
+                    </ul>
+                  
+                  
+                    <ul class='list-reset py1-ul pl1'>
+                      <li class='h5'><span>Instance members</span></li>
+                      
+                      <li><a
+                        href='#Telepat#configure'
+                        class='regular pre-open'>
+                        #configure
+                      </a></li>
+                      
+                      <li><a
+                        href='#Telepat#connect'
+                        class='regular pre-open'>
+                        #connect
+                      </a></li>
+                      
+                      <li><a
+                        href='#Telepat#disconnect'
+                        class='regular pre-open'>
+                        #disconnect
+                      </a></li>
+                      
+                      <li><a
+                        href='#Telepat#processMessage'
+                        class='regular pre-open'>
+                        #processMessage
+                      </a></li>
+                      
+                      <li><a
+                        href='#Telepat#setLogLevel'
+                        class='regular pre-open'>
+                        #setLogLevel
+                      </a></li>
+                      
+                      <li><a
+                        href='#Telepat#on'
+                        class='regular pre-open'>
+                        #on
+                      </a></li>
+                      
+                      <li><a
+                        href='#Telepat#removeCallback'
+                        class='regular pre-open'>
+                        #removeCallback
+                      </a></li>
+                      
+                      <li><a
+                        href='#Telepat#subscribe'
+                        class='regular pre-open'>
+                        #subscribe
+                      </a></li>
+                      
+                      <li><a
+                        href='#Telepat#getChannel'
+                        class='regular pre-open'>
+                        #getChannel
+                      </a></li>
+                      
+                    </ul>
+                  
+                  
+                    <ul class='list-reset py1-ul pl1'>
+                      <li class='h5'>Events</li>
+                      
+                        <li><a
+                          href='#Telepat.event:configure'
+                          class='regular pre-open'>
+                          ⓔ configure
+                        </a></li>
+                      
+                        <li><a
+                          href='#Telepat.event:connect'
+                          class='regular pre-open'>
+                          ⓔ connect
+                        </a></li>
+                      
+                        <li><a
+                          href='#Telepat.event:disconnect'
+                          class='regular pre-open'>
+                          ⓔ disconnect
+                        </a></li>
+                      
+                        <li><a
+                          href='#Telepat.event:login-error'
+                          class='regular pre-open'>
+                          ⓔ login-error
+                        </a></li>
+                      
+                        <li><a
+                          href='#Telepat.event:error'
+                          class='regular pre-open'>
+                          ⓔ error
+                        </a></li>
+                      
+                        <li><a
+                          href='#Telepat.event:logout-error'
+                          class='regular pre-open'>
+                          ⓔ logout-error
+                        </a></li>
+                      
+                        <li><a
+                          href='#Telepat.event:logout'
+                          class='regular pre-open'>
+                          ⓔ logout
+                        </a></li>
+                      
+                        <li><a
+                          href='#Telepat.event:collections-update'
+                          class='regular pre-open'>
+                          ⓔ collections-update
+                        </a></li>
+                      
+                        <li><a
+                          href='#Telepat.event:login'
+                          class='regular pre-open'>
+                          ⓔ login
+                        </a></li>
+                      
+                    </ul>
+                  
+                </div>
+                
+                </li>
+              
+                
+                <li><a
+                  href='#object-management'
+                  class="h5 bold black caps">
+                  Object management
+                  
+                </a>
+                
+                </li>
+              
+                
+                <li><a
+                  href='#channel'
+                  class=" toggle-sibling">
+                  Channel
+                  <span class='icon'>▸</span>
+                </a>
+                
+                <div class='toggle-target display-none'>
+                  
+                  <ul class='list-reset py1-ul pl1'>
+                    <li class='h5'><span>Static members</span></li>
+                    
+                      <li><a
+                        href='#Channelobjects'
+                        class='regular pre-open'>
+                        .objects
+                      </a></li>
+                    
+                      <li><a
+                        href='#ChannelobjectsArray'
+                        class='regular pre-open'>
+                        .objectsArray
+                      </a></li>
+                    
+                      <li><a
+                        href='#ChannelobjectsCount'
+                        class='regular pre-open'>
+                        .objectsCount
+                      </a></li>
+                    
+                    </ul>
+                  
+                  
+                    <ul class='list-reset py1-ul pl1'>
+                      <li class='h5'><span>Instance members</span></li>
+                      
+                      <li><a
+                        href='#Channel#subscribe'
+                        class='regular pre-open'>
+                        #subscribe
+                      </a></li>
+                      
+                      <li><a
+                        href='#Channel#unsubscribe'
+                        class='regular pre-open'>
+                        #unsubscribe
+                      </a></li>
+                      
+                      <li><a
+                        href='#Channel#getCount'
+                        class='regular pre-open'>
+                        #getCount
+                      </a></li>
+                      
+                      <li><a
+                        href='#Channel#add'
+                        class='regular pre-open'>
+                        #add
+                      </a></li>
+                      
+                      <li><a
+                        href='#Channel#remove'
+                        class='regular pre-open'>
+                        #remove
+                      </a></li>
+                      
+                      <li><a
+                        href='#Channel#update'
+                        class='regular pre-open'>
+                        #update
+                      </a></li>
+                      
+                      <li><a
+                        href='#Channel#on'
+                        class='regular pre-open'>
+                        #on
+                      </a></li>
+                      
+                      <li><a
+                        href='#Channel#removeCallback'
+                        class='regular pre-open'>
+                        #removeCallback
+                      </a></li>
+                      
+                    </ul>
+                  
+                  
+                    <ul class='list-reset py1-ul pl1'>
+                      <li class='h5'>Events</li>
+                      
+                        <li><a
+                          href='#Channel.event:subscribe'
+                          class='regular pre-open'>
+                          ⓔ subscribe
+                        </a></li>
+                      
+                        <li><a
+                          href='#Channel.event:unsubscribe'
+                          class='regular pre-open'>
+                          ⓔ unsubscribe
+                        </a></li>
+                      
+                        <li><a
+                          href='#Channel.event:update'
+                          class='regular pre-open'>
+                          ⓔ update
+                        </a></li>
+                      
+                        <li><a
+                          href='#Channel.event:error'
+                          class='regular pre-open'>
+                          ⓔ error
+                        </a></li>
+                      
+                    </ul>
+                  
+                </div>
+                
+                </li>
+              
+                
+                <li><a
+                  href='#user-management'
+                  class="h5 bold black caps">
+                  User management
+                  
+                </a>
+                
+                </li>
+              
+                
+                <li><a
+                  href='#user'
+                  class=" toggle-sibling">
+                  User
+                  <span class='icon'>▸</span>
+                </a>
+                
+                <div class='toggle-target display-none'>
+                  
+                  <ul class='list-reset py1-ul pl1'>
+                    <li class='h5'><span>Static members</span></li>
+                    
+                      <li><a
+                        href='#UserisAdmin'
+                        class='regular pre-open'>
+                        .isAdmin
+                      </a></li>
+                    
+                      <li><a
+                        href='#UsercanReauth'
+                        class='regular pre-open'>
+                        .canReauth
+                      </a></li>
+                    
+                      <li><a
+                        href='#Userdata'
+                        class='regular pre-open'>
+                        .data
+                      </a></li>
+                    
+                    </ul>
+                  
+                  
+                    <ul class='list-reset py1-ul pl1'>
+                      <li class='h5'><span>Instance members</span></li>
+                      
+                      <li><a
+                        href='#User#reauth'
+                        class='regular pre-open'>
+                        #reauth
+                      </a></li>
+                      
+                      <li><a
+                        href='#User#update'
+                        class='regular pre-open'>
+                        #update
+                      </a></li>
+                      
+                      <li><a
+                        href='#User#requestPasswordReset'
+                        class='regular pre-open'>
+                        #requestPasswordReset
+                      </a></li>
+                      
+                      <li><a
+                        href='#User#resetPassword'
+                        class='regular pre-open'>
+                        #resetPassword
+                      </a></li>
+                      
+                      <li><a
+                        href='#User#register'
+                        class='regular pre-open'>
+                        #register
+                      </a></li>
+                      
+                      <li><a
+                        href='#User#registerAdmin'
+                        class='regular pre-open'>
+                        #registerAdmin
+                      </a></li>
+                      
+                      <li><a
+                        href='#User#loginWithFacebook'
+                        class='regular pre-open'>
+                        #loginWithFacebook
+                      </a></li>
+                      
+                      <li><a
+                        href='#User#login'
+                        class='regular pre-open'>
+                        #login
+                      </a></li>
+                      
+                      <li><a
+                        href='#User#loginAdmin'
+                        class='regular pre-open'>
+                        #loginAdmin
+                      </a></li>
+                      
+                      <li><a
+                        href='#User#get'
+                        class='regular pre-open'>
+                        #get
+                      </a></li>
+                      
+                      <li><a
+                        href='#User#me'
+                        class='regular pre-open'>
+                        #me
+                      </a></li>
+                      
+                      <li><a
+                        href='#User#logout'
+                        class='regular pre-open'>
+                        #logout
+                      </a></li>
+                      
+                    </ul>
+                  
+                  
+                </div>
+                
+                </li>
+              
+                
+                <li><a
+                  href='#administration-tasks'
+                  class="h5 bold black caps">
+                  Administration tasks
+                  
+                </a>
+                
+                </li>
+              
+                
+                <li><a
+                  href='#admin'
+                  class=" toggle-sibling">
+                  Admin
+                  <span class='icon'>▸</span>
+                </a>
+                
+                <div class='toggle-target display-none'>
+                  
+                  <ul class='list-reset py1-ul pl1'>
+                    <li class='h5'><span>Static members</span></li>
+                    
+                      <li><a
+                        href='#AdminuserChannel'
+                        class='regular pre-open'>
+                        .userChannel
+                      </a></li>
+                    
+                      <li><a
+                        href='#Adminapps'
+                        class='regular pre-open'>
+                        .apps
+                      </a></li>
+                    
+                      <li><a
+                        href='#Adminapp'
+                        class='regular pre-open'>
+                        .app
+                      </a></li>
+                    
+                      <li><a
+                        href='#Adminusers'
+                        class='regular pre-open'>
+                        .users
+                      </a></li>
+                    
+                    </ul>
+                  
+                  
+                    <ul class='list-reset py1-ul pl1'>
+                      <li class='h5'><span>Instance members</span></li>
+                      
+                      <li><a
+                        href='#Admin#getApps'
+                        class='regular pre-open'>
+                        #getApps
+                      </a></li>
+                      
+                      <li><a
+                        href='#Admin#addApp'
+                        class='regular pre-open'>
+                        #addApp
+                      </a></li>
+                      
+                      <li><a
+                        href='#Admin#updateApp'
+                        class='regular pre-open'>
+                        #updateApp
+                      </a></li>
+                      
+                      <li><a
+                        href='#Admin#deleteApp'
+                        class='regular pre-open'>
+                        #deleteApp
+                      </a></li>
+                      
+                      <li><a
+                        href='#Admin#addCollection'
+                        class='regular pre-open'>
+                        #addCollection
+                      </a></li>
+                      
+                      <li><a
+                        href='#Admin#updateCollection'
+                        class='regular pre-open'>
+                        #updateCollection
+                      </a></li>
+                      
+                      <li><a
+                        href='#Admin#deleteCollection'
+                        class='regular pre-open'>
+                        #deleteCollection
+                      </a></li>
+                      
+                      <li><a
+                        href='#Admin#deleteModel'
+                        class='regular pre-open'>
+                        #deleteModel
+                      </a></li>
+                      
+                      <li><a
+                        href='#Admin#getAppUsers'
+                        class='regular pre-open'>
+                        #getAppUsers
+                      </a></li>
+                      
+                      <li><a
+                        href='#Admin#addUser'
+                        class='regular pre-open'>
+                        #addUser
+                      </a></li>
+                      
+                      <li><a
+                        href='#Admin#deleteUser'
+                        class='regular pre-open'>
+                        #deleteUser
+                      </a></li>
+                      
+                      <li><a
+                        href='#Admin#updateUser'
+                        class='regular pre-open'>
+                        #updateUser
+                      </a></li>
+                      
+                      <li><a
+                        href='#Admin#authorize'
+                        class='regular pre-open'>
+                        #authorize
+                      </a></li>
+                      
+                      <li><a
+                        href='#Admin#deauthorize'
+                        class='regular pre-open'>
+                        #deauthorize
+                      </a></li>
+                      
+                    </ul>
+                  
+                  
+                </div>
+                
+                </li>
+              
+                
+                <li><a
+                  href='#telepatcallback'
+                  class="">
+                  TelepatCallback
+                  
+                </a>
+                
+                </li>
+              
+            </ul>
+          </div>
+          <div class='mt1 h6 quiet'>
+            <a href='http://documentation.js.org/reading-documentation.html'>Need help reading this?</a>
+          </div>
+        </div>
+      </div>
+      <div class='fix-margin-3'>
+        
+          
+            <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+  <div class='clearfix'>
+    <h3 class='fl m0' id='telepat'>
+      Telepat
+    </h3>
+    
+  </div>
+  
+
+  <p>The <code>Telepat</code> object is the first object you want to instantiate while working with the Telepat SDK.
+It exposes methods and properties that enable you to register, login, subscribe to objects and to users.</p>
+
+
+  <div class='pre p1 fill-light mt0'>new Telepat()</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Example</div>
+    
+      
+      <pre class='p1 overflow-auto round fill-light'><span class="hljs-keyword">let</span> telepat = <span class="hljs-keyword">new</span> Telepat();</pre>
+    
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Static Members</div>
+    <div class="clearfix">
+  
+    <div class='border-bottom' id='Telepatconnected'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>connected</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Indicates whether the current instance is connected to the backend</p>
+
+
+  <div class='pre p1 fill-light mt0'>connected</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Telepatconnecting'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>connecting</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Indicates whether the current instance is in the process of connecting to the backend.
+If true, the <code>connect</code> event will be fired as soon as connection is established.</p>
+
+
+  <div class='pre p1 fill-light mt0'>connecting</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Telepatconfigured'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>configured</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Indicates whether the current instance is properly configured and ready for connection.</p>
+
+
+  <div class='pre p1 fill-light mt0'>configured</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='TelepatcurrentAppId'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>currentAppId</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>If connected, this property reflects the current app id.</p>
+
+
+  <div class='pre p1 fill-light mt0'>currentAppId</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Telepatcollections'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>collections</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>This object contains details about all the collections available for the currently connected application.
+You can read this after the <code>connect</code> event is emitted, or if the <code>connected</code> property is true.
+Each available collection is stored as an Object, using a key whose name is equal to the collection&#x27;s id.
+Modifications to collection objects stored within will be automatically synchronized with the Telepat backend.</p>
+
+
+  <div class='pre p1 fill-light mt0'>collections</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Telepatsubscriptions'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>subscriptions</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>This object contains references to all of the <a href="#channel">Channel</a>s that are actively subscribed.
+Each channel is stored using a key equal to the channel&#x27;s unique identifier.</p>
+
+
+  <div class='pre p1 fill-light mt0'>subscriptions</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Telepatadmin'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>admin</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>This property becomes available after successfully logging in as an administrator.
+It gives you access to a instance of the <a href="#admin">Admin</a> class, allowing you access to administrator functionality.</p>
+
+
+  <div class='pre p1 fill-light mt0'>admin</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Example</div>
+    
+      
+      <pre class='p1 overflow-auto round fill-light'>telepat.user.loginAdmin(<span class="hljs-string">'admin@email.com'</span>, <span class="hljs-string">'password'</span>, (err) =&gt; {
+ <span class="hljs-keyword">if</span> (err) {
+   <span class="hljs-comment">// Treat login error</span>
+ } <span class="hljs-keyword">else</span> {
+   telepat.admin.getAppUsers((err) =&gt; {
+     <span class="hljs-keyword">if</span> (err) {
+       <span class="hljs-comment">// Treat error</span>
+     } <span class="hljs-keyword">else</span> {
+       <span class="hljs-comment">// Treat success</span>
+       <span class="hljs-built_in">console</span>.log(telepat.admin.users);
+     }
+   })
+ }
+});</pre>
+    
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Telepatuser'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>user</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>An instance of the <a href="#user">User</a> class, this allows you to access user functionality like logging in,
+accessing and modifying current user data or registering new user accounts.</p>
+
+
+  <div class='pre p1 fill-light mt0'>user</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Example</div>
+    
+      
+      <pre class='p1 overflow-auto round fill-light'>telepat.user.login(<span class="hljs-string">'email'</span>, <span class="hljs-string">'password'</span>, (err) =&gt; {
+ <span class="hljs-keyword">if</span> (err) {
+   <span class="hljs-comment">// Treat login error</span>
+ } <span class="hljs-keyword">else</span> {
+   <span class="hljs-comment">// Treat successful login</span>
+   <span class="hljs-built_in">console</span>.log(telepat.user.data);
+ }
+});</pre>
+    
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+</div>
+
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Instance Members</div>
+    <div class="clearfix">
+  
+    <div class='border-bottom' id='Telepat#configure'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>configure([options], [callback])</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Call this to configure Telepat server endpoints without connecting to a specific app.</p>
+
+
+  <div class='pre p1 fill-light mt0'>configure(options: [<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>](default {}), callback: [<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>options</span> <code class='quiet'>([<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>](default {}))</code> Object containing all configuration options for connection
+
+          </div>
+          
+          <table class='mt1 mb2 fixed-table h5 col-12'>
+            <colgroup>
+              <col width='30%' />
+              <col width='70%' />
+            </colgroup>
+            <thead>
+              <tr class='bold fill-light'>
+                <th>Name</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody class='mt1'>
+              
+                <tr>
+                  <td class='break-word'><span class='code bold'>options.apiEndpoint</span> <code class='quiet'><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a></code>
+                  </td>
+                  <td class='break-word'><span>The Telepat API endpoint URL
+</span></td>
+                </tr>
+              
+                <tr>
+                  <td class='break-word'><span class='code bold'>options.socketEndpoint</span> <code class='quiet'><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a></code>
+                  </td>
+                  <td class='break-word'><span>The Telepat socket endpoint URL
+</span></td>
+                </tr>
+              
+                <tr>
+                  <td class='break-word'><span class='code bold'>options.reauth</span> <code class='quiet'>[<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a>]</code>
+                  
+                    (default <code>false</code>)
+                  </td>
+                  <td class='break-word'><span>Should reauth previously logged in user on connection
+</span></td>
+                </tr>
+              
+            </tbody>
+          </table>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>([<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</code> Callback invoked after configuration is finished
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Example</div>
+    
+      
+      <pre class='p1 overflow-auto round fill-light'><span class="hljs-keyword">let</span> telepat = <span class="hljs-keyword">new</span> Telepat();
+telepat.configure({
+ apiEndpoint: <span class="hljs-string">'TELEPAT-API-ENDPOINT'</span>,
+ socketEndpoint: <span class="hljs-string">'TELEPAT-SOCKET-ENDPOINT'</span>
+}, (err, res) =&gt; {
+ <span class="hljs-comment">// Handle configuration</span>
+});</pre>
+    
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Telepat#connect'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>connect([options], [callback])</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Call this to connect to a specific Telepat app.
+This is usually the first thing you need to do after instantiating the Telepat object.</p>
+
+
+  <div class='pre p1 fill-light mt0'>connect(options: [<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>](default {}), callback: [<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>options</span> <code class='quiet'>([<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>](default {}))</code> Object containing all configuration options for connection
+
+          </div>
+          
+          <table class='mt1 mb2 fixed-table h5 col-12'>
+            <colgroup>
+              <col width='30%' />
+              <col width='70%' />
+            </colgroup>
+            <thead>
+              <tr class='bold fill-light'>
+                <th>Name</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody class='mt1'>
+              
+                <tr>
+                  <td class='break-word'><span class='code bold'>options.appId</span> <code class='quiet'><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a></code>
+                  </td>
+                  <td class='break-word'><span>Your app id
+</span></td>
+                </tr>
+              
+                <tr>
+                  <td class='break-word'><span class='code bold'>options.apiEndpoint</span> <code class='quiet'>[<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>]</code>
+                  </td>
+                  <td class='break-word'><span>The Telepat API endpoint URL. If this is absent from the connect options, it must have been previously set by calling 
+<a href="#Telepat#configure">configure</a>
+.
+</span></td>
+                </tr>
+              
+                <tr>
+                  <td class='break-word'><span class='code bold'>options.socketEndpoint</span> <code class='quiet'>[<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>]</code>
+                  </td>
+                  <td class='break-word'><span>The Telepat socket endpoint URL.
+If this is absent from the connect options, it must have been previously set by calling 
+<a href="#Telepat#configure">configure</a>
+.
+</span></td>
+                </tr>
+              
+                <tr>
+                  <td class='break-word'><span class='code bold'>options.apiKey</span> <code class='quiet'><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a></code>
+                  </td>
+                  <td class='break-word'><span>Your app API key
+</span></td>
+                </tr>
+              
+                <tr>
+                  <td class='break-word'><span class='code bold'>options.persistentConnection</span> <code class='quiet'>[<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>]</code>
+                  
+                    (default <code>null</code>)
+                  </td>
+                  <td class='break-word'><span>Set this to configure receiving updates via persistent channels, like push notifications.
+</span></td>
+                </tr>
+              
+                <tr>
+                  <td class='break-word'><span class='code bold'>options.ioOptions</span> <code class='quiet'>[<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>]</code>
+                  
+                    (default <code>{}</code>)
+                  </td>
+                  <td class='break-word'><span>Configuration options for socket.io
+</span></td>
+                </tr>
+              
+                <tr>
+                  <td class='break-word'><span class='code bold'>options.updateUDID</span> <code class='quiet'>[<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a>]</code>
+                  
+                    (default <code>false</code>)
+                  </td>
+                  <td class='break-word'><span>Set this to true to force the client to update the saved device identifier.
+</span></td>
+                </tr>
+              
+                <tr>
+                  <td class='break-word'><span class='code bold'>options.timerInterval</span> <code class='quiet'>[<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>]</code>
+                  
+                    (default <code>150</code>)
+                  </td>
+                  <td class='break-word'><span>Frequency of running diff (in miliseconds) to check for object updates.
+</span></td>
+                </tr>
+              
+                <tr>
+                  <td class='break-word'><span class='code bold'>options.reauth</span> <code class='quiet'>[<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a>]</code>
+                  
+                    (default <code>false</code>)
+                  </td>
+                  <td class='break-word'><span>Should reauth previously logged in user on connection
+</span></td>
+                </tr>
+              
+            </tbody>
+          </table>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>([<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</code> Callback invoked after configuration is finished
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Example</div>
+    
+      
+      <pre class='p1 overflow-auto round fill-light'><span class="hljs-comment">// Simple connection to backend</span>
+
+<span class="hljs-keyword">let</span> telepat = <span class="hljs-keyword">new</span> Telepat();
+telepat.connect({
+ apiEndpoint: <span class="hljs-string">'TELEPAT-API-ENDPOINT'</span>,
+ socketEndpoint: <span class="hljs-string">'TELEPAT-SOCKET-ENDPOINT'</span>,
+ apiKey: <span class="hljs-string">'APP-API-KEY'</span>,
+ appId: <span class="hljs-string">'APP-ID'</span>
+}, (err, res) =&gt; {
+ <span class="hljs-comment">// Handle connection</span>
+});</pre>
+    
+      
+      <pre class='p1 overflow-auto round fill-light'><span class="hljs-comment">// Using connection event</span>
+
+<span class="hljs-keyword">let</span> telepat = <span class="hljs-keyword">new</span> Telepat();
+telepat.connect({
+ apiEndpoint: <span class="hljs-string">'TELEPAT-API-ENDPOINT'</span>,
+ socketEndpoint: <span class="hljs-string">'TELEPAT-SOCKET-ENDPOINT'</span>,
+ apiKey: <span class="hljs-string">'APP-API-KEY'</span>,
+ appId: <span class="hljs-string">'APP-ID'</span>
+});
+<span class="hljs-keyword">let</span> connectCallbackId = telepat.on(<span class="hljs-string">'connect'</span>, {
+ telepat.removeCallback(connectCallbackId);
+ <span class="hljs-comment">// Handle connection</span>
+});</pre>
+    
+      
+      <pre class='p1 overflow-auto round fill-light'><span class="hljs-comment">// Activating the push notifications transport.</span>
+<span class="hljs-comment">// Do this when running inside a mobile OS, for example.</span>
+telepat.connect({
+ apiEndpoint: <span class="hljs-string">'TELEPAT-API-ENDPOINT'</span>,
+ socketEndpoint: <span class="hljs-string">'TELEPAT-SOCKET-ENDPOINT'</span>,
+ apiKey: <span class="hljs-string">'APP-API-KEY'</span>,
+ appId: <span class="hljs-string">'APP-ID'</span>,
+ persistentConnection: {
+   type: <span class="hljs-string">'ios'</span>,
+   token: <span class="hljs-string">'DEVICE-NOTIFICATION-TOKEN'</span>,
+   active: <span class="hljs-number">1</span>
+ }
+});</pre>
+    
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Telepat#disconnect'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>disconnect()</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Call this function to disconnect the client from the Telepat backend.</p>
+
+
+  <div class='pre p1 fill-light mt0'>disconnect()</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Telepat#processMessage'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>processMessage(message)</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Forwards messages reveived via external channels to the processing unit.
+Use this if you&#x27;ve configured external transports (like push notifications), and you need to pass received payloads
+to the processing engine.</p>
+
+
+  <div class='pre p1 fill-light mt0'>processMessage(message: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>message</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code> The delta update notification received from Telepat
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Telepat#setLogLevel'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>setLogLevel(level)</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>You can tweak the logger verbosity using this function.</p>
+
+
+  <div class='pre p1 fill-light mt0'>setLogLevel(level: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>level</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code> One of 
+<code>&#x27;debug&#x27;</code>
+, 
+<code>&#x27;info&#x27;</code>
+, 
+<code>&#x27;warn&#x27;</code>
+ or 
+<code>&#x27;error&#x27;</code>
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Telepat#on'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>on(name, callback)</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Call this function to add callbacks to be invoked on event triggers.
+Available callbacks:</p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="#Telepat.event:connect">connect</a></td>
+<td>Invoked when client has connected to the backend</td>
+</tr>
+<tr>
+<td><a href="#Telepat.event:disconnect">disconnect</a></td>
+<td>Invoked when client has disconnected from the backend</td>
+</tr>
+<tr>
+<td><a href="#Telepat.event:configure">configure</a></td>
+<td>Invoked when client configuration has completed</td>
+</tr>
+<tr>
+<td><a href="#Telepat.event:error">error</a></td>
+<td>Invoked on any operation error</td>
+</tr>
+<tr>
+<td><a href="#Telepat.event:collections-update">collections-update</a></td>
+<td>Invoked when the available collections have updated</td>
+</tr>
+<tr>
+<td><a href="#Telepat.event:login">login</a></td>
+<td>Invoked when client has successfully logged in</td>
+</tr>
+<tr>
+<td><a href="#Telepat.event:login-error">login-error</a></td>
+<td>Invoked when there was an error with logging in</td>
+</tr>
+<tr>
+<td><a href="#Telepat.event:logout">logout</a></td>
+<td>Invoked when client has successfully logged out</td>
+</tr>
+<tr>
+<td><a href="#Telepat.event:logout-error">logout-error</a></td>
+<td>Invoked when there was an error with logging out</td>
+</tr>
+</tbody>
+</table>
+
+
+  <div class='pre p1 fill-light mt0'>on(name: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, callback: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function">function</a>): <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a></div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>name</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code> The name of the event to associate the callback with
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function">function</a>)</code> The callback to be executed
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+    
+      <div class='py1 quiet mt1 prose-big'>Returns</div>
+      <code><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a></code>:
+        A callback id. Save this in order to later remove the callback from the event (using 
+<a href="#Telepat#removeCallback">removeCallback</a>
+)
+
+      
+    
+  
+
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Example</div>
+    
+      
+      <pre class='p1 overflow-auto round fill-light'>telepat.on(<span class="hljs-string">'connect'</span>, () =&gt; {
+ <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'connected'</span>);
+});</pre>
+    
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Telepat#removeCallback'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>removeCallback(name, callbackId, index)</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Call this function to remove callbacks that have been set using <a href="#Telepat#on">on</a>.</p>
+
+
+  <div class='pre p1 fill-light mt0'>removeCallback(name: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, callbackId: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, index: any)</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>name</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code> The name of the event the callback was associated with
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callbackId</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>)</code> The callback id returned by calling 
+<a href="#Telepat#on">on</a>
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>index</span> <code class='quiet'>(any)</code> 
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Example</div>
+    
+      
+      <pre class='p1 overflow-auto round fill-light'><span class="hljs-keyword">let</span> connectCallbackId = telepat.on(<span class="hljs-string">'connect'</span>, () =&gt; {
+ <span class="hljs-comment">// Remove the callback after the first connection event</span>
+ telepat.removeCallback(connectCallbackId);
+});</pre>
+    
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Telepat#subscribe'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>subscribe(options, onSubscribe)</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Use this function to create a new <a href="#channel">Channel</a> object and retrieve its objects.</p>
+
+
+  <div class='pre p1 fill-light mt0'>subscribe(options: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>, onSubscribe: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function">function</a>): <a href="#channel">Channel</a></div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>options</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>)</code> The object describing the required subscription
+
+          </div>
+          
+          <table class='mt1 mb2 fixed-table h5 col-12'>
+            <colgroup>
+              <col width='30%' />
+              <col width='70%' />
+            </colgroup>
+            <thead>
+              <tr class='bold fill-light'>
+                <th>Name</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody class='mt1'>
+              
+                <tr>
+                  <td class='break-word'><span class='code bold'>options.limit</span> <code class='quiet'>[<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>]</code>
+                  </td>
+                  <td class='break-word'><span>The maximum number of objects to be returned in this batch (for pagination)
+</span></td>
+                </tr>
+              
+                <tr>
+                  <td class='break-word'><span class='code bold'>options.channel</span> <code class='quiet'>[<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>]</code>
+                  </td>
+                  <td class='break-word'><span>Describes the basic properties of the objects requested
+</span></td>
+                </tr>
+              
+                <tr>
+                  <td class='break-word'><span class='code bold'>options.sort</span> <code class='quiet'>[<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>]</code>
+                  </td>
+                  <td class='break-word'><span>An object that defines how returned objects should be sorted. Each object key is a property name, and each value can be either 
+<code>asc</code>
+ or 
+<code>desc</code>
+.
+</span></td>
+                </tr>
+              
+                <tr>
+                  <td class='break-word'><span class='code bold'>options.filters</span> <code class='quiet'>[<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>]</code>
+                  </td>
+                  <td class='break-word'><span>An object describing how returned objects should be filtered.
+</span></td>
+                </tr>
+              
+                <tr>
+                  <td class='break-word'><span class='code bold'>options.offset</span> <code class='quiet'>[<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>]</code>
+                  </td>
+                  <td class='break-word'><span>The offset that should be applied for the returned objects (for pagination)
+</span></td>
+                </tr>
+              
+            </tbody>
+          </table>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>onSubscribe</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function">function</a>)</code> Callback invoked when subscription is ready
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+    
+      <div class='py1 quiet mt1 prose-big'>Returns</div>
+      <code><a href="#channel">Channel</a></code>:
+        The new 
+<a href="#channel">Channel</a>
+ object
+
+      
+    
+  
+
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Example</div>
+    
+      
+      <pre class='p1 overflow-auto round fill-light'><span class="hljs-comment">// A simple subscription to all objects of type `article`</span>
+<span class="hljs-comment">// in a specific collection</span>
+
+<span class="hljs-keyword">let</span> articleChannel = telepat.subscribe({
+ channel: {
+   context: <span class="hljs-string">'context-unique-identifier'</span>,
+   model: <span class="hljs-string">'article'</span>
+ }
+}, () =&gt; {
+ <span class="hljs-built_in">console</span>.log(articleChannel.objectsArray);
+});</pre>
+    
+      
+      <pre class='p1 overflow-auto round fill-light'><span class="hljs-comment">// A filtered subscription to all objects of type `article`</span>
+<span class="hljs-comment">// in a specific collection, that have one of two specific tag values</span>
+
+<span class="hljs-keyword">let</span> articleChannel = telepat.subscribe({
+ channel: {
+   context: <span class="hljs-string">'context-unique-identifier'</span>,
+   model: <span class="hljs-string">'article'</span>
+ },
+ filters: {
+   or: [
+     {
+       is: {
+         tag: <span class="hljs-string">'specific-tag-value'</span>
+       }
+     },
+     {
+       is: {
+         tag: <span class="hljs-string">'another-tag-value'</span>
+       }
+     }
+   ]
+ }
+}, () =&gt; {
+ <span class="hljs-built_in">console</span>.log(articleChannel.objectsArray);
+});</pre>
+    
+      
+      <pre class='p1 overflow-auto round fill-light'><span class="hljs-comment">// A simple subscription to all objects of type `article`</span>
+<span class="hljs-comment">// in a specific collection, sorted by created date descending</span>
+
+<span class="hljs-keyword">let</span> articleChannel = telepat.subscribe({
+ channel: {
+   context: <span class="hljs-string">'context-unique-identifier'</span>,
+   model: <span class="hljs-string">'article'</span>
+ },
+ sort: {
+   created: <span class="hljs-string">'desc'</span>
+ }
+}, () =&gt; {
+ <span class="hljs-built_in">console</span>.log(articleChannel.objectsArray);
+});</pre>
+    
+      
+      <pre class='p1 overflow-auto round fill-light'><span class="hljs-comment">// A simple subscription to all objects of type `comment`</span>
+<span class="hljs-comment">// in a specific collection, that belong to a specific article parent</span>
+
+<span class="hljs-keyword">let</span> articleChannel = telepat.subscribe({
+ channel: {
+   context: <span class="hljs-string">'context-unique-identifier'</span>,
+   model: <span class="hljs-string">'comment'</span>,
+   parent: {
+     model: <span class="hljs-string">'article'</span>,
+     id: <span class="hljs-string">'article-parent-unique-identifier'</span>
+   }
+ }
+}, () =&gt; {
+ <span class="hljs-built_in">console</span>.log(articleChannel.objectsArray);
+});</pre>
+    
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Telepat#getChannel'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>getChannel(options)</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Same as <a href="#Telepat#subscribe">subscribe</a> method, but returns the new <a href="#channel">Channel</a> object without calling subscribe on it.</p>
+
+
+  <div class='pre p1 fill-light mt0'>getChannel(options: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>): <a href="#channel">Channel</a></div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>options</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>)</code> Same as 
+<a href="#Telepat#subscribe">subscribe</a>
+ Options
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+    
+      <div class='py1 quiet mt1 prose-big'>Returns</div>
+      <code><a href="#channel">Channel</a></code>:
+        The new 
+<a href="#channel">Channel</a>
+ object
+
+      
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+</div>
+
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Events</div>
+    <div class="clearfix">
+  
+    <div class='border-bottom' id='Telepat.event:configure'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>configure</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Invoked when client configuration has completed.</p>
+
+
+  <div class='pre p1 fill-light mt0'>configure</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>name</span> <code class='quiet'>(any)</code> 
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>(any)</code> 
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Telepat.event:connect'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>connect</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Invoked when client has connected to the backend.</p>
+
+
+  <div class='pre p1 fill-light mt0'>connect</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>name</span> <code class='quiet'>(any)</code> 
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>(any)</code> 
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Telepat.event:disconnect'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>disconnect</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Invoked when client has disconnected from the backend.</p>
+
+
+  <div class='pre p1 fill-light mt0'>disconnect</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>name</span> <code class='quiet'>(any)</code> 
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>(any)</code> 
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Telepat.event:login-error'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>login-error</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Invoked when there was an error with logging in.</p>
+
+
+  <div class='pre p1 fill-light mt0'>login-error</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>name</span> <code class='quiet'>(any)</code> 
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>(any)</code> 
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Telepat.event:error'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>error</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Invoked on any operation error.</p>
+
+
+  <div class='pre p1 fill-light mt0'>error</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>name</span> <code class='quiet'>(any)</code> 
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>(any)</code> 
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Telepat.event:logout-error'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>logout-error</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Invoked when there was an error with logging out.</p>
+
+
+  <div class='pre p1 fill-light mt0'>logout-error</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>name</span> <code class='quiet'>(any)</code> 
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>(any)</code> 
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Telepat.event:logout'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>logout</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Invoked when client has successfully logged out.</p>
+
+
+  <div class='pre p1 fill-light mt0'>logout</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>name</span> <code class='quiet'>(any)</code> 
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>(any)</code> 
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Telepat.event:collections-update'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>collections-update</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Invoked when the available collections have updated.</p>
+
+
+  <div class='pre p1 fill-light mt0'>collections-update</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>name</span> <code class='quiet'>(any)</code> 
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>(any)</code> 
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Telepat.event:login'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>login</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Invoked when client has successfully logged in.</p>
+
+
+  <div class='pre p1 fill-light mt0'>login</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>name</span> <code class='quiet'>(any)</code> 
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>(any)</code> 
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+</div>
+
+  
+</section>
+
+          
+        
+          
+            <div class='keyline-top-not py2'><section class='py2 clearfix'>
+
+  <h2 id='Object management' class='mt0'>
+    Object management
+  </h2>
+
+  
+    <p>Use channels to manage your subscriptions (add, edit, delete objects).</p>
+
+  
+</section>
+</div>
+          
+        
+          
+            <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+  <div class='clearfix'>
+    <h3 class='fl m0' id='channel'>
+      Channel
+    </h3>
+    
+  </div>
+  
+
+  <p>Use Channels to create, update and remove Telepat objects. You can create new Channels using the <a href="#Telepat#subscribe">subscribe</a>
+or the <a href="#Telepat#getChannel">getChannel</a> methods of the main <a href="#telepat">Telepat</a> object.</p>
+
+
+  <div class='pre p1 fill-light mt0'>new Channel()</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Example</div>
+    
+      
+      <pre class='p1 overflow-auto round fill-light'><span class="hljs-keyword">let</span> articleChannel = telepat.subscribe({
+ channel: {
+   context: <span class="hljs-string">'context-unique-identifier'</span>,
+   model: <span class="hljs-string">'article'</span>
+ }
+}, () =&gt; {
+ <span class="hljs-built_in">console</span>.log(articleChannel.objectsArray);
+
+ <span class="hljs-comment">// Create a new article object</span>
+ articleChannel.objects[<span class="hljs-string">'new'</span>] = {
+   title: <span class="hljs-string">'New article'</span>,
+   text: <span class="hljs-string">'Article body'</span>
+ };
+
+ <span class="hljs-comment">// Update a specific article</span>
+ articleChannel.objects[<span class="hljs-string">'article-unique-id'</span>].title = <span class="hljs-string">'New title'</span>;
+
+ <span class="hljs-comment">// Delete a specific article</span>
+ <span class="hljs-keyword">delete</span> articleChannel.objects[<span class="hljs-string">'article-unique-id'</span>];
+
+ <span class="hljs-comment">// React to object updates</span>
+ articleChannel.on(<span class="hljs-string">'update'</span>, (operationType, objectId, object, oldObject) =&gt; {
+   <span class="hljs-built_in">console</span>.log(<span class="hljs-string">`Received article update of type <span class="hljs-subst">${operationType}</span>, for object with id <span class="hljs-subst">${objectId}</span>`</span>);
+   <span class="hljs-comment">// Objects are already updated</span>
+   <span class="hljs-built_in">console</span>.log(articleChannel.objects);
+ });
+
+ <span class="hljs-comment">// Unsubscribe and clear objects</span>
+ articleChannel.unsubscribe();
+});</pre>
+    
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Static Members</div>
+    <div class="clearfix">
+  
+    <div class='border-bottom' id='Channelobjects'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>objects</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>A container object referencing all of the objects retrieved via subscription. Each object is stored on a key equal to its own unique id.</p>
+
+
+  <div class='pre p1 fill-light mt0'>objects</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='ChannelobjectsArray'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>objectsArray</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>A container array referencing all of the objects retrieved via subscription. The order of the objects reflects the sorting options set for the channel.</p>
+
+
+  <div class='pre p1 fill-light mt0'>objectsArray</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='ChannelobjectsCount'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>objectsCount</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>The current object count.</p>
+
+
+  <div class='pre p1 fill-light mt0'>objectsCount</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+</div>
+
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Instance Members</div>
+    <div class="clearfix">
+  
+    <div class='border-bottom' id='Channel#subscribe'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>subscribe([callback])</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Call this function to perform the actual subscribe for the configured channel. This is usually invoked by the
+<a href="#Telepat#subscribe">subscribe</a> method on the main <a href="#telepat">Telepat</a> object.</p>
+
+
+  <div class='pre p1 fill-light mt0'>subscribe(callback: [<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>([<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</code> Callback invoked after subscribe is finished
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Channel#unsubscribe'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>unsubscribe([callback])</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Call this function to unsubscribe from the configured channel. All channel properties will be reset to original values.</p>
+
+
+  <div class='pre p1 fill-light mt0'>unsubscribe(callback: [<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>([<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</code> Callback invoked after unsubscribe is finished
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Channel#getCount'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>getCount([callback])</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Call this to retrieve the number of objects available for this channel. Value will be available on the <a href="#ChannelobjectsCount">objectsCount</a> property.</p>
+
+
+  <div class='pre p1 fill-light mt0'>getCount(callback: [<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>([<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</code> Callback invoked after getting object count is finished
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Channel#add'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>add(object, [callback])</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Add a new Telepat object to the current channel.
+Instead of using this function, you can also add the object to <a href="#Channelobjects">Channel.objects</a>, on any new key.
+The key will be automatically replaced with the new object id after the backend processes the operation.</p>
+
+
+  <div class='pre p1 fill-light mt0'>add(object: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>, callback: [<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>object</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>)</code> The new object to add
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>([<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</code> Callback invoked after notifying the Telepat backend of the new object
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Example</div>
+    
+      
+      <pre class='p1 overflow-auto round fill-light'><span class="hljs-comment">// This is one way of adding a new object using the channel instance.</span>
+<span class="hljs-comment">// The new key will be picked up by the monitoring system, which will signal the new event creation</span>
+<span class="hljs-comment">//   to the Telepat backend, and then delete the new key you just set from the objects property.</span>
+<span class="hljs-comment">// After processing the request, Telepat will signal the change back to the client, and the new object will be</span>
+<span class="hljs-comment">//   re-added to the objects property, but this time on the right key (equal to the new object's assigned id).</span>
+<span class="hljs-comment">//   This is when the 'update' event will get triggered on the channel.</span>
+channel.objects[<span class="hljs-string">'new'</span>] = newObject;
+
+<span class="hljs-comment">// Alternatively, you can call the add method:</span>
+channel.add(newObject, err =&gt; {
+ <span class="hljs-keyword">if</span> (err) {
+   <span class="hljs-comment">// There's been a server error, check err. The object will not be added.</span>
+ } <span class="hljs-keyword">else</span> {
+   <span class="hljs-comment">// We've successfully signaled that we want to add the object.</span>
+   <span class="hljs-comment">// Keep in mind that this is not a sync process, so we still have to wait for the 'update'</span>
+   <span class="hljs-comment">//   event on the channel, signaling the availability of the new object on the channel.objects property.</span>
+ }
+});</pre>
+    
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Channel#remove'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>remove(id, [callback])</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Remove a Telepat object from the current channel.
+Instead of using this function, you can also delete the object from <a href="#Channelobjects">Channel.objects</a>.</p>
+
+
+  <div class='pre p1 fill-light mt0'>remove(id: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, callback: [<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>id</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code> The id of the object to delete
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>([<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</code> Callback invoked after notifying the Telepat backend of the deleted object
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Example</div>
+    
+      
+      <pre class='p1 overflow-auto round fill-light'><span class="hljs-comment">// This is one way of deleting an object using the channel instance.</span>
+<span class="hljs-comment">// The deleted key will be picked up by the monitoring system, which will signal the object removal</span>
+<span class="hljs-comment">//   to the Telepat backend. The change will be then signaled back to the client as confirmation, triggering</span>
+<span class="hljs-comment">//   the channel's 'update' event.</span>
+<span class="hljs-comment">// This is the optimistic way of doing a delete, as the removed object will be instantly gone from the local</span>
+<span class="hljs-comment">//   state, before the 'update' event is triggered (and even if it is not).</span>
+<span class="hljs-keyword">delete</span> channel.objects[objectId];
+
+<span class="hljs-comment">// Alternatively, the pessimistic approach is to call the remove method:</span>
+channel.remove(objectId, err =&gt; {
+ <span class="hljs-keyword">if</span> (err) {
+   <span class="hljs-comment">// There's been a server error, check err. The object will not be deleted.</span>
+ } <span class="hljs-keyword">else</span> {
+   <span class="hljs-comment">// We've successfully signaled that we want to delete the object.</span>
+   <span class="hljs-comment">// Keep in mind that this is not a sync process, so we still have to wait for the 'update'</span>
+   <span class="hljs-comment">//   event on the channel, signaling that the object has been removed from the channel.objects property.</span>
+ }
+});</pre>
+    
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Channel#update'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>update(id, patches, [callback])</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Updates a Telepat object from the current channel.
+To call this function, you need to create an  array containing &#x27;patch&#x27; objects, representing the
+modifications that need to be persisted. The structure of a patch object is:</p>
+<p><code>{&#x27;op&#x27;: &#x27;replace&#x27;, &#x27;path&#x27;: channel + &#x27;/&#x27; + object_id + &#x27;/&#x27; + object_property, &#x27;value&#x27;: modified_value}</code></p>
+<p>Instead of using this function, you can also update the object directly from <a href="#Channelobjects">Channel.objects</a>.</p>
+
+
+  <div class='pre p1 fill-light mt0'>update(id: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, patches: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array">Array</a>&lt;<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>&gt;, callback: [<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>id</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>)</code> The id of the object to update
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>patches</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array">Array</a>&lt;<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>&gt;)</code> The array of patches representing the modifications that need to be persisted.
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>([<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</code> Callback invoked after notifying the Telepat backend of the updated object
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Example</div>
+    
+      
+      <pre class='p1 overflow-auto round fill-light'><span class="hljs-comment">// This is one way of updating an object using the channel instance.</span>
+<span class="hljs-comment">// The updated key will be picked up by the monitoring system, which will signal the object update</span>
+<span class="hljs-comment">//   to the Telepat backend. The change will be then signaled back to the client as confirmation, triggering</span>
+<span class="hljs-comment">//   the channel's 'update' event.</span>
+<span class="hljs-comment">// This is the optimistic way of doing a delete, as the updated object will be instantly modified within the local</span>
+<span class="hljs-comment">//   state, before the 'update' event is triggered (and even if it is not).</span>
+channel.objects[objectId].title = <span class="hljs-string">"New title"</span>;
+
+<span class="hljs-comment">// Alternatively, the pessimistic approach is to call the update method:</span>
+channel.update(objectId, [
+ {
+   <span class="hljs-string">'op'</span>: <span class="hljs-string">'replace'</span>,
+   <span class="hljs-string">'path'</span>: <span class="hljs-string">`article/<span class="hljs-subst">${objectId}</span>/title`</span>,
+   <span class="hljs-string">'value'</span>: <span class="hljs-string">'New title'</span>
+ }
+], err =&gt; {
+ <span class="hljs-keyword">if</span> (err) {
+   <span class="hljs-comment">// There's been a server error, check err. The object will not be updated.</span>
+ } <span class="hljs-keyword">else</span> {
+   <span class="hljs-comment">// We've successfully signaled that we want to update the object.</span>
+   <span class="hljs-comment">// Keep in mind that this is not a sync process, so we still have to wait for the 'update'</span>
+   <span class="hljs-comment">//   event on the channel, signaling that the object has been updated within the channel.objects property.</span>
+ }
+});</pre>
+    
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Channel#on'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>on(name, callback)</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Call this function to add callbacks to be invoked on event triggers.
+Available callbacks:</p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="#Channel.event:error">error</a></td>
+<td>Invoked when there was an error processing the requested operation</td>
+</tr>
+<tr>
+<td><a href="#Channel.event:subscribe">subscribe</a></td>
+<td>Invoked when channel subscription is successful</td>
+</tr>
+<tr>
+<td><a href="#Channel.event:unsubscribe">unsubscribe</a></td>
+<td>Invoked when channel unsubscription is successful</td>
+</tr>
+<tr>
+<td><a href="#Channel.event:update">update</a></td>
+<td>Invoked when objects in the subscription have been modified (update of an existing object, new object or deleted object)</td>
+</tr>
+</tbody>
+</table>
+
+
+  <div class='pre p1 fill-light mt0'>on(name: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, callback: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function">function</a>): <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a></div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>name</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code> The name of the event to associate the callback with
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function">function</a>)</code> The callback to be executed
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+    
+      <div class='py1 quiet mt1 prose-big'>Returns</div>
+      <code><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a></code>:
+        A callback id. Save this in order to later remove the callback from the event (using 
+<a href="#Channel#removeCallback">removeCallback</a>
+)
+
+      
+    
+  
+
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Example</div>
+    
+      
+      <pre class='p1 overflow-auto round fill-light'><span class="hljs-comment">// React to object updates</span>
+ articleChannel.on(<span class="hljs-string">'update'</span>, (operationType, objectId, object, oldObject) =&gt; {
+   <span class="hljs-built_in">console</span>.log(<span class="hljs-string">`Received article update of type <span class="hljs-subst">${operationType}</span>, for object with id <span class="hljs-subst">${objectId}</span>`</span>);
+   <span class="hljs-comment">// Objects are already updated</span>
+   <span class="hljs-built_in">console</span>.log(articleChannel.objects);
+ });</pre>
+    
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Channel#removeCallback'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>removeCallback(name, callbackId, index)</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Call this function to remove callbacks that have been set using <a href="#Channel#on">on</a>.</p>
+
+
+  <div class='pre p1 fill-light mt0'>removeCallback(name: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, callbackId: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, index: any)</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>name</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code> The name of the event the callback was associated with
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callbackId</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>)</code> The callback id returned by calling 
+<a href="#Channel#on">on</a>
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>index</span> <code class='quiet'>(any)</code> 
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Example</div>
+    
+      
+      <pre class='p1 overflow-auto round fill-light'><span class="hljs-keyword">let</span> updateCallbackId = channel.on(<span class="hljs-string">'update'</span>, () =&gt; {
+ <span class="hljs-comment">// Remove the callback after the first update event</span>
+ channel.removeCallback(updateCallbackId);
+});</pre>
+    
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+</div>
+
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Events</div>
+    <div class="clearfix">
+  
+    <div class='border-bottom' id='Channel.event:subscribe'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>subscribe</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Invoked when channel subscription is successful.</p>
+
+
+  <div class='pre p1 fill-light mt0'>subscribe</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>name</span> <code class='quiet'>(any)</code> 
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>(any)</code> 
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Channel.event:unsubscribe'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>unsubscribe</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Invoked when channel unsubscription is successful.</p>
+
+
+  <div class='pre p1 fill-light mt0'>unsubscribe</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>name</span> <code class='quiet'>(any)</code> 
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>(any)</code> 
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Channel.event:update'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>update</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Invoked when objects in the subscription have been modified (there was an update of an existing object, a new object has been added or an object has been deleted).</p>
+
+
+  <div class='pre p1 fill-light mt0'>update</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>eventType</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code> One of &#x27;add&#x27;, &#x27;delete&#x27; or &#x27;replace&#x27;
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>objectId</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code> The id of the affected object
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>object</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>)</code> The affected object itself
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>oldObject</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>)</code> Present only for the &#x27;replace&#x27; eventType, the old state of the affected object
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>name</span> <code class='quiet'>(any)</code> 
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>(any)</code> 
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Channel.event:error'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>error</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Invoked when there was an error processing the requested operation.</p>
+
+
+  <div class='pre p1 fill-light mt0'>error</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>name</span> <code class='quiet'>(any)</code> 
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>(any)</code> 
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+</div>
+
+  
+</section>
+
+          
+        
+          
+            <div class='keyline-top-not py2'><section class='py2 clearfix'>
+
+  <h2 id='User management' class='mt0'>
+    User management
+  </h2>
+
+  
+</section>
+</div>
+          
+        
+          
+            <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+  <div class='clearfix'>
+    <h3 class='fl m0' id='user'>
+      User
+    </h3>
+    
+  </div>
+  
+
+  <p>You can access an instance of this class using the <a href="#Telepatuser">user</a> property of the Telepat object.</p>
+
+
+  <div class='pre p1 fill-light mt0'>new User()</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Example</div>
+    
+      
+      <pre class='p1 overflow-auto round fill-light'>telepat.user.login(<span class="hljs-string">'email'</span>, <span class="hljs-string">'password'</span>, (err) =&gt; {
+ <span class="hljs-keyword">if</span> (err) {
+   <span class="hljs-comment">// Treat login error</span>
+ } <span class="hljs-keyword">else</span> {
+   <span class="hljs-comment">// Treat successful login</span>
+   <span class="hljs-built_in">console</span>.log(telepat.user.data);
+ }
+});</pre>
+    
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Static Members</div>
+    <div class="clearfix">
+  
+    <div class='border-bottom' id='UserisAdmin'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>isAdmin</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Indicates if the currently logged in user is an admin</p>
+
+
+  <div class='pre p1 fill-light mt0'>isAdmin</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='UsercanReauth'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>canReauth</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Indicates if there&#x27;s a saved authentication token that can be used to re-login</p>
+
+
+  <div class='pre p1 fill-light mt0'>canReauth</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Userdata'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>data</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Object that holds all key-value data about the currently logged in user</p>
+
+
+  <div class='pre p1 fill-light mt0'>data</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+</div>
+
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Instance Members</div>
+    <div class="clearfix">
+  
+    <div class='border-bottom' id='User#reauth'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>reauth([callback])</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>If there is a saved authentication token from previous connections, try to use it to login again.
+You can call this method if the <a href="#UsercanReauth">canReauth</a> property is true.</p>
+
+
+  <div class='pre p1 fill-light mt0'>reauth(callback: [<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>([<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</code> Callback invoked after reauth operation is finished
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='User#update'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>update(patches, [callback])</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Call this to update your profile.</p>
+<p>To call this method, you need to create an  array containing &#x27;patch&#x27; objects, representing the
+modifications that need to be persisted. The structure of a patch object is:</p>
+<p><code>{&#x27;op&#x27;: &#x27;replace&#x27;, &#x27;path&#x27;: user or admin + &#x27;/&#x27; + user_id + &#x27;/&#x27; + property, &#x27;value&#x27;: modified_value}</code></p>
+<p>Instead of using this function, you can also update the user directly from <a href="#Userdata">User.data</a>.</p>
+
+
+  <div class='pre p1 fill-light mt0'>update(patches: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array">Array</a>&lt;<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>&gt;, callback: [<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>patches</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array">Array</a>&lt;<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>&gt;)</code> The array of patches representing the modifications that need to be persisted
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>([<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</code> Callback invoked after operation is finished
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='User#requestPasswordReset'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>requestPasswordReset(email, [callbackURL], [callback])</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Call this to request a password reset for the logged in user.
+The process involves a confirmation email, with a link that needs to be clicked on in order to get a unique pass reset token.
+You then use that token to call the <a href="#User#resetPassword">resetPassword</a> method that finishes the process by setting a new password.</p>
+
+
+  <div class='pre p1 fill-light mt0'>requestPasswordReset(email: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, callbackURL: [<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>](default null), callback: [<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>email</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code> The email/username of the user to reset the pass for
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callbackURL</span> <code class='quiet'>([<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>](default null))</code> The URL the user will be pointed to after verifying the request by clicking the link in the sent email
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>([<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</code> Callback invoked after the operation is finished
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='User#resetPassword'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>resetPassword(userId, id, token, newPassword, [callback])</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  
+
+  <div class='pre p1 fill-light mt0'>resetPassword(userId: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, id: any, token: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, newPassword: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, callback: [<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>userId</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code> The id of the user that needs the password reset
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>id</span> <code class='quiet'>(any)</code> 
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>token</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code> The token obtained from the redirect generated by calling 
+<a href="#User#requestPasswordReset">requestPasswordReset</a>
+.
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>newPassword</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code> The new password
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>([<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</code> Callback invoked after the operation is finished
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='User#register'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>register(user, [callback])</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>This function creates a new user profile.</p>
+
+
+  <div class='pre p1 fill-light mt0'>register(user: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>, callback: [<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>user</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>)</code> The object representing the new user profile
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>([<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</code> Callback invoked after the operation is finished
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='User#registerAdmin'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>registerAdmin(admin, [callback])</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>This function creates a new admin profile.</p>
+
+
+  <div class='pre p1 fill-light mt0'>registerAdmin(admin: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>, callback: [<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>admin</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>)</code> The object representing the new admin profile
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>([<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</code> Callback invoked after the operation is finished
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='User#loginWithFacebook'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>loginWithFacebook(facebookToken, [callback])</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>This function associates the current anonymous device to a Telepat user profile, using a Facebook
+account for authentication.</p>
+
+
+  <div class='pre p1 fill-light mt0'>loginWithFacebook(facebookToken: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, callback: [<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>facebookToken</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code> The user token obtained from Facebook after login
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>([<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</code> Callback invoked after the operation is finished
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='User#login'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>login(email, password, [callback])</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>This function associates the current anonymous device to a Telepat user profile, using a password for authentication.</p>
+
+
+  <div class='pre p1 fill-light mt0'>login(email: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, password: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, callback: [<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>email</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code> The user&#x27;s email address
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>password</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code> The user&#x27;s password
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>([<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</code> Callback invoked after the operation is finished
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Example</div>
+    
+      
+      <pre class='p1 overflow-auto round fill-light'>telepat.user.login(<span class="hljs-string">'email'</span>, <span class="hljs-string">'password'</span>, (err) =&gt; {
+ <span class="hljs-keyword">if</span> (err) {
+   <span class="hljs-comment">// Treat login error</span>
+ } <span class="hljs-keyword">else</span> {
+   <span class="hljs-comment">// Treat successful login</span>
+   <span class="hljs-built_in">console</span>.log(telepat.user.data);
+ }
+});</pre>
+    
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='User#loginAdmin'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>loginAdmin(email, password, [callback])</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>This function associates the current anonymous device to a Telepat administrator profile, using a password for authentication.</p>
+
+
+  <div class='pre p1 fill-light mt0'>loginAdmin(email: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, password: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, callback: [<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>email</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code> The admin email address
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>password</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code> The admin password
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>([<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</code> Callback invoked after the operation is finished
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Example</div>
+    
+      
+      <pre class='p1 overflow-auto round fill-light'>telepat.user.loginAdmin(<span class="hljs-string">'admin@email.com'</span>, <span class="hljs-string">'password'</span>, (err) =&gt; {
+ <span class="hljs-keyword">if</span> (err) {
+   <span class="hljs-comment">// Treat login error</span>
+ } <span class="hljs-keyword">else</span> {
+   telepat.admin.getAppUsers((err) =&gt; {
+     <span class="hljs-keyword">if</span> (err) {
+       <span class="hljs-comment">// Treat error</span>
+     } <span class="hljs-keyword">else</span> {
+       <span class="hljs-comment">// Treat success</span>
+       <span class="hljs-built_in">console</span>.log(telepat.admin.users);
+     }
+   })
+ }
+});</pre>
+    
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='User#get'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>get(user, userId, [callback])</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>This function retrieves a Telepat user&#x27;s information, based on a user id.</p>
+
+
+  <div class='pre p1 fill-light mt0'>get(user: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, userId: any, callback: [<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>user</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code> The user&#x27;s Telepat ID
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>userId</span> <code class='quiet'>(any)</code> 
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>([<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</code> Callback invoked after the operation is finished
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='User#me'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>me([callback])</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>This function retrieves the currently logged in user&#x27;s information.</p>
+
+
+  <div class='pre p1 fill-light mt0'>me(callback: [<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>([<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</code> Callback invoked after the operation is finished
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='User#logout'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>logout([callback])</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Logs the current user out.</p>
+
+
+  <div class='pre p1 fill-light mt0'>logout(callback: [<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>([<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</code> Callback invoked after the operation is finished
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+</div>
+
+  
+
+  
+</section>
+
+          
+        
+          
+            <div class='keyline-top-not py2'><section class='py2 clearfix'>
+
+  <h2 id='Administration tasks' class='mt0'>
+    Administration tasks
+  </h2>
+
+  
+</section>
+</div>
+          
+        
+          
+            <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+  <div class='clearfix'>
+    <h3 class='fl m0' id='admin'>
+      Admin
+    </h3>
+    
+  </div>
+  
+
+  <p>You can access an instance of this class using the <a href="#Telepatadmin">admin</a> property of the Telepat object.
+This instance becomes available after successfully logging in as an administrator.</p>
+
+
+  <div class='pre p1 fill-light mt0'>new Admin()</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Example</div>
+    
+      
+      <pre class='p1 overflow-auto round fill-light'>telepat.user.loginAdmin(<span class="hljs-string">'admin@email.com'</span>, <span class="hljs-string">'password'</span>, (err) =&gt; {
+ <span class="hljs-keyword">if</span> (err) {
+   <span class="hljs-comment">// Treat login error</span>
+ } <span class="hljs-keyword">else</span> {
+   telepat.admin.getAppUsers((err) =&gt; {
+     <span class="hljs-keyword">if</span> (err) {
+       <span class="hljs-comment">// Treat error</span>
+     } <span class="hljs-keyword">else</span> {
+       <span class="hljs-comment">// Treat success</span>
+       <span class="hljs-built_in">console</span>.log(telepat.admin.users);
+
+       <span class="hljs-comment">// Update users</span>
+       telepat.admin.users[goodUserId].isAwesome = <span class="hljs-literal">true</span>;
+       <span class="hljs-keyword">delete</span> telepat.admin.users[badUserId];
+
+       <span class="hljs-comment">// Update collection metadata</span>
+       telepat.collections[currentCollectionId].topic = <span class="hljs-string">'Cats'</span>;
+     }
+   })
+ }
+});</pre>
+    
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Static Members</div>
+    <div class="clearfix">
+  
+    <div class='border-bottom' id='AdminuserChannel'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>userChannel</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>This <a href="#channel">Channel</a> instance allows registering callbacks for &#x27;update&#x27; events on user data.</p>
+
+
+  <div class='pre p1 fill-light mt0'>userChannel</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Adminapps'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>apps</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>This object contains data about all of the applications the current administrator can access.
+Each app data is stored using a key equal to the application unique identifier.
+You can access this after calling <a href="#Admin#getApps">getApps</a>.
+Modifications to app objects stored within will be automatically synchronized with the Telepat backend.</p>
+
+
+  <div class='pre p1 fill-light mt0'>apps</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Adminapp'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>app</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>This object contains data about the currently connected app.
+You can access this after calling <a href="#Admin#getApps">getApps</a>.
+Modifications to this object will be automatically synchronized with the Telepat backend.</p>
+
+
+  <div class='pre p1 fill-light mt0'>app</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Adminusers'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>users</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>This object contains data about all of the users of the current app.
+Each user data is stored using a key equal to the user unique identifier.
+You can access this after calling <a href="#Admin#getAppUsers">getAppUsers</a>.
+Modifications to user objects stored within will be automatically synchronized with the Telepat backend.</p>
+
+
+  <div class='pre p1 fill-light mt0'>users</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+</div>
+
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Instance Members</div>
+    <div class="clearfix">
+  
+    <div class='border-bottom' id='Admin#getApps'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>getApps([callback])</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Call this to retrieve all the application objects the current administrator can access.
+Results will be sent as a callback argument, and persisted on the <a href="#Adminapps">apps</a> property.
+The object belonging to the currently connected app will also be made available, on the <a href="#Adminapp">app</a> property.</p>
+
+
+  <div class='pre p1 fill-light mt0'>getApps(callback: [<a href="#telepatcallback">TelepatCallback</a>](default function () {}))</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>([<a href="#telepatcallback">TelepatCallback</a>](default function () {}))</code> Callback invoked after operation is finished
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Admin#addApp'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>addApp(properties, [callback])</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Call this to create a new application.</p>
+
+
+  <div class='pre p1 fill-light mt0'>addApp(properties: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>, callback: [<a href="#telepatcallback">TelepatCallback</a>](default function () {}))</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>properties</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>)</code> Data about the new application. Can hold any key-value data.
+Must contain at least a &#x27;keys&#x27; key, with an array of string values that will be used as valid API keys for the app.
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>([<a href="#telepatcallback">TelepatCallback</a>](default function () {}))</code> Callback invoked after operation is finished
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Admin#updateApp'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>updateApp(id, patches, [callback])</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Updates key-value data within an application object.</p>
+<p>To call this method, you need to create an  array containing &#x27;patch&#x27; objects, representing the
+modifications that need to be persisted. The structure of a patch object is:</p>
+<p><code>{&#x27;op&#x27;: &#x27;replace&#x27;, &#x27;path&#x27;: application + &#x27;/&#x27; + app_id + &#x27;/&#x27; + property, &#x27;value&#x27;: modified_value}</code></p>
+<p>Instead of using this function, you can also update the app directly from <a href="#Adminapps">Admin.apps</a>.</p>
+
+
+  <div class='pre p1 fill-light mt0'>updateApp(id: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, patches: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array">Array</a>&lt;<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>&gt;, callback: [<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>id</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code> The application id
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>patches</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array">Array</a>&lt;<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>&gt;)</code> The array of patches representing the modifications that need to be persisted
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>([<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</code> Callback invoked after operation is finished
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Admin#deleteApp'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>deleteApp(id, [callback])</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Call this to delete an application.
+Instead of using this function, you can also delete the app directly from <a href="#Adminapps">Admin.apps</a>.</p>
+
+
+  <div class='pre p1 fill-light mt0'>deleteApp(id: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, callback: [<a href="#telepatcallback">TelepatCallback</a>](default function () {}))</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>id</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code> The application id
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>([<a href="#telepatcallback">TelepatCallback</a>](default function () {}))</code> Callback invoked after operation is finished
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Admin#addCollection'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>addCollection(collection, [callback])</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Call this to create a new collection.</p>
+
+
+  <div class='pre p1 fill-light mt0'>addCollection(collection: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>, callback: [<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>collection</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>)</code> Data about the new application. Can hold any key-value data. May be empty object.
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>([<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</code> Callback invoked after operation is finished
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Admin#updateCollection'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>updateCollection(id, patches, [callback])</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Updates key-value data within a collection object.</p>
+<p>To call this method, you need to create an  array containing &#x27;patch&#x27; objects, representing the
+modifications that need to be persisted. The structure of a patch object is:</p>
+<p><code>{&#x27;op&#x27;: &#x27;replace&#x27;, &#x27;path&#x27;: context + &#x27;/&#x27; + collection_id + &#x27;/&#x27; + property, &#x27;value&#x27;: modified_value}</code></p>
+<p>Instead of using this function, you can also update the collection directly from <a href="#Telepatcollections">Telepat.collections</a>.</p>
+
+
+  <div class='pre p1 fill-light mt0'>updateCollection(id: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, patches: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array">Array</a>&lt;<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>&gt;, callback: [<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>id</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code> The collection id
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>patches</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array">Array</a>&lt;<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>&gt;)</code> The array of patches representing the modifications that need to be persisted
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>([<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</code> Callback invoked after operation is finished
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Admin#deleteCollection'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>deleteCollection(id, [callback])</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Call this to delete a collection.
+Instead of using this function, you can also delete the collection directly from <a href="#Telepatcollections">Telepat.collections</a>.</p>
+
+
+  <div class='pre p1 fill-light mt0'>deleteCollection(id: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, callback: [<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>id</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code> The collection id
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>([<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</code> Callback invoked after operation is finished
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Admin#deleteModel'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>deleteModel(type, callback)</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Call this to remove a model from the schema, together with all objects of that specific type.</p>
+
+
+  <div class='pre p1 fill-light mt0'>deleteModel(type: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, callback: <a href="#telepatcallback">TelepatCallback</a>)</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>type</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code> The model name
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>(<a href="#telepatcallback">TelepatCallback</a>)</code> Callback invoked after operation is finished
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Admin#getAppUsers'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>getAppUsers([callback])</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Call this to retrieve all the current application user objects.
+Results will be sent as a callback argument, and persisted on the <a href="#Adminusers">users</a> property.</p>
+
+
+  <div class='pre p1 fill-light mt0'>getAppUsers(callback: [<a href="#telepatcallback">TelepatCallback</a>](default function () {}))</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>([<a href="#telepatcallback">TelepatCallback</a>](default function () {}))</code> Callback invoked after operation is finished
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Admin#addUser'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>addUser(user, [callback])</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>This is an alias for <a href="#User#register">#User#register</a>.</p>
+
+
+  <div class='pre p1 fill-light mt0'>addUser(user: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>, callback: [<a href="#telepatcallback">TelepatCallback</a>](default function () {}))</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>user</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>)</code> The object representing the new user profile
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>([<a href="#telepatcallback">TelepatCallback</a>](default function () {}))</code> Callback invoked after operation is finished
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Admin#deleteUser'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>deleteUser(username, [callback])</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Call this to delete a user profile.
+Instead of using this function, you can also delete the user directly from <a href="#Adminusers">Admin.users</a>.</p>
+
+
+  <div class='pre p1 fill-light mt0'>deleteUser(username: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, callback: [<a href="#telepatcallback">TelepatCallback</a>](default function () {}))</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>username</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code> The email address of the user profile to delete
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>([<a href="#telepatcallback">TelepatCallback</a>](default function () {}))</code> Callback invoked after operation is finished
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Admin#updateUser'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>updateUser(patches, [callback])</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Call this to update a user profile.</p>
+<p>To call this method, you need to create an  array containing &#x27;patch&#x27; objects, representing the
+modifications that need to be persisted. The structure of a patch object is:</p>
+<p><code>{&#x27;op&#x27;: &#x27;replace&#x27;, &#x27;path&#x27;: user + &#x27;/&#x27; + user_id + &#x27;/&#x27; + property, &#x27;value&#x27;: modified_value}</code></p>
+<p>Instead of using this function, you can also update the user directly from <a href="#Adminusers">Admin.users</a>.</p>
+
+
+  <div class='pre p1 fill-light mt0'>updateUser(patches: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array">Array</a>&lt;<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>&gt;, callback: [<a href="#telepatcallback">TelepatCallback</a>](default function () {}))</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>patches</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array">Array</a>&lt;<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>&gt;)</code> The array of patches representing the modifications that need to be persisted
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>([<a href="#telepatcallback">TelepatCallback</a>](default function () {}))</code> Callback invoked after operation is finished
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Admin#authorize'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>authorize(user, callback)</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Call this to authorize access to the current app for another administrator account
+within the same Telepat instance.</p>
+
+
+  <div class='pre p1 fill-light mt0'>authorize(user: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, callback: <a href="#telepatcallback">TelepatCallback</a>)</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>user</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code> The email associated with the account of the new administrator
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>(<a href="#telepatcallback">TelepatCallback</a>)</code> Callback invoked after operation is finished
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='Admin#deauthorize'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>deauthorize(user, callback)</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Call this to deauthorize access to the current app for another administrator account
+within the same Telepat instance.</p>
+
+
+  <div class='pre p1 fill-light mt0'>deauthorize(user: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, callback: <a href="#telepatcallback">TelepatCallback</a>)</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>user</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code> The email associated with the account of the administrator to be removed
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>callback</span> <code class='quiet'>(<a href="#telepatcallback">TelepatCallback</a>)</code> Callback invoked after operation is finished
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+</div>
+
+  
+
+  
+</section>
+
+          
+        
+          
+            <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+  <div class='clearfix'>
+    <h3 class='fl m0' id='telepatcallback'>
+      TelepatCallback
+    </h3>
+    
+  </div>
+  
+
+  <p>This callback is displayed as part of the Requester class.</p>
+
+
+  <div class='pre p1 fill-light mt0'>TelepatCallback</div>
+
+  
+
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>err</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error">Error</a>)</code> If there was an error processing the requested operation, this will reference the error object resulted
+
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>res</span> <code class='quiet'>(any)</code> The operation response
+
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+          
+        
+      </div>
+    </div>
+  </div>
+  <script src='assets/anchor.js'></script>
+  <script src='assets/site.js'></script>
+</body>
+</html>

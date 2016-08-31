@@ -1,0 +1,10 @@
+toc:
+  - Telepat
+  - name: Object management
+    description: |
+      Use channels to manage your subscriptions (add, edit, delete objects).
+  - Channel
+  - name: User management
+  - User
+  - name: Administration tasks
+  - Admin
