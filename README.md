@@ -2,7 +2,7 @@
 
 # Telepat Javascript Client
 
-UMD client for Telepat, using [Browserify](http://browserify.org) to run in browsers.
+UMD client for Telepat, using [Webpack](https://webpack.github.io/) to run in browsers.
 Available on [GitHub](https://github.com/telepat-io/telepat-js).
 
 [Telepat](http://telepat.io) is an open-source backend stack, designed to deliver information and information updates in real-time to clients, while allowing for flexible deployment and simple scaling. Read more about how it works and why it's different [here](http://docs.telepat.io).
@@ -11,11 +11,11 @@ Available on [GitHub](https://github.com/telepat-io/telepat-js).
 
 - `bower install telepat-js`, if you're using Bower
 - `npm install telepat-js`, if you're using NPM
-- or the classic `<script src="dist/telepat.js"></script>`
+- or the classic `<script src="lib/telepat.js"></script>`
 
 ## Learning
 
-Documentation is available [here](http://docs.telepat.io/js-sdk.html), and you can check out a simple demo in the `example` folder.
+Documentation is available [here](http://docs.telepat.io/js-sdk.html), and you can check out a simple demo [here](https://github.com/telepat-io/telepat-demo).
 
 Read on about working with the library:
 
@@ -26,9 +26,7 @@ Read on about working with the library:
 
 ## Building from source
 
-Clone this repo, then run `npm install`. After that, you can build the project using `gulp build`.
-
-
+Clone [the repo](https://github.com/telepat-io/telepat-js), then run `npm install`. After editing the sources in the /src directory, run `npm run build-all` to compile the libraries, and `npm run docs` to generate the documentation.
 
 ## License
 

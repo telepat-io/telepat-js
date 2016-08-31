@@ -34,18 +34,21 @@ export default class User {
      * Indicates if the currently logged in user is an admin
      * @type {boolean}
      * @memberof User
+     * @instance
      */
     this.isAdmin = false;
     /**
      * Indicates if there's a saved authentication token that can be used to re-login
      * @type {boolean}
      * @memberof User
+     * @instance
      */
     this.canReauth = null;
     /**
      * Object that holds all key-value data about the currently logged in user
      * @type {Object}
      * @memberof User
+     * @instance
      */
     this.data = {};
     API.tokenUpdateCallback = (newToken) => {

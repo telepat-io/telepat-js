@@ -2,6 +2,11 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.5.0] - 2016-06-31
+### Changed
+- New codebase, using ES6 and Webpack
+- New documentation available
+
 ## [0.4.0] - 2016-05-30
 ### Changed
 - Updated API endpoint URLs for Telepat v0.4.0

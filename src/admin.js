@@ -42,6 +42,7 @@ export default class Admin {
      * This {@link Channel} instance allows registering callbacks for 'update' events on user data.
      * @type {Object}
      * @memberof Admin
+     * @instance
      */
     this.userChannel = null;
     /**
@@ -51,6 +52,7 @@ export default class Admin {
      * Modifications to app objects stored within will be automatically synchronized with the Telepat backend.
      * @type {Object}
      * @memberof Admin
+     * @instance
      */
     this.apps = null;
     /**
@@ -59,6 +61,7 @@ export default class Admin {
      * Modifications to this object will be automatically synchronized with the Telepat backend.
      * @type {Object}
      * @memberof Admin
+     * @instance
      */
     this.app = null;
     /**
@@ -68,6 +71,7 @@ export default class Admin {
      * Modifications to user objects stored within will be automatically synchronized with the Telepat backend.
      * @type {Object}
      * @memberof Admin
+     * @instance
      */
     this.users = null;
   }

@@ -54,18 +54,21 @@ export default class Channel {
      * A container object referencing all of the objects retrieved via subscription. Each object is stored on a key equal to its own unique id.
      * @type {Object}
      * @memberof Channel
+     * @instance
      */
     this.objects = {};
     /**
      * A container array referencing all of the objects retrieved via subscription. The order of the objects reflects the sorting options set for the channel.
      * @type {Array<Object>}
      * @memberof Channel
+     * @instance
      */
     this.objectsArray = [];
     /**
      * The current object count.
      * @type {number|null}
      * @memberof Channel
+     * @instance
      */
     this.objectsCount = null;
   }

@@ -16,6 +16,43 @@ import User from './user';
  *
  * @example
  * let telepat = new Telepat();
+ * telepat.connect({
+ *  apiEndpoint: 'TELEPAT-API-ENDPOINT',
+ *  socketEndpoint: 'TELEPAT-SOCKET-ENDPOINT',
+ *  apiKey: 'APP-API-KEY',
+ *  appId: 'APP-ID'
+ * }, (err, res) => {
+ *  if (err) {
+ *    // Treat connection error
+ *    console.log(err);
+ *    return;
+ *  }
+ *
+ *  // Display all collections
+ *  console.log(telepat.collections);
+ *
+ *  // Login, display and update user data
+ *  telepat.on('login', () => {
+ *    console.log(telepat.user.data);
+ *    telepat.user.data.change = true;
+ *  });
+ *  telepat.user.login('user', 'pass');
+ *
+ *  // Subscribe to data
+ *  let articleChannel = telepat.subscribe({
+ *    channel: {
+ *      context: 'collection-identifier',
+ *      model: 'article'
+ *    }
+ *  }, () => {
+ *    console.log(articleChannel.objectsArray);
+ *    articleChannel.objects['object-identifier'].title = 'new title';
+ *
+ *    articleChannel.on('update', (operationType, objectId, object, oldObject) => {
+ *      // Update interface on data updates
+ *    });
+ *  });
+ * });
  */
 export default class Telepat {
   constructor() {
@@ -44,6 +81,7 @@ export default class Telepat {
      * Indicates whether the current instance is connected to the backend
      * @type {boolean}
      * @memberof Telepat
+     * @instance
      */
     this.connected = false;
     /**
@@ -51,18 +89,21 @@ export default class Telepat {
      * If true, the `connect` event will be fired as soon as connection is established.
      * @type {boolean}
      * @memberof Telepat
+     * @instance
      */
     this.connecting = false;
     /**
      * Indicates whether the current instance is properly configured and ready for connection.
      * @type {boolean}
      * @memberof Telepat
+     * @instance
      */
     this.configured = false;
     /**
      * If connected, this property reflects the current app id.
      * @type {string}
      * @memberof Telepat
+     * @instance
      */
     this.currentAppId = null;
     /**
@@ -72,6 +113,7 @@ export default class Telepat {
      * Modifications to collection objects stored within will be automatically synchronized with the Telepat backend.
      * @type {Object}
      * @memberof Telepat
+     * @instance
      */
     this.collections = {};
     /**
@@ -79,6 +121,7 @@ export default class Telepat {
      * Each channel is stored using a key equal to the channel's unique identifier.
      * @type {Object}
      * @memberof Telepat
+     * @instance
      */
     this.subscriptions = {};
     /**
@@ -86,6 +129,7 @@ export default class Telepat {
      * It gives you access to a instance of the {@link Admin} class, allowing you access to administrator functionality.
      * @type {Admin}
      * @memberof Telepat
+     * @instance
      *
      * @example
      * telepat.user.loginAdmin('admin@email.com', 'password', (err) => {
@@ -109,6 +153,7 @@ export default class Telepat {
      * accessing and modifying current user data or registering new user accounts.
      * @type {User}
      * @memberof Telepat
+     * @instance
      *
      * @example
      * telepat.user.login('email', 'password', (err) => {

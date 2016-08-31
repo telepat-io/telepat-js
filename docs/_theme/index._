@@ -1,0 +1,116 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset='utf-8' />
+  <title><%- options.name %> <%- options.version %> | Documentation</title>
+  <meta name='viewport' content='width=device-width,initial-scale=1'>
+  <link href="http://fonts.googleapis.com/css?family=Open+Sans:400,600" rel="stylesheet" type="text/css">
+  <link href='assets/bass.css' type='text/css' rel='stylesheet' />
+  <link href='assets/style.css' type='text/css' rel='stylesheet' />
+  <link href='assets/github.css' type='text/css' rel='stylesheet' />
+</head>
+<body class='documentation'>
+  <div class='max-width-4 mx-auto'>
+    <div class='clearfix md-mxn2'>
+      <div class='fixed xs-hide fix-3 overflow-auto max-height-100'>
+        <div class='py1 px2'>
+          <h3 class='mb0 no-anchor'><%- options.name %></h3>
+          <div class='mb1'><code><%- options.version %></code></div>
+          <input
+            placeholder='Filter'
+            id='filter-input'
+            class='col12 block input'
+            type='text' />
+          <div id='toc'>
+            <ul class='list-reset h5 py1-ul'>
+              <% docs.forEach(function(doc) { %>
+                <% var hasMembers = doc.members.static.length || doc.members.instance.length %>
+                <li><a
+                  href='#<%=slug(doc.namespace)%>'
+                  class="<% if (doc.kind === 'note') { %>h5 bold black caps<% } %><% if (hasMembers) { %> toggle-sibling<% } %>">
+                  <%- doc.name %>
+                  <% if (hasMembers) { %><span class='icon'>▸</span><% } %>
+                </a>
+                <% if (hasMembers) { %>
+                <div class='toggle-target display-none'>
+                  <% if (doc.members.static && doc.members.static.length) { %>
+                  <ul class='list-reset py1-ul pl1'>
+                    <li class='h5'><span>Static members</span></li>
+                    <% doc.members.static.forEach(function(member) { %>
+                      <li><a
+                        href='#<%=member.namespace%>'
+                        class='regular pre-open'>
+                        .<%- member.name %>
+                      </a></li>
+                    <% }) %>
+                    </ul>
+                  <% } %>
+                  <% if (doc.members.instance && doc.members.instance.length) { %>
+                    <ul class='list-reset py1-ul pl1'>
+                      <li class='h5'><span>Instance members</span></li>
+                      <% doc.members.instance.forEach(function(member) { %>
+                      <li><a
+                        href='#<%=member.namespace%>'
+                        class='regular pre-open'>
+                        #<%- member.name %>
+                      </a></li>
+                      <% }) %>
+                    </ul>
+                  <% } %>
+                  <% if (doc.members.events && doc.members.events.length) { %>
+                    <ul class='list-reset py1-ul pl1'>
+                      <li class='h5'>Events</li>
+                      <% doc.members.events.forEach(function(member) { %>
+                        <li><a
+                          href='#<%=member.namespace%>'
+                          class='regular pre-open'>
+                          ⓔ <%- member.name %>
+                        </a></li>
+                      <% }) %>
+                    </ul>
+                  <% } %>
+                </div>
+                <% } %>
+                </li>
+              <% }) %>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class='fix-margin-3'>
+        <div class="p2 mb2 clearfix bg-white minishadow">
+          <h3 class="fl m0">Telepat Javascript Client</h3>
+          <p>UMD client for Telepat, built with Webpack to run in browsers. Available on <a href="https://github.com/telepat-io/telepat-js" target="_blank">GitHub</a>.</p>
+          <p>Telepat is an open-source backend stack, designed to deliver information and information updates in real-time to clients, while allowing for flexible deployment and simple scaling. Read more about how it works and why it's different <a href="http://docs.telepat.io/" target="_blank">here</a>.</p>
+          <p>Documentation is available <a href="http://docs.telepat.io/js-sdk.html" target="_blank">here</a>, and you can check out a simple demo app <a href="https://github.com/telepat-io/telepat-demo" target="_blank">here</a>.</p>
+          <h4>Installing</h4>
+          <p>
+            <ul>
+              <li><code>bower install telepat-js</code>, if you're using Bower</li>
+              <li><code>npm install telepat-js</code>, if you're using NPM</li>
+              <li>or the classic <code>&lt;script src=&quot;lib/telepat.js&quot;&gt;&lt;/script&gt;</code></li>
+            </ul>
+          </p>
+          <h4>Building from source</h4>
+          <p>Clone <a href="https://github.com/telepat-io/telepat-js" target="_blank">the repo</a>, then run <code>npm install</code>. After editing the sources in the /src directory, run <code>npm run build-all</code> to compile the libraries, and <code>npm run docs</code> to generate the documentation.</p>
+          <h4>License</h4>
+          <p>Released under the <a href="http://www.apache.org/licenses/LICENSE-2.0" target="_blank">Apache 2 License</a>.</p>
+        </div>
+        <% docs.forEach(function(s) { %>
+          <% if (s.kind !== 'note') { %>
+            <%= renderSection({
+              section: s,
+              renderSection: renderSection,
+              renderSectionList: renderSectionList
+            }) %>
+          <% } else { %>
+            <div class='keyline-top-not py2'><%=renderNote({ note: s })%></div>
+          <% } %>
+        <% }) %>
+      </div>
+    </div>
+  </div>
+  <script src='assets/anchor.js'></script>
+  <script src='assets/site.js'></script>
+</body>
+</html>
