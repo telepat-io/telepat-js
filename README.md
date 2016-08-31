@@ -17,16 +17,51 @@ Available on [GitHub](https://github.com/telepat-io/telepat-js).
 
 Documentation is available [here](http://docs.telepat.io/js-sdk.html), and you can check out a simple demo [here](https://github.com/telepat-io/telepat-demo).
 
-Read on about working with the library:
+A simple usage example:
 
-- [Telepat](http://docs.telepat.io/telepat-js/lib/telepat.js.html)
-- [Channel](http://docs.telepat.io/telepat-js/lib/channel.js.html)
-- [User](http://docs.telepat.io/telepat-js/lib/user.js.html)
-- [Admin](http://docs.telepat.io/telepat-js/lib/admin.js.html)
+    let telepat = new Telepat();
+    telepat.connect({
+     apiEndpoint: 'TELEPAT-API-ENDPOINT',
+     socketEndpoint: 'TELEPAT-SOCKET-ENDPOINT',
+     apiKey: 'APP-API-KEY',
+     appId: 'APP-ID'
+    }, (err, res) => {
+     if (err) {
+       // Treat connection error
+       console.log(err);
+       return;
+     }
+
+     // Display all collections
+     console.log(telepat.collections);
+
+     // Login, display and update user data
+     telepat.on('login', () => {
+       console.log(telepat.user.data);
+       telepat.user.data.change = true;
+     });
+     telepat.user.login('user', 'pass');
+
+     // Subscribe to data
+     let articleChannel = telepat.subscribe({
+       channel: {
+         context: 'collection-identifier',
+         model: 'article'
+       }
+     }, () => {
+       console.log(articleChannel.objectsArray);
+       articleChannel.objects['object-identifier'].title = 'new title';
+
+       articleChannel.on('update', (operationType, objectId, object, oldObject) => {
+         // Update interface on data updates
+       });
+     });
+    });
 
 ## Building from source
 
 Clone [the repo](https://github.com/telepat-io/telepat-js), then run `npm install`. After editing the sources in the /src directory, run `npm run build-all` to compile the libraries, and `npm run docs` to generate the documentation.
+
 
 ## License
 
