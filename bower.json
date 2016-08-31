@@ -1,0 +1,17 @@
+{
+  "name": "telepat-js",
+  "version": "0.5.0",
+  "license": "Apache 2.0",
+  "authors": [
+    "Telepat.io", "Telepat.io <dev@telepat.io>"
+  ],
+  "homepage": "http://telepat.io",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/telepat-io/telepat-js.git"
+  },
+  "description": "Javascript Client for Telepat",
+  "main": "lib/telepat.js",
+  "ignore": [ "docs" ],
+  "dependencies": {}
+}
