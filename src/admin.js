@@ -310,10 +310,11 @@ export default class Admin {
    *
    * Instead of using this function, you can also update the user directly from {@link #Adminusers Admin.users}.
    *
+   * @param {string} id The id of the user to be updated
    * @param  {Array<Object>} patches The array of patches representing the modifications that need to be persisted
    * @param {TelepatCallback} callback Callback invoked after operation is finished
    */
-  updateUser(patches, callback = function () {}) {
+  updateUser(id, patches, callback = function () {}) {
     API.call('admin/user/update', {
       patches: patches
     },

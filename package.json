@@ -10,6 +10,7 @@
     "build-0.3": "webpack --progress --colors --version=0.3 --mode=dev",
     "dev": "webpack --progress --colors --watch --mode=dev",
     "build-all": "npm run build-latest && npm run build-latest-min && npm run build-0.3 && npm run build-0.3-min",
+    "docs": "documentation build ./src/ --format html --output docs --config documentation.yml",
     "test": "mocha --compilers js:babel-core/register --colors -w ./test/*.spec.js"
   },
   "devDependencies": {

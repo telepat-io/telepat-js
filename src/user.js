@@ -15,6 +15,9 @@ import Admin from './admin';
  *  } else {
  *    // Treat successful login
  *    console.log(telepat.user.data);
+ *
+ *    // Update user data
+ *    telepat.user.data.points++;
  *  }
  * });
  */
@@ -164,7 +167,9 @@ export default class User {
           this.data = {};
           this._event.emit('logout');
         } else {
-          for (var k in res.body.content) {
+          let userContainer = {};
+
+          for (let k in res.body.content) {
             this.data[k] = res.body.content[k];
             this._customProperties.push(k);
           }
@@ -173,6 +178,16 @@ export default class User {
             this._saveToken(API.authenticationToken);
             this._setAdmin(new Admin(this));
           }
+
+          userContainer[this.data.id] = this.data;
+          this._monitor.add(
+            {channel: {model: (this.isAdmin ? 'admin' : 'user')}},
+            userContainer,
+            null,
+            () => {},
+            () => {},
+            this.update.bind(this)
+          );
           callback(null, res);
           this._event.emit('login');
         }
@@ -192,10 +207,11 @@ export default class User {
    *
    * Instead of using this function, you can also update the user directly from {@link #Userdata User.data}.
    *
+   * @param {string} id The user id of the updated user profile
    * @param  {Array<Object>} patches The array of patches representing the modifications that need to be persisted
    * @param {TelepatCallback} callback Callback invoked after operation is finished
    */
-  update(patches, callback = () => {}) {
+  update(id, patches, callback = () => {}) {
     API.call(this.isAdmin ? 'admin/update' : 'user/update', {patches: patches}, (err, res) => {
       if (err) {
         return callback(error('Failed updating user: ' + res.body.message));
@@ -349,17 +365,18 @@ export default class User {
   };
 
   /**
-   * This function retrieves a Telepat user's information, based on a user id.
+   * Call this to retrieve a specific application user object.
+   * Results will be sent as a callback argument.
    *
-   * @param {string} user The user's Telepat ID
-   * @param {TelepatCallback} callback Callback invoked after the operation is finished
+   * @param {string} userId The id of the requested user
+   * @param {TelepatCallback} callback Callback invoked after operation is finished
    */
   get(userId, callback = () => {}) {
     API.get('user/get', 'user_id=' + encodeURIComponent(userId), (err, res) => {
       if (err) {
-        callback(console.error('Request failed with error: ' + err), null);
+        callback(error('Retrieving user failed with error: ' + err), null);
       } else {
-        callback(null, JSON.parse(res.text).content);
+        callback(null, res.body.content);
       }
     });
   };

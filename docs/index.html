@@ -3910,6 +3910,9 @@ Available callbacks:</p>
  } <span class="hljs-keyword">else</span> {
    <span class="hljs-comment">// Treat successful login</span>
    <span class="hljs-built_in">console</span>.log(telepat.user.data);
+
+   <span class="hljs-comment">// Update user data</span>
+   telepat.user.data.points++;
  }
 });</pre>
     
@@ -4740,7 +4743,7 @@ account for authentication.</p>
       <div class="clearfix small pointer toggle-sibling">
         <div class="py1 contain">
             <a class='icon pin-right py1 dark-link caret-right'>▸</a>
-            <span class='code strong strong truncate'>get(user, userId, [callback])</span>
+            <span class='code strong strong truncate'>get(userId, [callback])</span>
         </div>
       </div>
       <div class="clearfix display-none toggle-target">
@@ -4748,10 +4751,11 @@ account for authentication.</p>
 
   
 
-  <p>This function retrieves a Telepat user&#x27;s information, based on a user id.</p>
+  <p>Call this to retrieve a specific application user object.
+Results will be sent as a callback argument.</p>
 
 
-  <div class='pre p1 fill-light mt0'>get(user: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, userId: any, callback: [<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</div>
+  <div class='pre p1 fill-light mt0'>get(userId: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, callback: [<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</div>
 
   
 
@@ -4767,7 +4771,7 @@ account for authentication.</p>
       
         <div class='space-bottom0'>
           <div>
-            <span class='code bold'>user</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code> The user&#x27;s Telepat ID
+            <span class='code bold'>userId</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code> The id of the requested user
 
           </div>
           
@@ -4775,14 +4779,7 @@ account for authentication.</p>
       
         <div class='space-bottom0'>
           <div>
-            <span class='code bold'>userId</span> <code class='quiet'>(any)</code> 
-          </div>
-          
-        </div>
-      
-        <div class='space-bottom0'>
-          <div>
-            <span class='code bold'>callback</span> <code class='quiet'>([<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</code> Callback invoked after the operation is finished
+            <span class='code bold'>callback</span> <code class='quiet'>([<a href="#telepatcallback">TelepatCallback</a>](default () =&gt; {}))</code> Callback invoked after operation is finished
 
           </div>
           
