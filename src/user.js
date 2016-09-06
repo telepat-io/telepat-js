@@ -217,9 +217,10 @@ export default class User {
   update(id, patches, callback = () => {}) {
     API.call(this.isAdmin ? 'admin/update' : 'user/update', {patches: patches}, (err, res) => {
       if (err) {
-        return callback(error('Failed updating user: ' + res.body.message));
+        callback(error('Failed updating user: ' + res.body.message));
+      } else {
+        callback();
       }
-      callback();
     });
   }
 
