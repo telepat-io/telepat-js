@@ -97,7 +97,7 @@ export default class Admin {
             this.apps[app.id] = app;
           }
           this.app = this.apps[API.appId];
-          this._monitor.add({channel: {model: 'application'}}, this.apps, null, this.addApp, this.deleteApp, this.updateApp);
+          this._monitor.add({channel: {model: 'application'}}, this.apps, new EventObject(log), () => {}, ()=>{}, this.updateApp);
           callback(null, res.body.content);
         }
       }, 'get');
@@ -117,7 +117,21 @@ export default class Admin {
         if (err) {
           callback(error('Adding application failed with error: ' + err), null);
         } else {
-          this.apps[res.body.content.id] = res.body.content;
+          this._monitor.processMessage({
+            'data': {
+              'new': [
+                {
+                  'op': 'create',
+                  'object': res.body.content,
+                  'subscriptions': [
+                    'blg:null:application'
+                  ]
+                }
+              ],
+              'updated': [],
+              'deleted': []
+            }
+          });
           callback(null, res.body.content);
         }
       });
@@ -166,6 +180,23 @@ export default class Admin {
         if (err) {
           callback(error('Removing application failed with error: ' + err), null);
         } else {
+          this._monitor.processMessage({
+            'data': {
+              'deleted': [
+                {
+                  'op': 'delete',
+                  'object': {
+                    id: id
+                  },
+                  'subscriptions': [
+                    'blg:null:application'
+                  ]
+                }
+              ],
+              'updated': [],
+              'new': []
+            }
+          });
           callback();
         }
       });
