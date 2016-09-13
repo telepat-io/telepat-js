@@ -117,6 +117,7 @@ export default class Admin {
         if (err) {
           callback(error('Adding application failed with error: ' + err), null);
         } else {
+          this.apps[res.body.content.id] = res.body.content;
           callback(null, res.body.content);
         }
       });

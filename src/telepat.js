@@ -502,6 +502,13 @@ export default class Telepat {
     this._socket.on('disconnect', () => {
     });
 
+    this._socket.on('reconnect', () => {
+      self._socket.emit('bind_device', {
+        'device_id': API.UDID,
+        'application_id': API.appId
+      });
+    });
+
     return this;
   }
 

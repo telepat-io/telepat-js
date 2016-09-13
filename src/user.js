@@ -79,12 +79,14 @@ export default class User {
       this._db.put(newObject).then(doc => {
         this.canReauth = true;
       }).catch(err => {
+        this.canReauth = false;
         log.warn('Could not persist authentication token. Error: ' + err);
       });
     }).catch(() => {
       this._db.put(newObject).then(doc => {
         this.canReauth = true;
       }).catch(err => {
+        this.canReauth = false;
         log.warn('Could not persist authentication token. Error: ' + err);
       });
     });
@@ -165,6 +167,7 @@ export default class User {
           API.authenticationToken = null;
           this._setAdmin(null);
           this._db.remove(doc._id, doc._rev);
+          this.canReauth = false;
           callback(error('Saved authentication token expired'), null);
           this._customProperties = [];
           this.data = {};
