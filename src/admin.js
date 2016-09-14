@@ -324,9 +324,9 @@ export default class Admin {
    *  @param {string} username The email address of the user profile to delete
    *  @param {TelepatCallback} callback Callback invoked after operation is finished
    */
-  deleteUser(username, callback = function () {}) {
+  deleteUser(id, callback = function () {}) {
     API.del('admin/user/delete',
-    { username: username },
+    { id: id },
     (err, res) => {
       if (err) {
         callback(error('Removing user failed with error: ' + err), null);
