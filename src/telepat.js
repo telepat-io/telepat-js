@@ -172,10 +172,10 @@ export default class Telepat {
   getCollections(callback = () => {}) {
     API.get('context/all', '', (err, res) => {
       if (err) {
-        let error = error('Error retrieving collections ' + err);
+        let resultingError = error('Error retrieving collections ' + err);
 
-        this.callback(error, null);
-        this._event.emit('error', error);
+        this.callback(resultingError, null);
+        this._event.emit('error', resultingError);
       } else {
         this._monitor.remove({channel: {model: 'context'}});
         this.collections = {};
@@ -405,12 +405,13 @@ export default class Telepat {
               self.currentAppId = null;
               self.connected = false;
               self.connecting = false;
-              return callback(error('Device registration failed with error: ' + err));
+              callback(error('Device registration failed with error: ' + err));
+            } else {
+              completeRegistration(res);
             }
-            return completeRegistration(res);
           });
         } else {
-          return completeRegistration(res);
+          completeRegistration(res);
         }
       });
     }

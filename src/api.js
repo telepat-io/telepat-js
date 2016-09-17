@@ -12,7 +12,7 @@ var API = {
 
 API.call = function (endpoint, data, callback = () => {}, method) {
   if (!this.apiEndpoint) {
-    return callback(new Error('No API endpoint set - run Telepat.configure or Telepat.connect first'), null);
+    callback(new Error('No API endpoint set - run Telepat.configure or Telepat.connect first'), null);
   }
   var req;
 

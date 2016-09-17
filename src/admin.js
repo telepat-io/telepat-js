@@ -153,16 +153,16 @@ export default class Admin {
    */
   updateApp(id, patches, callback = () => {}) {
     if (id !== API.appId) {
-      return callback(error('Cannot update an app that is not active. Please reconnect to that specific app id to make updates.'));
+      callback(error('Cannot update an app that is not active. Please reconnect to that specific app id to make updates.'));
     }
     API.call('admin/app/update',
       {id: id, patches: patches},
       (err, res) => {
         if (err) {
-          return callback(error('Updating application failed with error: ' + err));
+          callback(error('Updating application failed with error: ' + err));
+        } else {
+          callback();
         }
-
-        callback();
       });
   }
 
@@ -213,10 +213,10 @@ export default class Admin {
       collection,
       (err, res) => {
         if (err) {
-          return callback(error('Creating collection failed with error: ' + err));
+          callback(error('Creating collection failed with error: ' + err));
+        } else {
+          callback(null, res);
         }
-
-        callback(null, res);
       });
   }
 
@@ -239,10 +239,10 @@ export default class Admin {
       {id: id, patches: patches},
       (err, res) => {
         if (err) {
-          return callback(error('Updating collection failed with error: ' + err));
+          callback(error('Updating collection failed with error: ' + err));
+        } else {
+          callback();
         }
-
-        callback();
       });
   }
 
@@ -258,10 +258,10 @@ export default class Admin {
       {id: id},
       (err, res) => {
         if (err) {
-          return callback(error('Deleting collection failed with error: ' + err));
+          callback(error('Deleting collection failed with error: ' + err));
+        } else {
+          callback();
         }
-
-        callback();
       });
   }
 
@@ -276,10 +276,10 @@ export default class Admin {
       'model_name': type
     }, (err, res) => {
       if (err) {
-        return callback(error('Deleting model failed with error: ' + err));
+        callback(error('Deleting model failed with error: ' + err));
+      } else {
+        callback();
       }
-
-      callback();
     });
   }
 
@@ -356,7 +356,7 @@ export default class Admin {
     },
     (err, res) => {
       if (err) {
-        callback(error('Removing user failed with error: ' + err), null);
+        callback(error('Updating user failed with error: ' + err), null);
       } else {
         callback();
       }
@@ -375,10 +375,10 @@ export default class Admin {
       email: user
     }, (err, res) => {
       if (err) {
-        return callback(error('Authorizing admin failed with error: ' + err), null);
+        callback(error('Authorizing admin failed with error: ' + err), null);
+      } else {
+        callback();
       }
-
-      callback();
     });
   };
 
@@ -394,10 +394,10 @@ export default class Admin {
       email: user
     }, (err, res) => {
       if (err) {
-        return callback(error('Deauthorizing admin failed with error: ' + err), null);
+        callback(error('Deauthorizing admin failed with error: ' + err), null);
+      } else {
+        callback();
       }
-
-      callback();
     });
   };
 
