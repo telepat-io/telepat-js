@@ -19,44 +19,46 @@ Documentation is available [here](http://docs.telepat.io/js-sdk.html), and you c
 
 A simple usage example:
 
-    let telepat = new Telepat();
-    telepat.connect({
-     apiEndpoint: 'TELEPAT-API-ENDPOINT',
-     socketEndpoint: 'TELEPAT-SOCKET-ENDPOINT',
-     apiKey: 'APP-API-KEY',
-     appId: 'APP-ID'
-    }, (err, res) => {
-     if (err) {
-       // Treat connection error
-       console.log(err);
-       return;
-     }
+```js
+let telepat = new Telepat();
+telepat.connect({
+ apiEndpoint: 'TELEPAT-API-ENDPOINT',
+ socketEndpoint: 'TELEPAT-SOCKET-ENDPOINT',
+ apiKey: 'APP-API-KEY',
+ appId: 'APP-ID'
+}, (err, res) => {
+ if (err) {
+   // Treat connection error
+   console.log(err);
+   return;
+ }
 
-     // Display all collections
-     console.log(telepat.collections);
+ // Display all collections
+ console.log(telepat.collections);
 
-     // Login, display and update user data
-     telepat.on('login', () => {
-       console.log(telepat.user.data);
-       telepat.user.data.change = true;
-     });
-     telepat.user.login('user', 'pass');
+ // Login, display and update user data
+ telepat.on('login', () => {
+   console.log(telepat.user.data);
+   telepat.user.data.change = true;
+ });
+ telepat.user.login('user', 'pass');
 
-     // Subscribe to data
-     let articleChannel = telepat.subscribe({
-       channel: {
-         context: 'collection-identifier',
-         model: 'article'
-       }
-     }, () => {
-       console.log(articleChannel.objectsArray);
-       articleChannel.objects['object-identifier'].title = 'new title';
+ // Subscribe to data
+ let articleChannel = telepat.subscribe({
+   channel: {
+     context: 'collection-identifier',
+     model: 'article'
+   }
+ }, () => {
+   console.log(articleChannel.objectsArray);
+   articleChannel.objects['object-identifier'].title = 'new title';
 
-       articleChannel.on('update', (operationType, objectId, object, oldObject) => {
-         // Update interface on data updates
-       });
-     });
-    });
+   articleChannel.on('update', (operationType, objectId, object, oldObject) => {
+     // Update interface on data updates
+   });
+ });
+});
+```
 
 ## Building from source
 
