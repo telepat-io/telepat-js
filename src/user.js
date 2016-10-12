@@ -272,7 +272,7 @@ export default class User {
       return;
     }
 
-    API.call('user/request_password_reset',
+    API.call('user/password_reset',
       {
         'token': token,
         'user_id': id,
