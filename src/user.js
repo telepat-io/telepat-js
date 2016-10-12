@@ -236,7 +236,7 @@ export default class User {
    * @param  {string} callbackURL The URL the user will be pointed to after verifying the request by clicking the link in the sent email
    * @param  {TelepatCallback} callback Callback invoked after the operation is finished
    */
-  requestPasswordReset(email, callbackURL = null, callback = () => {}) {
+  requestPasswordReset(email, type, callback = () => {}) {
     if (!email) {
       if (this.email) {
         email = this.email;
@@ -248,9 +248,8 @@ export default class User {
 
     API.call('user/request_password_reset',
       {
-        'type': 'app',
-        'username': email,
-        'callbackUrl': callbackURL
+        'type': type,
+        'username': email
       },
     (err, res) => {
       if (err) {
