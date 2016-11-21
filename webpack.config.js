@@ -4,17 +4,21 @@ var path = require('path');
 var env = require('yargs').argv.mode;
 var version = require('yargs').argv.version;
 
-var libraryName = 'Telepat';
-
-var definePlugin = new webpack.DefinePlugin({
-  __0_3__: JSON.stringify(JSON.parse(version === 0.3))
-});
-var plugins = [definePlugin];
-var outputFile = 'telepat';
-
-if (version) {
-  outputFile += version;
+if (!version) {
+  version = 'client';
 }
+
+var plugins = [
+  new webpack.ContextReplacementPlugin(/.*/, path.resolve(__dirname, 'node_modules', 'jsondiffpatch'), {
+    '../package.json': './package.json',
+    './formatters': './src/formatters/index.js',
+    './console': './src/formatters/console.js'
+  })
+];
+var outputFile = `telepat.${version}`;
+
+plugins.push(new webpack.DefinePlugin({ 'global.GENTLY': false }));
+
 if (env === 'dev') {
   outputFile += '.js';
 } else {
@@ -24,37 +28,45 @@ if (env === 'dev') {
 
 var config = {
   entry: __dirname + '/src/telepat.js',
+  target: version === 'server' ? 'node' : 'web',
   devtool: 'source-map',
   output: {
     path: __dirname + '/lib',
     filename: outputFile,
-    library: libraryName,
+    library: 'Telepat',
     libraryTarget: 'umd',
     umdNamedDefine: true
   },
   module: {
     loaders: [
       {
-        test: /(\.jsx|\.js)$/,
+        test: /(\.js)$/,
         loader: 'babel',
         exclude: /(node_modules|bower_components)/
       },
       {
-        test: /(\.jsx|\.js)$/,
+        test: /(\.js)$/,
         loader: 'eslint-loader',
         exclude: /node_modules/
       },
       {
         test: /(\.json)$/,
-        loader: 'json-loader'
+        loader: 'json'
       }
     ]
   },
   resolve: {
     root: path.resolve('./src'),
-    extensions: ['', '.js']
+    extensions: ['', '.js', '.json'],
+    alias: {
+      '../package.json': './node_modules/jsondiffpatch/package.json'
+    }
   },
-  plugins: plugins
+  node: {
+    __dirname: true
+  },
+  plugins: plugins,
+  externals: ['bindings']
 };
 
 module.exports = config;

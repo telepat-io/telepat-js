@@ -67,7 +67,7 @@ export default class Monitor {
       key += ':' + options.channel.id;
     }
     if (options.filters) {
-      key += ':filter:' + (btoa(JSON.stringify(options.filters)).toString('base64'));
+      key += ':filter:' + (new Buffer(JSON.stringify(options.filters)).toString('base64'));
     }
     return key;
   };
@@ -83,9 +83,7 @@ export default class Monitor {
   };
 
   add(subscriptionOptions, objects, event, addCallback, removeCallback, updateCallback) {
-    var self = this;
-
-    function processDeltaObject(object) {
+    let processDeltaObject = (object) => {
       if (Array.isArray(object) || object['_t'] === 'a') {
         return true;
       }
@@ -98,24 +96,24 @@ export default class Monitor {
         return true;
       }
       return false;
-    }
+    };
 
-    function timerFunction() {
-      if (self._processingPatch || self._updateRunning) {
+    let timerFunction = () => {
+      if (this._processingPatch || this._updateRunning) {
         return;
       }
-      var totalDiff = jsondiffpatch.diff(self._lastObjects, self.objects);
+      let totalDiff = jsondiffpatch.diff(this._lastObjects, this.objects);
 
       if (totalDiff !== undefined) {
         log.debug('Found diff: ' + JSON.stringify(totalDiff));
-        for (var subKey in totalDiff) {
-          var root = self._lastObjects[subKey];
-          var diff = totalDiff[subKey];
-          var options = self.options[subKey];
-          var callbacks = self.callbacks[subKey];
-          var diffKeys = Object.keys(diff);
+        for (let subKey in totalDiff) {
+          let root = this._lastObjects[subKey];
+          let diff = totalDiff[subKey];
+          let options = this.options[subKey];
+          let callbacks = this.callbacks[subKey];
+          let diffKeys = Object.keys(diff);
 
-          for (var i = 0; i < diffKeys.length; i++) {
+          for (let i = 0; i < diffKeys.length; i++) {
             var key = diffKeys[i];
 
             if (key !== '_t') {
@@ -123,9 +121,9 @@ export default class Monitor {
 
               if (Array.isArray(obj)) {
                 if (obj.length === 1) {
-                  callbacks.add(self.objects[subKey][key]);
+                  callbacks.add(this.objects[subKey][key]);
                   delete root[key];
-                  delete self.objects[subKey][key];
+                  delete this.objects[subKey][key];
                   log.debug('Adding object to ' + subKey + ' channel');
                 } else if (obj.length === 3) {
                   callbacks.remove(key);
@@ -137,8 +135,8 @@ export default class Monitor {
                 var patch = [];
                 var publicKey = key;
 
-                if (Array.isArray(self.objects[subKey]) && self.objects[subKey][key].id) {
-                  publicKey = self.objects[subKey][key].id;
+                if (Array.isArray(this.objects[subKey]) && this.objects[subKey][key].id) {
+                  publicKey = this.objects[subKey][key].id;
                 }
 
                 for (var j = 0; j < objKeys.length; j++) {
@@ -147,7 +145,7 @@ export default class Monitor {
 
                   if (!processDeltaObject(delta)) {
                     if (typeof delta === 'object') {
-                      patch.push({'op': 'replace', 'path': options.channel.model + '/' + publicKey + '/' + objKey, 'value': self.objects[subKey][key][objKey]});
+                      patch.push({'op': 'replace', 'path': options.channel.model + '/' + publicKey + '/' + objKey, 'value': this.objects[subKey][key][objKey]});
                       log.debug('Modified ' + objKey + ' property on object ' + key + ', ' + options.channel.model + ' channel');
                     } else if (delta.length === 1) {
                       patch.push({'op': 'replace', 'path': options.channel.model + '/' + publicKey + '/' + objKey, 'value': delta[0]});
@@ -159,11 +157,11 @@ export default class Monitor {
                       log.info('Removing object properties is not supported in this version. Try setting to an empty value instead.');
                     }
                   } else {
-                    patch.push({'op': 'replace', 'path': options.channel.model + '/' + publicKey + '/' + objKey, 'value': self.objects[subKey][key][objKey]});
+                    patch.push({'op': 'replace', 'path': options.channel.model + '/' + publicKey + '/' + objKey, 'value': this.objects[subKey][key][objKey]});
                     log.debug('Modified ' + objKey + ' property on object ' + key + ', ' + options.channel.model + ' channel');
                   }
 
-                  root[key][objKey] = JSON.parse(JSON.stringify(self.objects[subKey][key][objKey]));
+                  root[key][objKey] = JSON.parse(JSON.stringify(this.objects[subKey][key][objKey]));
                 }
 
                 if (patch.length) {
@@ -175,7 +173,7 @@ export default class Monitor {
           }
         }
       }
-    }
+    };
 
     var subscriptionKey = Monitor.subscriptionKeyForOptions(subscriptionOptions);
 
@@ -208,118 +206,69 @@ export default class Monitor {
   //     });
 
   processMessage(message) {
-    var self = this;
+    let process = (operation) => {
+      for (let i = 0; i < operation.subscriptions.length; i++) {
+        let subscription = operation.subscriptions[i];
 
-    function process(operation) {
-      var oldValue, root, lastRoot, event, subscription, pathComponents, parent;
+        let subscriptionComponents = subscription.split(':');
 
-      if (__0_3__) { // eslint-disable-line no-undef
-        if (self.objects.hasOwnProperty(operation.subscription)) {
-          root = self.objects[operation.subscription];
-          lastRoot = self._lastObjects[operation.subscription];
-          event = self._events[operation.subscription];
-
-          if (operation.hasOwnProperty('path')) {
-            pathComponents = operation.path.split('/');
-
-            if (operation.hasOwnProperty('op')) {
-              if (operation.op === 'replace') {
-                if (!root.hasOwnProperty(pathComponents[1])) {
-                  self._event.emit('error', error('Object id doesn\'t exist ' + operation));
-                } else if (operation.hasOwnProperty('value')) {
-                  parent = root[pathComponents[1]];
-
-                  oldValue = parent[pathComponents[2]];
-                  parent[pathComponents[2]] = operation.value;
-                  lastRoot[pathComponents[1]][pathComponents[2]] = JSON.parse(JSON.stringify(operation.value));
-                  event.emit('update', 'replace', pathComponents[1], parent, { path: pathComponents[2], oldValue: oldValue });
-                  log.debug('Replaced property ' + pathComponents[2] + ' of object id ' + pathComponents[1] + ' with  value ' + operation.value);
-                } else {
-                  event.emit('error', error('Invalid operation ' + operation));
-                }
-              } else if (operation.op === 'delete') {
-                oldValue = root[pathComponents[1]];
-                delete root[pathComponents[1]];
-                delete lastRoot[pathComponents[1]];
-                event.emit('update', 'delete', pathComponents[1], oldValue);
-                log.debug('Removed object id ' + pathComponents[1]);
-              } else {
-                event.emit('error', error('Unsupported operation ' + operation));
-              }
-            } else {
-              event.emit('error', error('Invalid operation ' + operation));
-            }
-          } else {
-            if (operation.hasOwnProperty('value') && operation.value.hasOwnProperty('id')) {
-              if (!root.hasOwnProperty(operation.value.id)) {
-                operation.value.$$event = new EventObject(log);
-                root[operation.value.id] = operation.value;
-                lastRoot[operation.value.id] = JSON.parse(JSON.stringify(operation.value));
-                event.emit('update', 'add', operation.value.id, operation.value);
-                log.debug('Added object with id ' + operation.value.id);
-              } else {
-                event.emit('error', error('Object id already exists ' + operation));
-              }
-            } else {
-              event.emit('error', error('Invalid add operation ' + operation));
-            }
-          }
+        // Handle collection updates
+        if (subscriptionComponents[2] === 'context' && subscriptionComponents.length === 4) {
+          subscriptionComponents.pop();
+          subscription = subscriptionComponents.join(':');
         }
-      } else {
-        for (var i = 0; i < operation.subscriptions.length; i++) {
-          subscription = operation.subscriptions[i];
 
-          let subscriptionComponents = subscription.split(':');
+        let root = this.objects[subscription];
+        let lastRoot = this._lastObjects[subscription];
+        let event = this._events[subscription];
 
-          if (subscriptionComponents[2] === 'context' && subscriptionComponents.length === 4) {
-            subscriptionComponents.pop();
-            subscription = subscriptionComponents.join(':');
-          }
-
-          root = self.objects[subscription];
-          lastRoot = self._lastObjects[subscription];
-          event = self._events[subscription];
-
-          if (root) {
-            if (operation.op === 'new') {
-              if (!root.hasOwnProperty(operation.object.id)) {
-                operation.object.$$event = new EventObject(log);
-                root[operation.object.id] = operation.object;
-                lastRoot[operation.object.id] = JSON.parse(JSON.stringify(operation.object));
-                event.emit('update', 'add', operation.object.id, operation.object);
-                log.debug('Added object with id ' + operation.object.id);
-              } else {
-                event.emit('error', error('Object id already exists ' + operation));
-              }
-            } else if (operation.op === 'update') {
-              pathComponents = operation.patch.path.split('/');
-
-              if (!root.hasOwnProperty(pathComponents[1])) {
-                event.emit('error', error('Object id doesn\'t exist ' + operation));
-              } else if (operation.patch.hasOwnProperty('value')) {
-                parent = root[pathComponents[1]];
-
-                oldValue = parent[pathComponents[2]];
-                parent[pathComponents[2]] = operation.patch.value;
-                lastRoot[pathComponents[1]][pathComponents[2]] = JSON.parse(JSON.stringify(operation.patch.value));
-                event.emit('update', 'replace', pathComponents[1], parent, { path: pathComponents[2], oldValue: oldValue });
-                log.debug('Replaced property ' + pathComponents[2] + ' of object id ' + pathComponents[1] + ' with  value ' + operation.patch.value);
-              } else {
-                event.emit('error', error('Invalid operation ' + operation));
-              }
+        if (root) {
+          if (operation.op === 'new') {
+            if (!root.hasOwnProperty(operation.object.id)) {
+              operation.object.$$event = new EventObject(log);
+              root[operation.object.id] = operation.object;
+              lastRoot[operation.object.id] = JSON.parse(JSON.stringify(operation.object));
+              event.emit('update', 'add', operation.object.id, operation.object);
+              log.debug('Added object with id ' + operation.object.id);
             } else {
-              oldValue = root[operation.object.id];
-              delete root[operation.object.id];
-              delete lastRoot[operation.object.id];
-              event.emit('update', 'delete', operation.object.id, oldValue);
-              log.debug('Removed object id ' + operation.object.id);
+              event.emit('error', error('Object id already exists ' + operation.object.id), operation.object.id, root[operation.object.id]);
+            }
+          } else if (operation.op === 'update') {
+            let pathComponents = operation.patch.path.split('/');
+            let objectId = pathComponents[1];
+            let changedProperty = pathComponents[2];
+            let newValue = operation.patch.value;
+
+            if (!root.hasOwnProperty(objectId)) {
+              event.emit('error', error('Object id doesn\'t exist ' + objectId), objectId, changedProperty, newValue);
+            } else if (typeof newValue !== 'undefined') {
+              let parent = root[objectId];
+              let oldValue;
+
+              if (typeof parent[changedProperty] !== 'undefined') {
+                oldValue = JSON.parse(JSON.stringify(parent[changedProperty]));
+              }
+
+              parent[changedProperty] = newValue;
+              lastRoot[objectId][changedProperty] = JSON.parse(JSON.stringify(newValue));
+              event.emit('update', 'replace', objectId, parent, { path: changedProperty, oldValue: oldValue });
+              log.debug('Replaced property ' + changedProperty + ' of object id ' + objectId + ' with  value ' + newValue);
+            } else {
+              event.emit('error', error('Invalid operation ' + JSON.stringify(operation)));
             }
           } else {
-            log.warn('Subscription not found ' + subscription);
+            let oldValue = root[operation.object.id];
+
+            delete root[operation.object.id];
+            delete lastRoot[operation.object.id];
+            event.emit('update', 'delete', operation.object.id, oldValue);
+            log.debug('Removed object id ' + operation.object.id);
           }
+        } else {
+          log.warn('Subscription not found ' + subscription);
         }
       }
-    }
+    };
 
     this._processingPatch = true;
     log.debug('Received update: ' + JSON.stringify(message));
@@ -327,17 +276,17 @@ export default class Monitor {
 
     for (i = 0; i < message.data.new.length; i++) {
       operation = message.data.new[i];
-      if (!__0_3__) operation.op = 'new'; // eslint-disable-line no-undef
+      operation.op = 'new';
       process(operation);
     }
     for (i = 0; i < message.data.updated.length; i++) {
       operation = message.data.updated[i];
-      if (!__0_3__) operation.op = 'update'; // eslint-disable-line no-undef
+      operation.op = 'update';
       process(operation);
     }
     for (i = 0; i < message.data.deleted.length; i++) {
       operation = message.data.deleted[i];
-      if (!__0_3__) operation.op = 'remove'; // eslint-disable-line no-undef
+      operation.op = 'remove';
       process(operation);
     }
     this._processingPatch = false;

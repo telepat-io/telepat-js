@@ -49,6 +49,7 @@ export default class Channel {
     this._addCallback = addCallback;
     this._updateCallback = updateCallback;
     this._removeCallback = removeCallback;
+    this._subscribed = false;
 
     /**
      * A container object referencing all of the objects retrieved via subscription. Each object is stored on a key equal to its own unique id.
@@ -71,6 +72,24 @@ export default class Channel {
      * @instance
      */
     this.objectsCount = null;
+
+    this._event.on('update', (operation, parentId, parentObject, delta) => {
+      if (operation === 'add') {
+        this.objectsArray.push(parentObject);
+        this._sortObjectArray();
+        if (this.objectsCount) {
+          this.objectsCount++;
+        }
+      } else if (operation === 'delete') {
+        this.objectsArray = this.objectsArray.filter(object => {
+          return object.id !== parentId;
+        });
+        this._sortObjectArray();
+        if (this.objectsCount) {
+          this.objectsCount--;
+        }
+      }
+    });
   }
 
   _sortObjectArray() {
@@ -114,53 +133,47 @@ export default class Channel {
  */
   subscribe(callback = () => {}) {
     API.call('object/subscribe',
-    this._options,
-    (err, res) => {
-      if (err) {
-        this._event.emit('error', error('Subscribe failed with error: ' + err));
-        callback(err, null);
-      } else {
-        var i;
+      this._options,
+      (err, res) => {
+        if (err) {
+          this._event.emit('error', error('Subscribe failed with error: ' + err));
+          callback(err, null);
+        } else {
+          let i;
 
-        for (i = 0; i < res.body.content.length; i++) {
-          this.objects[res.body.content[i].id] = res.body.content[i];
-        }
-        this.objectsArray = res.body.content;
-        this._sortObjectArray();
-        var objectKeys = Object.keys(this.objects);
+          this.objects = {};
+          this.objectsArray = [];
+          this.objectsCount = 0;
 
-        for (i = 0; i < objectKeys.length; i++) {
-          this.objects[objectKeys[i]].$$event = new EventObject(log);
-        }
-        this._monitor.add(
-          this._options,
-          this.objects,
-          this._event,
-          this._addCallback || this.add.bind(this),
-          this._removeCallback || this.remove.bind(this),
-          this._updateCallback || this.update.bind(this)
-        );
-        this._event.on('update', (operation, parentId, parentObject, delta) => {
-          if (operation === 'add') {
-            this.objectsArray.push(parentObject);
-            this._sortObjectArray();
-            if (this.objectsCount) {
-              this.objectsCount++;
-            }
-          } else if (operation === 'delete') {
-            this.objectsArray = this.objectsArray.filter(object => {
-              return object.id !== parentId;
-            });
-            this._sortObjectArray();
-            if (this.objectsCount) {
-              this.objectsCount--;
-            }
+          for (i = 0; i < res.body.content.length; i++) {
+            this.objects[res.body.content[i].id] = res.body.content[i];
           }
-        });
-        this._event.emit('subscribe');
-        callback(null, this);
-      }
-    });
+          this.objectsArray = res.body.content;
+          this._sortObjectArray();
+          let objectKeys = Object.keys(this.objects);
+
+          for (i = 0; i < objectKeys.length; i++) {
+            this.objects[objectKeys[i]].$$event = new EventObject(log);
+          }
+          this._monitor.add(
+            this._options,
+            this.objects,
+            this._event,
+            this._addCallback || this.add.bind(this),
+            this._removeCallback || this.remove.bind(this),
+            this._updateCallback || this.update.bind(this)
+          );
+
+          if (this._subscribed) {
+            this._event.emit('update', 'resync');
+          } else {
+            this._event.emit('subscribe');
+          }
+
+          this._subscribed = true;
+          callback(null, this);
+        }
+      });
   }
 
 /**
@@ -182,6 +195,7 @@ export default class Channel {
           this._monitor.remove(this._options);
           this._event.emit('unsubscribe');
           this._event.emit('_unsubscribe');
+          this._subscribed = false;
           callback(null, this);
         }
       });
@@ -368,9 +382,11 @@ export default class Channel {
  */
 /**
  * Invoked when objects in the subscription have been modified (there was an update of an existing object, a new object has been added or an object has been deleted).
+ * Also invoked when all objects in the subscription have been resync'd with the server. This can happen
+ * when the volatile transport is reconnected (after an offline period), or on manual re-calls of the `subscribe` method.
  *
  * @event update
- * @param {string} eventType One of 'add', 'delete' or 'replace'
+ * @param {string} eventType One of 'add', 'delete', 'replace', 'resync'
  * @param {string} objectId The id of the affected object
  * @param {Object} object The affected object itself
  * @param {Object} oldObject Present only for the 'replace' eventType, the old state of the affected object
@@ -384,6 +400,7 @@ export default class Channel {
  * | -------------------------------------------------- | --------------------- |
  * | {@link #Channel.event:error error}                 | Invoked when there was an error processing the requested operation |
  * | {@link #Channel.event:subscribe subscribe}         | Invoked when channel subscription is successful |
+ * | {@link #Channel.event:resync resync}               | Invoked when channel objects are resync'd with server |
  * | {@link #Channel.event:unsubscribe unsubscribe}     | Invoked when channel unsubscription is successful |
  * | {@link #Channel.event:update update}               | Invoked when objects in the subscription have been modified (update of an existing object, new object or deleted object) |
  *

@@ -51,6 +51,12 @@ export default class User {
      * @instance
      */
     this.data = {};
+
+    /**
+     * Indicates if there is a currently logged-in user
+     */
+    this.isLoggedIn = false;
+
     API.tokenUpdateCallback = (newToken) => {
       this._saveToken(newToken);
     };
@@ -93,35 +99,35 @@ export default class User {
   }
 
   _login(endpoint, options, isAdmin, callback = () => {}) {
-    var self = this;
-
-    function success(res) {
+    let success = (res) => {
       let userContainer = {};
 
+      this.isLoggedIn = true;
+
       for (let k in res.body.content.user) {
-        self.data[k] = res.body.content.user[k];
-        self._customProperties.push(k);
+        this.data[k] = res.body.content.user[k];
+        this._customProperties.push(k);
       }
       if (isAdmin) {
-        self.isAdmin = true;
-        self._setAdmin(new Admin(self));
+        this.isAdmin = true;
+        this._setAdmin(new Admin(this));
       }
 
-      userContainer[self.data.id] = self.data;
-      self._monitor.add(
-        {channel: {model: (self.isAdmin ? 'admin' : 'user')}},
+      userContainer[this.data.id] = this.data;
+      this._monitor.add(
+        {channel: {model: (this.isAdmin ? 'admin' : 'user')}},
         userContainer,
         null,
         () => {},
         () => {},
-        self.update.bind(self)
+        this.update.bind(this)
       );
 
       API.authenticationToken = res.body.content.token;
-      self._saveToken(API.authenticationToken);
-      self._event.emit('login');
-      callback(null, self);
-    }
+      this._saveToken(API.authenticationToken);
+      this._event.emit('login');
+      callback(null, this);
+    };
 
     API.call(endpoint, options, (err, res) => {
       if (err) {
@@ -130,12 +136,12 @@ export default class User {
           API.call('user/register-facebook', options, (err, res) => {
             if (err) {
               log.error('Failed to login with Facebook. Could not register or login user.');
-              self._event.emit('login_error', error('Login failed with error: ' + err));
+              this._event.emit('login_error', error('Login failed with error: ' + err));
             } else {
               API.call(endpoint, options, function (err, res) {
                 if (err) {
                   log.error('Failed to login with Facebook. User registration was successful, but login failed.');
-                  self._event.emit('login_error', error('Login failed with error: ' + err));
+                  this._event.emit('login_error', error('Login failed with error: ' + err));
                 } else {
                   success(res);
                 }
@@ -143,7 +149,7 @@ export default class User {
             }
           });
         } else {
-          self._event.emit('login_error', error('Login failed with error: ' + err));
+          this._event.emit('login_error', error('Login failed with error: ' + err));
           callback(err, null);
         }
       } else {
@@ -171,9 +177,12 @@ export default class User {
           callback(error('Saved authentication token expired'), null);
           this._customProperties = [];
           this.data = {};
+          this.isLoggedIn = false;
           this._event.emit('logout');
         } else {
           let userContainer = {};
+
+          this.isLoggedIn = true;
 
           for (let k in res.body.content) {
             this.data[k] = res.body.content[k];
@@ -415,6 +424,7 @@ export default class User {
     });
     this._setAdmin(null);
     this.isAdmin = false;
+    this.isLoggedIn = false;
     this.canReauth = false;
     this._customProperties = [];
     this.data = {};

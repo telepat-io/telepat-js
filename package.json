@@ -1,15 +1,16 @@
 {
   "name": "telepat-js",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "description": "Javascript Client for Telepat",
-  "main": "lib/telepat.js",
+  "main": "./lib/telepat.server.js",
+  "browser": "./lib/telepat.client.js",
   "scripts": {
-    "build-latest-min": "webpack --progress --colors",
-    "build-latest": "webpack --progress --colors --mode=dev",
-    "build-0.3-min": "webpack --progress --colors --version=0.3",
-    "build-0.3": "webpack --progress --colors --version=0.3 --mode=dev",
+    "build-server-min": "webpack --progress --colors --version=server",
+    "build-server": "webpack --progress --colors --version=server --mode=dev",
+    "build-min": "webpack --progress --colors --version=client",
+    "build": "webpack --progress --colors --version=client --mode=dev",
     "dev": "webpack --progress --colors --watch --mode=dev",
-    "build-all": "npm run build-latest && npm run build-latest-min && npm run build-0.3 && npm run build-0.3-min",
+    "build-all": "npm run build-server && npm run build-server-min && npm run build && npm run build-min",
     "docs": "documentation build ./src/ --format html --output docs --config documentation.yml --github --theme ./docs/_theme",
     "test": "mocha --compilers js:babel-core/register --colors -w ./test/*.spec.js"
   },
@@ -70,5 +71,8 @@
   "bugs": {
     "url": "https://github.com/telepat-io/telepat-js/issues"
   },
-  "homepage": "http://telepat.io"
+  "homepage": "http://telepat.io",
+  "engines": {
+    "node": ">= 6.4"
+  }
 }

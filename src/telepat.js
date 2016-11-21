@@ -8,6 +8,8 @@ import Monitor from './monitor';
 import Channel from './channel';
 import User from './user';
 
+const UDID_DB_KEY = ':deviceId';
+
 /**
  * The `Telepat` object is the first object you want to instantiate while working with the Telepat SDK.
  * It exposes methods and properties that enable you to register, login, subscribe to objects and to users.
@@ -55,7 +57,7 @@ import User from './user';
  * });
  */
 export default class Telepat {
-  constructor() {
+  constructor(options = null) {
     function getUserHome() {
       return process.env[(process.platform === 'win32') ? 'USERPROFILE' : 'HOME'];
     }
@@ -75,7 +77,6 @@ export default class Telepat {
     this._socketEndpoint = null;
     this._socket = null;
     this._persistentConnectionOptions = null;
-    this._sessionId = null;
 
     /**
      * Indicates whether the current instance is connected to the backend
@@ -167,6 +168,14 @@ export default class Telepat {
      */
     this.user = null;
     this.collectionEvent = new EventObject(log);
+
+    if (options) {
+      this.connect(options);
+    }
+  }
+
+  onReady(callback) {
+    return this.on('ready', callback);
   }
 
   getCollections(callback = () => {}) {
@@ -175,7 +184,6 @@ export default class Telepat {
         let resultingError = error('Error retrieving collections ' + err);
 
         this.callback(resultingError, null);
-        this._event.emit('error', resultingError);
       } else {
         this._monitor.remove({channel: {model: 'context'}});
         this.collections = {};
@@ -185,10 +193,10 @@ export default class Telepat {
 
         this._monitor.add({channel: {model: 'context'}}, this.collections, this.collectionEvent, this._addCollection.bind(this), this._deleteCollection.bind(this), this._updateCollection.bind(this));
         this.collectionEvent.on('update', (operation, parentId, parentObject, delta) => {
-          this._event.emit('collections-update');
+          this._event.emit('collections_update');
         });
         callback(null, this.collections);
-        this._event.emit('collections-update');
+        this._event.emit('collections_update');
       }
     });
   }
@@ -231,6 +239,71 @@ export default class Telepat {
     }
   }
 
+  _getSavedUDID(callback) {
+    this._db.get(UDID_DB_KEY).then(doc => {
+      if (doc[API.appId]) {
+        callback(null, doc[API.appId]);
+      } else {
+        log.warn('Could not retrieve saved UDID');
+        callback(new Error('Could not retrieve saved UDID'));
+      }
+    }).catch((err) => {
+      log.warn('Could not retrieve saved UDID', err);
+      callback(err);
+    });
+  }
+
+  _saveUDID(udid, callback) {
+    this._db.get(UDID_DB_KEY).then(doc => {
+      doc[API.appId] = udid;
+      this._db.put(doc).then(() => {
+        log.info('Replaced existing UDID');
+        callback(null);
+      }).catch(err => {
+        log.warn('Could not persist UDID. Error: ' + err);
+        callback(err);
+      });
+    }).catch(() => {
+      let newObject = {
+        _id: UDID_DB_KEY
+      };
+
+      newObject[API.appId] = API.UDID;
+      this._db.put(newObject).then(() => {
+        log.info('Saved new UDID');
+        callback(null);
+      }).catch(err => {
+        log.warn('Could not persist UDID. Error: ' + err);
+        callback(err);
+      });
+    });
+  }
+
+  _rebindVolatileTransport(callback) {
+    if (this._socket) {
+      let watchdog = setTimeout(() => {
+        callback(error('Socket transport connection timeout'));
+      }, 5000);
+
+      this._socket.emit('bind_device', {
+        'device_id': API.UDID,
+        'application_id': API.appId
+      });
+      this._socket.on('ready', () => {
+        this._socket.removeAllListeners('ready');
+        clearTimeout(watchdog);
+        watchdog = null;
+
+        // Update all subscription data on transport reconnect
+        for (let key in this.subscriptions) {
+          this.subscriptions[key].subscribe();
+        }
+
+        callback(null);
+      });
+    }
+  }
+
   /**
    * Call this to configure Telepat server endpoints without connecting to a specific app.
    *
@@ -239,6 +312,7 @@ export default class Telepat {
    * @param {string} options.socketEndpoint The Telepat socket endpoint URL
    * @param {boolean} [options.reauth=false] Should reauth previously logged in user on connection
    * @param {TelepatCallback} callback Callback invoked after configuration is finished
+   *
    * @fires Telepat.event:configure
    *
    * @example
@@ -271,6 +345,123 @@ export default class Telepat {
   }
 
   /**
+   * Call this to register a device with the Telepat backend. This will be automatically invoked
+   * during the initial connection.
+   *
+   * @param {TelepatCallback} callback Callback invoked after device is registered
+   */
+  registerDevice(callback = () => {}) {
+    let finalizeRequest = (err, res) => {
+      if (err) {
+        callback(err);
+      } else {
+        if (res.body.content.identifier) {
+          API.UDID = res.body.content.identifier;
+          log.info('Received new UDID: ' + API.UDID);
+          this._saveUDID(API.UDID, () => {});
+        }
+        callback(null, res);
+      }
+    };
+
+    let request = {
+      'info': {
+        'os': 'web',
+        'userAgent': ((typeof navigator !== 'undefined') ? navigator.userAgent : 'node')
+      },
+      'volatile': {
+        'type': 'sockets',
+        'active': 1
+      }
+    };
+
+    if (this._persistentConnectionOptions) {
+      request.persistent = this._persistentConnectionOptions;
+      if (request.persistent.active === 1) {
+        request.volatile.active = 0;
+      }
+    }
+
+    API.call('device/register', request, (err, res) => {
+      if (err && API.UDID) {
+        // Maybe our UDID got out of sync with the server. Let's try to get a new one
+        API.UDID = null;
+        API.call('device/register', request, (err, res2) => {
+          finalizeRequest(err, res2);
+        });
+      } else {
+        finalizeRequest(null, res);
+      }
+    });
+  }
+
+  /**
+   * Call this to register the device with the Telepat volatile transport service. This will be automatically invoked
+   * during the initial connection.
+   *
+   * @param {Object} options Socket.io connection options. See http://socket.io/docs/client-api/#manager(url:string,-opts:object).
+   * @param {TelepatCallback} callback Callback invoked after transport is registered
+   */
+  connectVolatileTransport(ioOptions = {}, callback = () => {}) {
+    this.disconnectVolatileTransport();
+
+    this._socket = require('socket.io-client')(this._socketEndpoint, ioOptions);
+    log.info('Connecting to socket service ' + this._socketEndpoint);
+
+    this._socket.on('error', (err) => {
+      callback(err);
+    });
+
+    this._socket.on('connect', () => {
+      this._rebindVolatileTransport(err => {
+        callback(err);
+      });
+    });
+
+    this._socket.on('message', message => {
+      this.processMessage(message);
+    });
+
+    this._socket.on('context-update', () => {
+      this.getCollections();
+    });
+
+    this._socket.on('disconnect', () => {
+      log.warn('Sockets disconnected');
+      this._event.emit('volatile_disconnect');
+    });
+
+    this._socket.on('reconnect', () => {
+      this._rebindVolatileTransport(err => {
+        if (err) {
+          this._event.emit('reconnect_failed');
+        } else {
+          this._event.emit('reconnect');
+        }
+      });
+    });
+
+    this._socket.on('reconnect_failed', () => {
+      log.warn('Sockets reconnect failed');
+      this._event.emit('reconnect_failed');
+    });
+  }
+
+  /**
+   * Call this to unregister the device with the Telepat volatile transport service. This will be automatically invoked
+   * during disconnection.
+   *
+   * @fires Telepat.event:volatile_disconnect
+   */
+  disconnectVolatileTransport() {
+    if (this._socket) {
+      this._socket.removeAllListeners();
+      this._socket.close();
+      this._socket = null;
+    }
+  }
+
+  /**
    * Call this to connect to a specific Telepat app.
    * This is usually the first thing you need to do after instantiating the Telepat object.
    *
@@ -286,7 +477,10 @@ export default class Telepat {
    * @param {boolean} [options.updateUDID=false] Set this to true to force the client to update the saved device identifier.
    * @param {number} [options.timerInterval=150] Frequency of running diff (in miliseconds) to check for object updates.
    * @param {TelepatCallback} callback Callback invoked after configuration is finished
+   *
    * @fires Telepat.event:connect
+   * @fires Telepat.event:ready
+   * @fires Telepat.event:connect_error
    * @fires Telepat.event:disconnect
    *
    * @example
@@ -333,89 +527,6 @@ export default class Telepat {
    * });
    */
   connect(options = {}, callback = () => {}) {
-    var self = this;
-
-    function completeRegistration(res) {
-      if (res.body.content.identifier !== undefined) {
-        API.UDID = res.body.content.identifier;
-        log.info('Received new UDID: ' + API.UDID);
-
-        self._db.get(':deviceId').then(doc => {
-          doc[API.appId] = API.UDID;
-          log.warn('Replacing existing UDID');
-          self._db.put(doc).catch(err => {
-            log.warn('Could not persist UDID. Error: ' + err);
-          });
-        }).catch(() => {
-          let newObject = {
-            _id: ':deviceId'
-          };
-
-          newObject[API.appId] = API.UDID;
-          self._db.put(newObject).catch(err => {
-            log.warn('Could not persist UDID. Error: ' + err);
-          });
-        });
-      }
-      self._socket.emit('bind_device', {
-        'device_id': API.UDID,
-        'application_id': API.appId
-      });
-
-      log.info('Connection established');
-
-      self.getCollections(() => {
-        self._updateUser(options.reauth, () => {
-          self.currentAppId = API.appId;
-          self.connected = true;
-          self.connecting = false;
-          self._event.emit('connect');
-          callback(null, self);
-        });
-      });
-      return true;
-    }
-
-    function registerDevice() {
-      var request = {
-        'info': {
-          'os': 'web',
-          'userAgent': ((typeof navigator !== 'undefined') ? navigator.userAgent : 'node')
-        },
-        'volatile': {
-          'type': 'sockets',
-          'active': 1,
-          'token': self._sessionId
-        }
-      };
-
-      if (self._persistentConnectionOptions) {
-        request.persistent = self._persistentConnectionOptions;
-        if (request.persistent.active === 1) {
-          request.volatile.active = 0;
-        }
-      }
-      API.call('device/register', request, function (err, res) {
-        if (err) {
-          API.UDID = null;
-          API.call('device/register', request, function (err, res) {
-            if (err) {
-              self._socket.disconnect();
-              self._event.emit('disconnect', err);
-              self.currentAppId = null;
-              self.connected = false;
-              self.connecting = false;
-              callback(error('Device registration failed with error: ' + err));
-            } else {
-              completeRegistration(res);
-            }
-          });
-        } else {
-          completeRegistration(res);
-        }
-      });
-    }
-
     if (typeof options !== 'undefined') {
       if (typeof options.apiKey === 'undefined') {
         return callback(error('Connect options must provide an apiKey property'));
@@ -440,11 +551,60 @@ export default class Telepat {
       return callback(error('Options object not provided to the connect function'));
     }
 
-    this.connecting = true;
+    let signalConnectFailed = (err) => {
+      this.connected = false;
+      this.connecting = false;
+      this.currentAppId = null;
+      callback(error('Device registration failed with error: ' + err));
+      this._event.emit('connect_error', err);
+    };
+
+    let signalConnectSucceded = () => {
+      this.connected = true;
+      this.connecting = false;
+      this.currentAppId = API.appId;
+      callback(null);
+      this._event.emit('connect');
+      this._event.emit('ready');
+    };
+
+    let populateData = () => {
+      this.getCollections((err) => {
+        if (err) {
+          signalConnectFailed(err);
+        } else {
+          this._updateUser(options.reauth, () => {
+            signalConnectSucceded();
+          });
+        }
+      });
+    };
+
+    let postRegister = (err, res) => {
+      if (err) {
+        signalConnectFailed(err);
+      } else {
+        if (!this._persistentConnectionOptions || this._persistentConnectionOptions.active !== 1) {
+          this.connectVolatileTransport({}, (err) => {
+            if (err) {
+              signalConnectFailed(err);
+            } else {
+              populateData();
+            }
+          });
+        } else {
+          populateData();
+        }
+      }
+    };
+
+    // START CONNECTION PROCESS
 
     if (this.connected) {
+      this.connected = false;
       this.disconnect();
     }
+    this.connecting = true;
 
     API.apiKey = options.apiKey;
     API.appId = options.appId;
@@ -455,60 +615,16 @@ export default class Telepat {
 
     this._persistentConnectionOptions = options.persistentConnection || this._persistentConnectionOptions;
 
-    this._socket = require('socket.io-client')(this._socketEndpoint, options.ioOptions || {});
-    log.info('Connecting to socket service ' + this._socketEndpoint);
-
-    if (__0_3__) { // eslint-disable-line no-undef
-      this._socket.on('welcome', data => {
-        this._sessionId = data.sessionId;
-
-        if (options.updateUDID) {
-          registerDevice();
-        } else {
-          this._db.get(':deviceId').then(doc => {
-            if (doc[API.appId]) {
-              API.UDID = doc[API.appId];
-              log.info('Retrieved saved UDID: ' + API.UDID);
-            }
-            registerDevice();
-          }).catch(function () {
-            registerDevice();
-          });
-        }
-      });
+    if (options.updateUDID) {
+      this.registerDevice(postRegister);
     } else {
-      if (options.updateUDID) {
-        registerDevice();
-      } else {
-        this._db.get(':deviceId').then(doc => {
-          if (doc[API.appId]) {
-            API.UDID = doc[API.appId];
-            log.info('Retrieved saved UDID: ' + API.UDID);
-          }
-          registerDevice();
-        }).catch(function () {
-          registerDevice();
-        });
-      }
-    }
-
-    this._socket.on('message', message => {
-      this._monitor.processMessage(message);
-    });
-
-    this._socket.on('context-update', () => {
-      this.getCollections();
-    });
-
-    this._socket.on('disconnect', () => {
-    });
-
-    this._socket.on('reconnect', () => {
-      self._socket.emit('bind_device', {
-        'device_id': API.UDID,
-        'application_id': API.appId
+      this._getSavedUDID((err, udid) => {
+        if (!err) {
+          API.UDID = udid;
+        }
+        this.registerDevice(postRegister);
       });
-    });
+    }
 
     return this;
   }
@@ -516,11 +632,10 @@ export default class Telepat {
   /**
    * Call this function to disconnect the client from the Telepat backend.
    * @fires Telepat.event:disconnect
+   * @fires Telepat.event:volatile_disconnect
    */
   disconnect() {
-    this._socket.close();
-    this._socket = null;
-    this._sessionId = null;
+    this.disconnectVolatileTransport();
     this.collections = null;
     this._monitor.remove({channel: {model: 'context'}});
 
@@ -573,9 +688,32 @@ export default class Telepat {
    * @event connect
    */
   /**
+   * Invoked when client has connected to the backend. Alias for the `connect` event.
+   *
+   * @event ready
+   */
+  /**
    * Invoked when client has disconnected from the backend.
    *
    * @event disconnect
+   * @type {Error}
+   */
+  /**
+   * Invoked when volatile transport has been (temporarily) disconnected.
+   *
+   * @event volatile_disconnect
+   * @type {Error}
+   */
+  /**
+   * Invoked when volatile transport has reconnected.
+   *
+   * @event reconnect
+   * @type {Error}
+   */
+  /**
+   * Invoked when volatile transport has failed to reconnect.
+   *
+   * @event reconnect_failed
    * @type {Error}
    */
   /**
@@ -584,15 +722,15 @@ export default class Telepat {
    * @event configure
    */
   /**
-   * Invoked on any operation error.
+   * Invoked on connection error.
    *
-   * @event error
+   * @event connect_error
    * @type {Error}
    */
   /**
    * Invoked when the available collections have updated.
    *
-   * @event collections-update
+   * @event collections_update
    */
   /**
    * Invoked when client has successfully logged in.
@@ -602,7 +740,7 @@ export default class Telepat {
   /**
    * Invoked when there was an error with logging in.
    *
-   * @event login-error
+   * @event login_error
    * @type {Error}
    */
   /**
@@ -613,7 +751,7 @@ export default class Telepat {
   /**
    * Invoked when there was an error with logging out.
    *
-   * @event logout-error
+   * @event logout_error
    * @type {Error}
    */
 
@@ -621,17 +759,21 @@ export default class Telepat {
    * Call this function to add callbacks to be invoked on event triggers.
    * Available callbacks:
    *
-   * | Name                                                         | Description           |
-   * | ------------------------------------------------------------ | --------------------- |
-   * | {@link #Telepat.event:connect connect}                       | Invoked when client has connected to the backend |
-   * | {@link #Telepat.event:disconnect disconnect}                 | Invoked when client has disconnected from the backend |
-   * | {@link #Telepat.event:configure configure}                   | Invoked when client configuration has completed |
-   * | {@link #Telepat.event:error error}                           | Invoked on any operation error |
-   * | {@link #Telepat.event:collections-update collections-update} | Invoked when the available collections have updated |
-   * | {@link #Telepat.event:login login}                           | Invoked when client has successfully logged in |
-   * | {@link #Telepat.event:login-error login-error}               | Invoked when there was an error with logging in |
-   * | {@link #Telepat.event:logout logout}                         | Invoked when client has successfully logged out |
-   * | {@link #Telepat.event:logout-error logout-error}             | Invoked when there was an error with logging out |
+   * | Name                                                          | Description           |
+   * | ------------------------------------------------------------- | --------------------- |
+   * | {@link #Telepat.event:connect connect}                        | Invoked when client has connected to the backend |
+   * | {@link #Telepat.event:ready ready}                            | Alias for the connect event |
+   * | {@link #Telepat.event:disconnect disconnect}                  | Invoked when client has disconnected from the backend |
+   * | {@link #Telepat.event:reconnect reconnect}                    | Invoked when volatile transport has reconnected |
+   * | {@link #Telepat.event:reconnect_failed reconnect_failed}      | Invoked when volatile transport reconnection failed |
+   * | {@link #Telepat.event:volatile_disconnect volatile_disconnect}| Invoked when volatile transport has been disconnected |
+   * | {@link #Telepat.event:configure configure}                    | Invoked when client configuration has completed |
+   * | {@link #Telepat.event:connect_error connect_error}            | Invoked on connection errors |
+   * | {@link #Telepat.event:collections_update collections_update}  | Invoked when the available collections have updated |
+   * | {@link #Telepat.event:login login}                            | Invoked when client has successfully logged in |
+   * | {@link #Telepat.event:login_error login_error}                | Invoked when there was an error with logging in |
+   * | {@link #Telepat.event:logout logout}                          | Invoked when client has successfully logged out |
+   * | {@link #Telepat.event:logout_error logout_error}              | Invoked when there was an error with logging out |
    *
    * @param {string} name The name of the event to associate the callback with
    * @param {function} callback The callback to be executed
@@ -643,6 +785,9 @@ export default class Telepat {
    * });
    */
   on(name, callback) {
+    if ((name === 'connect' || name === 'ready') && this.connected) {
+      setTimeout(callback, 0);
+    }
     return this._event.on(name, callback);
   };
 
@@ -806,7 +951,6 @@ export default class Telepat {
     options,
     (err, res) => {
       if (err) {
-        this._event.emit('error', error('Get objects failed with error: ' + err));
         callback(error('Get objects failed with error: ' + err), null);
       } else {
         callback(null, res.body.content);
