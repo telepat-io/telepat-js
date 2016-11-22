@@ -1,6 +1,6 @@
 {
   "name": "telepat-js",
-  "version": "0.4.4",
+  "version": "0.4.6",
   "description": "Javascript Client for Telepat",
   "main": "./lib/telepat.server.js",
   "browser": "./lib/telepat.client.js",
