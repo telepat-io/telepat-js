@@ -70,10 +70,11 @@ export default class Telepat {
       }
       return dir;
     }
+    
     this.name = (options && options.name) ? options.name : '';
     UDID_DB_KEY += this.name;
     this._db = new PouchDB((typeof window !== 'undefined') ? ('/_telepat') : (getTelepatDir()));
-    console.log(UDID_DB_KEY);
+
     this._event = new EventObject(log);
     this._monitor = new Monitor();
     this._socketEndpoint = null;
