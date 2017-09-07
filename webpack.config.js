@@ -3,6 +3,7 @@ var UglifyJsPlugin = webpack.optimize.UglifyJsPlugin;
 var path = require('path');
 var env = require('yargs').argv.mode;
 var version = require('yargs').argv.version;
+var nodeExternals = require('webpack-node-externals');
 
 if (!version) {
   version = 'client';
@@ -36,7 +37,11 @@ var config = {
     library: 'Telepat',
     libraryTarget: 'umd',
     umdNamedDefine: true
-  },
+  }, 
+  externals:  version === 'server'? {
+    'pouchdb':"pouchdb",
+    'leveldown':"leveldown"
+  } : {},
   module: {
     loaders: [
       {
@@ -66,7 +71,6 @@ var config = {
     __dirname: true
   },
   plugins: plugins,
-  externals: ['bindings']
 };
 
 module.exports = config;
