@@ -8,7 +8,7 @@ import Monitor from './monitor';
 import Channel from './channel';
 import User from './user';
 
-const UDID_DB_KEY = ':deviceId';
+let UDID_DB_KEY = ':deviceId';
 
 /**
  * The `Telepat` object is the first object you want to instantiate while working with the Telepat SDK.
@@ -70,14 +70,15 @@ export default class Telepat {
       }
       return dir;
     }
-
-    this._db = new PouchDB((typeof window !== 'undefined') ? '/_telepat' : getTelepatDir());
+    this.name = (options && options.name) ? options.name : '';
+    UDID_DB_KEY += this.name;
+    this._db = new PouchDB((typeof window !== 'undefined') ? ('/_telepat') : (getTelepatDir()));
+    console.log(UDID_DB_KEY);
     this._event = new EventObject(log);
     this._monitor = new Monitor();
     this._socketEndpoint = null;
     this._socket = null;
     this._persistentConnectionOptions = null;
-
     /**
      * Indicates whether the current instance is connected to the backend
      * @type {boolean}
@@ -356,7 +357,7 @@ export default class Telepat {
         callback(err);
       } else {
         if (res.body.content.identifier) {
-          API.UDID = res.body.content.identifier;
+          API.UDID = res.body.content.identifier + this.name;
           log.info('Received new UDID: ' + API.UDID);
           this._saveUDID(API.UDID, () => {});
         }
