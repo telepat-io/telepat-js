@@ -70,9 +70,16 @@ export default class Telepat {
       }
       return dir;
     }
-    
+
     this.name = (options && options.name) ? options.name : '';
     UDID_DB_KEY += this.name;
+    if (options && options.name) {
+      delete options.name;
+      if (options && Object.keys(options).length === 0 && options.constructor === Object) {
+        options = null;
+      }
+    }
+
     this._db = new PouchDB((typeof window !== 'undefined') ? ('/_telepat') : (getTelepatDir()));
 
     this._event = new EventObject(log);
@@ -229,7 +236,7 @@ export default class Telepat {
 
   _updateUser(reauth = false, callback = () => {}) {
     if (!this.user) {
-      this.user = new User(this._db, this._event, this._monitor, newAdmin => { this.admin = newAdmin; }, () => {
+      this.user = new User(this._db, this._event, this._monitor, newAdmin => { this.admin = newAdmin; }, this.name, () => {
         if (reauth) {
           this.user.reauth(callback);
         } else {
@@ -358,7 +365,7 @@ export default class Telepat {
         callback(err);
       } else {
         if (res.body.content.identifier) {
-          API.UDID = res.body.content.identifier + this.name;
+          API.UDID = res.body.content.identifier;
           log.info('Received new UDID: ' + API.UDID);
           this._saveUDID(API.UDID, () => {});
         }

@@ -22,14 +22,14 @@ import Admin from './admin';
  * });
  */
 export default class User {
-  constructor(db, event, monitor, setAdmin, callback = () => {}) {
+  constructor(db, event, monitor, setAdmin, name = '', callback = () => {}) {
     this._event = event;
     this._monitor = monitor;
     this._setAdmin = setAdmin;
     this._db = db;
     this._customProperties = [];
     this._userChannel = null;
-
+    this.tokenKey = ':userToken' + name;
     /**
      * Indicates if the currently logged in user is an admin
      * @type {boolean}
@@ -61,7 +61,7 @@ export default class User {
       this._saveToken(newToken);
     };
 
-    this._db.get(':userToken').then(doc => {
+    this._db.get(this.tokenKey).then(doc => {
       this.canReauth = true;
       callback();
     }).catch(() => {
@@ -72,14 +72,14 @@ export default class User {
 
   _saveToken(token) {
     var newObject = {
-      _id: ':userToken',
+      _id: this.tokenKey,
       value: {
         token: token,
         admin: this.isAdmin
       }
     };
 
-    this._db.get(':userToken').then(doc => {
+    this._db.get(this.tokenKey).then(doc => {
       newObject._rev = doc._rev;
       log.info('Replacing existing authentication token');
       this._db.put(newObject).then(doc => {
@@ -165,7 +165,7 @@ export default class User {
    * @param  {TelepatCallback} callback Callback invoked after reauth operation is finished
    */
   reauth(callback = () => {}) {
-    this._db.get(':userToken').then(doc => {
+    this._db.get(this.tokenKey).then(doc => {
       log.info('Retrieved saved authentication token');
       API.authenticationToken = doc.value.token;
       API.get((doc.value.admin ? 'admin/me' : 'user/me'), '', function (err, res) {
@@ -417,7 +417,7 @@ export default class User {
    * @param {TelepatCallback} callback Callback invoked after the operation is finished
    */
   logout(callback = () => {}) {
-    this._db.get(':userToken').then(doc => {
+    this._db.get(this.tokenKey).then(doc => {
       this._db.remove(doc._id, doc._rev);
     }).catch(function () {
     });
