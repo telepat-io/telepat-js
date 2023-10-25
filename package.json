@@ -41,7 +41,7 @@
     "example"
   ],
   "dependencies": {
-    "crypto-js": "^3.1.4",
+    "crypto-js": "^4.2.0",
     "fs": "0.0.2",
     "jsondiffpatch": "^0.2.4",
     "loglevel": "^1.2.0",
